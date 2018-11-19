@@ -25,6 +25,9 @@ which will install the libraries in `c:\ffmpeg`
 
 # SDL
 
+* Download latest source archive
+* With CMake: `cmake -DSDL_STATIC=1 -DCMAKE_BUILD_TYPE=Release path/to/sdl`
+
 # Qt
 
 Just download the latest Qt
