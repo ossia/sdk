@@ -13,9 +13,11 @@ make install
 ```    
 which will install the libraries in `c:\ffmpeg`
 
+# LLVM
+
+# Faust
+
 # SDL
-
-
 
 # Qt
 
