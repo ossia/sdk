@@ -22,7 +22,11 @@ cd faustdir
 
 export PATH=/opt/llvm-release/bin:$PATH
 
-cmake -C ../backends/llvm.cmake  .. -DINCLUDE_OSC=0 -DINCLUDE_HTTP=0 -DINCLUDE_EXECUTABLE=0 -DINCLUDE_STATIC=1
+cmake -C ../backends/llvm.cmake .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DINCLUDE_OSC=0 -DINCLUDE_HTTP=0 \
+  -DINCLUDE_EXECUTABLE=0 -DINCLUDE_STATIC=1 \
+  -DCMAKE_INSTALL_PREFIX=/opt/score-sdk/faust
 
 BACKENDS=llvm.cmake make configstatic
 make -j$(nproc)

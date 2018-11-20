@@ -5,7 +5,9 @@ tar xaf pa_snapshot.tgz
 
 cd portaudio/build
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=portaudio-install
+cmake .. \
+ -DCMAKE_BUILD_TYPE=Release \
+ -DCMAKE_INSTALL_PREFIX=/opt/score-sdk/portaudio
 
 make -j8
 make install

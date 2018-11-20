@@ -43,7 +43,7 @@ cmake \
  -DLLVM_ENABLE_CXX1Y=1 \
  -DCMAKE_C_FLAGS="-mmacosx-version-min=10.12" \
  -DCMAKE_CXX_FLAGS="-mmacosx-version-min=10.12" \
- -DCMAKE_INSTALL_PREFIX=/opt/llvm-release \
+ -DCMAKE_INSTALL_PREFIX=/opt/score-sdk/llvm \
  ../llvm
 
 ninja
