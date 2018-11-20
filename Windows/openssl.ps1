@@ -1,5 +1,4 @@
-# Base on https://gist.github.com/terrillmoore/995421ea6171a9aa50552f6aa4be0998
-# Base ond https://gist.github.com/terrillmoore/995421ea6171a9aa50552f6aa4be0998
+# Based on https://gist.github.com/terrillmoore/995421ea6171a9aa50552f6aa4be0998
 
 # TODO put nasm.exe in path
 # TODO put perl in path
@@ -9,7 +8,6 @@
 Invoke-WebRequest -Uri https://github.com/openssl/openssl/archive/OpenSSL_1_1_0j.zip -OutFile openssl.zip
 Expand-Archive openssl.zip
 
-Invoke-BatchFile "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
 cd openssl/openssl-OpenSSL_1_1_0j
 perl Configure VC-WIN64A --prefix=c:\score-sdk\openssl\win64 --openssldir=c:\score-sdk\openssl\SSL no-shared
 nmake
