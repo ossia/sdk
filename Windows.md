@@ -21,6 +21,8 @@ which will install the libraries in `c:\ffmpeg`
 
 # LLVM
 
+https://github.com/mstorsjo/llvm-mingw should be the way to go
+
 # Faust
 
 # SDL
