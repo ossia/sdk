@@ -1,7 +1,7 @@
 #!/bin/bash
 
 wget -nv https://www.libsdl.org/release/SDL2-2.0.9.tar.gz
-tar xaf SDL2-2.0.9.tar.gz
+gtar xaf SDL2-2.0.9.tar.gz
 
 mkdir sdl-build
 cd sdl-build
