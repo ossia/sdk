@@ -3,7 +3,7 @@
 brew install yasm
 
 wget -nv https://ffmpeg.org/releases/ffmpeg-4.1.tar.bz2
-tar xaf ffmpeg-4.1
+gtar xaf ffmpeg-4.1.tar.bz2
 
 mkdir ffmpeg-build
 cd ffmpeg-build
@@ -22,4 +22,4 @@ cd ffmpeg-build
  	--extra-cflags="-mmacosx-version-min=10.12"
 
  make -j4
- make DESTDIR=build install
+ make install
