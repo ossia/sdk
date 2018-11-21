@@ -1,5 +1,5 @@
 # OSSIA/sdk
-SDK files for building ossia score and related projects.
+SDK files for building ossia score and related projects dependencies: FFMPEG, OpenSSL, etc...
 
 - Windows on MSVC
 - OS X (Qt 5.11, CMake 3.11, Ninja, Boost 1.67)
