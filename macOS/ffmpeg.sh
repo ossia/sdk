@@ -1,6 +1,6 @@
 #!/bin/bash
 
-brew install yasm
+source ./common.sh
 
 wget -nv https://ffmpeg.org/releases/ffmpeg-4.1.tar.bz2
 gtar xaf ffmpeg-4.1.tar.bz2
@@ -18,8 +18,8 @@ cd ffmpeg-build
  	--disable-videotoolbox \
  	--disable-network --disable-iconv \
  	--enable-protocols  --disable-lzma \
- 	--prefix=/opt/score-sdk/ffmpeg \
- 	--extra-cflags="-mmacosx-version-min=10.12"
+ 	--prefix=$INSTALL_PREFIX/ffmpeg \
+ 	--extra-cflags="-mmacosx-version-min=$MACOS_VERSION"
 
- make -j4
+ make -j$NPROC
  make install

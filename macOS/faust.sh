@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ./common.sh
+
 git clone --recursive -j4 https://github.com/grame-cncm/faust
 
 cd faust/build
@@ -20,14 +22,17 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 mkdir -p faustdir
 cd faustdir
 
-export PATH=/opt/llvm-release/bin:$PATH
+export PATH=/opt/score-sdk/llvm/bin:$PATH
 
 cmake -C ../backends/llvm.cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
-  -DINCLUDE_OSC=0 -DINCLUDE_HTTP=0 \
-  -DINCLUDE_EXECUTABLE=0 -DINCLUDE_STATIC=1 \
-  -DCMAKE_INSTALL_PREFIX=/opt/score-sdk/faust
+  -DINCLUDE_OSC=0 \
+  -DINCLUDE_HTTP=0 \
+  -DINCLUDE_EXECUTABLE=0 \
+  -DINCLUDE_STATIC=1 \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
+  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust
 
 BACKENDS=llvm.cmake make configstatic
-make -j$(nproc)
+make -j$NPROC
 make install

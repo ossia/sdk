@@ -1,12 +1,14 @@
 #!/bin/bash
 
+source ./common.sh
+
 brew update
 brew upgrade
 
-brew install qt5 cmake ninja boost gnu-tar
+brew install cmake ninja boost gnu-tar yasm subversion
 
 SDK_DIR=.
 cd /usr/local/Cellar
-gtar caf "$SDK_DIR/homebrew-cache.txz" qt cmake ninja boost  
+#gtar caf "$SDK_DIR/homebrew-cache.txz" qt cmake ninja boost  
 
 

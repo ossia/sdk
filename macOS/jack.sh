@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ./common.sh
+
 git clone https://github.com/jackaudio/jack2
-mkdir -p /opt/score-sdk/jack/include
-cp -rf jack2/common/jack /opt/score-sdk/jack/include/
+mkdir -p $INSTALL_PREFIX/jack/include
+cp -rf jack2/common/jack $INSTALL_PREFIX/jack/include/
