@@ -22,6 +22,8 @@ which will install the libraries in `c:\ffmpeg`
 # LLVM
 
 https://github.com/mstorsjo/llvm-mingw should be the way to go
+* Download https://martin.st/temp/llvm-mingw-x86_64-full.zip
+* Follow instructions here:  https://github.com/mstorsjo/llvm-mingw/issues/24#issuecomment-444276294
 
 # Faust
 
@@ -32,7 +34,8 @@ https://github.com/mstorsjo/llvm-mingw should be the way to go
 
 # Qt
 
-Just download the latest Qt
+ * Put ActivePerl in PATH
+ * ../qt5/configure -opensource -confirm-license -nomake examples -nomake tests -prefix /c/score-sdk/qt5-dynamic -platform win32-clang-g++ -opengl desktop -release
 
 # Boost
 
