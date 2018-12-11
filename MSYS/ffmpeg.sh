@@ -3,7 +3,7 @@
 source ./common.sh
 
 wget -nv https://ffmpeg.org/releases/ffmpeg-4.1.tar.bz2
-gtar xaf ffmpeg-4.1.tar.bz2
+tar xaf ffmpeg-4.1.tar.bz2
 
 mkdir ffmpeg-build
 cd ffmpeg-build
@@ -18,8 +18,7 @@ cd ffmpeg-build
  	--disable-videotoolbox \
  	--disable-network --disable-iconv \
  	--enable-protocols  --disable-lzma \
- 	--prefix=$INSTALL_PREFIX/ffmpeg \
- 	--extra-cflags="-mmacosx-version-min=$MACOS_VERSION"
+ 	--prefix=$INSTALL_PREFIX/ffmpeg 
 
  make -j$NPROC
  make install
