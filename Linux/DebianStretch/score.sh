@@ -1,0 +1,1 @@
+cmake ../score  -DCMAKE_PREFIX_PATH=/opt/qt5-static/lib/cmake/Qt5  -DSCORE_CONFIGURATION=static-release -DCMAKE_INSTALL_PREFIX=/usr -DSCORE_ENABLE_LTO=0 -DOSSIA_LTO=0 -DOSSIA_SDK=/opt/score-sdk  -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++"
