@@ -22,8 +22,6 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 mkdir -p faustdir
 cd faustdir
 
-export PATH=/opt/score-sdk/llvm/bin:$PATH
-
 cmake -C ../backends/llvm.cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
@@ -33,6 +31,5 @@ cmake -C ../backends/llvm.cmake .. \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust
 
-BACKENDS=llvm.cmake make configstatic
 make -j$NPROC
 make install

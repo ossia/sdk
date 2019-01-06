@@ -6,7 +6,7 @@ git clone https://code.qt.io/qt/qt5.git
 
 (
   cd qt5
-  git checkout 5.11
+  git checkout 5.12
   git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
 )
 
