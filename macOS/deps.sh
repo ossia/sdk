@@ -5,7 +5,7 @@ source ./common.sh
 brew update
 brew upgrade
 
-brew install cmake ninja boost gnu-tar yasm subversion
+brew install cmake ninja boost gnu-tar gnu-sed yasm subversion
 
 SDK_DIR=.
 cd /usr/local/Cellar

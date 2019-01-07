@@ -2,15 +2,20 @@
 
 source ./common.sh
 
+if [[ ! -d qt5 ]]; then
 git clone https://code.qt.io/qt/qt5.git
 
 (
   cd qt5
-  git checkout 5.11
+  git checkout 5.12
   git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
 )
 
-mkdir qt5-build-dynamic
+echo 'QMAKE_LFLAGS+= -L/opt/score-sdk/llvm/lib -lc++ -lc++abi -Wl,-rpath,/opt/score-sdk/llvm/lib' >> qt5/qtbase/mkspecs/common/clang-mac.conf
+fi
+
+
+mkdir -p qt5-build-dynamic
 (
   cd qt5-build-dynamic
   ../qt5/configure -release \
@@ -31,18 +36,11 @@ mkdir qt5-build-dynamic
                    -qt-freetype \
                    -qt-harfbuzz \
                    -qt-pcre \
-                   -qt-xcb \
-                   -qt-xkbcommon-x11 \
-                   -no-xinput2 \
-                   -glib \
                    -no-cups \
                    -no-iconv \
                    -no-tslib \
                    -no-icu \
                    -no-pch \
-                   -ltcg \
-                   -openssl-linked \
-                   -dbus-linked \
                    -no-system-proxies \
                    -prefix $INSTALL_PREFIX/qt5-dynamic
 
