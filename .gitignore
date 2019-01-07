@@ -1,0 +1,11 @@
+*.*
+!.gitattributes
+!.gitignore
+!.gitkeep
+!*.md
+!*.sh
+!*.ps1
+!*.cmd
+!*.bat
+
+

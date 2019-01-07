@@ -18,6 +18,7 @@ cd portaudio/build
 
 cmake .. \
  -DCMAKE_BUILD_TYPE=Release \
+ -DCMAKE_POSITION_INDEPENDENT_CODE=1 \
  -DPA_BUILD_SHARED=Off \
  -DPA_USE_JACK=Off \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/portaudio
