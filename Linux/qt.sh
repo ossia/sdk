@@ -1,8 +1,6 @@
 #!/bin/bash -eux
 
 source ./common.sh
-yum -y install libxkbcommon-x11-devel
-yum -y remove openssl-devel libselinux-devel krb5-devel pcre-devel pcre2-devel freetype-devel
 $GIT clone https://code.qt.io/qt/qt5.git
 
 (
@@ -62,6 +60,7 @@ mkdir qt5-build-dynamic
   make install -j$NPROC
 )
 
+exit 0
 mkdir qt5-build-static
 (
   cd qt5-build-static
