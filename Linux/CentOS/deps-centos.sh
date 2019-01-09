@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # For building the toolchain
-yum install glibc-devel \
+yum -y install glibc-devel \
     devtoolset-7-gcc devtoolset-7-make \
     libxcb-devel xcb-util xcb-util-devel which mesa-libGL-devel \
     rh-git29 svn perl-Data-Dump perl-Data-Dumper \

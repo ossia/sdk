@@ -16,7 +16,7 @@ sed -i '305i  SET(PA_PKGCONFIG_LDFLAGS "${PA_PKGCONFIG_LDFLAGS} ${CMAKE_DL_LIBS}
       
 cd portaudio/build
 
-cmake .. \
+$CMAKE .. \
  -DCMAKE_BUILD_TYPE=Release \
  -DCMAKE_POSITION_INDEPENDENT_CODE=1 \
  -DPA_BUILD_SHARED=Off \

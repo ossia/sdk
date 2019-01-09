@@ -2,8 +2,6 @@
 
 source ./common.sh
 
-yum install wget
-
 OPENSSL_VERSION="1_1_0j"
 
 wget -nv https://github.com/openssl/openssl/archive/OpenSSL_$OPENSSL_VERSION.tar.gz 

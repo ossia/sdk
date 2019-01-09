@@ -2,6 +2,8 @@
 export NPROC=$(nproc)
 export INSTALL_PREFIX=/opt/score-sdk
 export SDK_ROOT=$PWD
+export GIT=git
+export CMAKE=cmake
 
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export CC=$INSTALL_PREFIX/llvm/bin/clang
