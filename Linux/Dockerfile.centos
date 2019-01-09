@@ -1,0 +1,43 @@
+FROM centos:7
+
+RUN yum -y update
+
+RUN yum -y install epel-release centos-release-scl  
+RUN yum -y update
+RUN yum -y install \
+    devtoolset-7-gcc devtoolset-7-make devtoolset-7 \
+    libxcb-devel glibc-devel \
+    rh-git29 svn perl-Data-Dump perl-Data-Dumper \
+    ncurses-devel zlib-devel cmake3 scl-utils \
+    ninja-build wget flex bison rsync bzip2 make xz file \
+    perl harfbuzz-devel which perl-version libxcb \
+    xcb-util xcb-util-devel fontconfig-devel libX11-devel libXrender-devel libXi-devel  dbus-devel glib2-devel mesa-libGL-devel openssl-devel \
+    nasm  
+    
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-7" ]
+
+ADD ./CentOS/common-centos.sh /common.sh
+ADD ./llvm-deps.sh /image/llvm-deps.sh
+RUN /image/llvm-deps.sh
+
+ADD ./llvm.sh /image/llvm.sh
+RUN /image/llvm.sh
+
+ADD ./openssl.sh /image/openssl.sh
+RUN /image/openssl.sh
+
+ADD qt.sh /image/qt.sh
+RUN /image/qt.sh
+
+ADD ffmpeg.sh /image/ffmpeg.sh 
+RUN /image/ffmpeg.sh
+
+ADD faust.sh /image/faust.sh 
+RUN /image/faust.sh
+
+ADD portaudio.sh /image/portaudio.sh 
+RUN /image/portaudio.sh
+
+ADD jack.sh /image/jack.sh 
+RUN /image/jack.sh
+
