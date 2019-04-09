@@ -36,7 +36,6 @@ mkdir qt5-build-static
                    -no-gbm \
                    -no-directfb \
                    -no-eglfs \
-                   -no-mirclient \
                    -openssl-linked \
                    -I$INSTALL_PREFIX/openssl/include \
                    -no-dbus \

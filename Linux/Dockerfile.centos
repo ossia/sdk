@@ -29,9 +29,6 @@ RUN /image/openssl.sh
 ADD ffmpeg.sh /image/ffmpeg.sh 
 RUN /image/ffmpeg.sh
 
-ADD faust.sh /image/faust.sh 
-RUN /image/faust.sh
-
 ADD portaudio.sh /image/portaudio.sh 
 RUN /image/portaudio.sh
 
@@ -43,3 +40,6 @@ RUN /image/qt-deps.sh
 
 ADD qt.sh /image/qt.sh
 RUN /image/qt.sh
+
+ADD faust.sh /image/faust.sh 
+RUN /image/faust.sh

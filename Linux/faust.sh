@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-$GIT clone --depth=1 https://github.com/grame-cncm/faust
+$GIT clone --depth=1 https://github.com/grame-cncm/faust -b master-dev
 cd faust/build
 echo '
 set ( ASMJS_BACKEND  OFF CACHE STRING  "Include ASMJS backend" FORCE )
@@ -17,6 +17,8 @@ set ( OLDCPP_BACKEND OFF        CACHE STRING  "Include old CPP backend"   FORCE 
 set ( RUST_BACKEND   OFF        CACHE STRING  "Include RUST backend"      FORCE )
 set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 ' > backends/llvm.cmake
+
+sed -i 's/no-rtti/rtti/g' CMakeLists.txt
 
 mkdir -p faustdir
 cd faustdir
