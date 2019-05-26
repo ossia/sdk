@@ -3,10 +3,10 @@
 source ./common.sh
 
 wget -nv http://www.steinberg.net/sdk_downloads/ASIOSDK2.3.2.zip
-unzip x ASIOSDK2.3.2.zip
+unzip ASIOSDK2.3.2.zip
 
 wget -nv http://www.portaudio.com/archives/pa_snapshot.tgz
-tar xaf pa_snapshot.tgz
+tar.exe xaf pa_snapshot.tgz
 
 sed -i '387i TARGET_INCLUDE_DIRECTORIES(portaudio_static PUBLIC "$<INSTALL_INTERFACE:include>")' portaudio/CMakeLists.txt
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 export NPROC=4
-export INSTALL_PREFIX=/c/score-sdk
-export INSTALL_PREFIX_CMAKE=c:/score-sdk
+export INSTALL_PREFIX=/c/score-sdk-llvm
+export INSTALL_PREFIX_CMAKE=c:/score-sdk-llvm
 export SDK_ROOT=$PWD
 
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then

@@ -3,7 +3,7 @@
 source ./common.sh
 
 wget -nv https://ffmpeg.org/releases/ffmpeg-4.1.tar.bz2
-tar xaf ffmpeg-4.1.tar.bz2
+tar.exe xaf ffmpeg-4.1.tar.bz2
 
 mkdir ffmpeg-build
 cd ffmpeg-build

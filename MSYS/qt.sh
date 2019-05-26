@@ -1,6 +1,7 @@
 #!/bin/bash -eux
 
 source ./common.sh
+export PATH=/c/Perl64/bin:$PATH
 
 git clone https://code.qt.io/qt/qt5.git
 
@@ -10,7 +11,7 @@ git clone https://code.qt.io/qt/qt5.git
   git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
 )
 
-mkdir qt5-build-dynamic
+mkdir -p qt5-build-dynamic
 (
   cd qt5-build-dynamic
   ../qt5/configure -release \
@@ -24,15 +25,15 @@ mkdir qt5-build-dynamic
                    -no-gif \
                    -qt-libpng \
                    -qt-libjpeg \
-                   -qt-zlib \
                    -qt-freetype \
                    -qt-harfbuzz \
                    -qt-pcre \
-                   -glib \
                    -no-iconv \
                    -no-tslib \
                    -no-icu \
                    -no-pch \
+                   -opengl desktop \
+                   -platform win32-clang-g++ \
                    -prefix $INSTALL_PREFIX/qt5-dynamic
 
   make -j$NPROC
