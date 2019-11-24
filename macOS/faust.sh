@@ -21,15 +21,16 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 
 mkdir -p faustdir
 cd faustdir
-
-cmake -C ../backends/llvm.cmake .. \
+export PATH=$PATH:$INSTALL_PREFIX/llvm-libs/bin
+xcrun cmake -C ../backends/llvm.cmake .. \
+  -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX/llvm-libs \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
   -DINCLUDE_HTTP=0 \
   -DINCLUDE_EXECUTABLE=0 \
   -DINCLUDE_STATIC=1 \
-  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust
-#  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
+  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust \
+  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
   
-make -j$NPROC
-make install
+xcrun make -j$NPROC
+xcrun make install

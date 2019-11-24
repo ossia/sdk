@@ -7,7 +7,7 @@ git clone https://code.qt.io/qt/qt5.git
 
 (
   cd qt5
-  git checkout 5.12
+  git checkout 5.14
   git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
 )
 
@@ -19,6 +19,7 @@ mkdir -p qt5-build-dynamic
 (
   cd qt5-build-dynamic
   ../qt5/configure -release \
+                   -ltcg \
                    -opensource \
                    -confirm-license \
                    -nomake examples \

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# source ./common.sh
+source ./common.sh
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
@@ -8,7 +8,7 @@ mkdir -p llvm-build-3
 cd llvm-build-3
 # set PATH=/opt/score-sdk/llvm/bin:$PATH
 
-cmake \
+xcrun cmake \
  -G Ninja \
  -DCMAKE_BUILD_TYPE=Release \
  -DCMAKE_OSX_ARCHITECTURES=x86_64 \
@@ -29,6 +29,6 @@ cmake \
  -DCMAKE_MODULE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
  ../llvm
 
-ninja
-ninja install
+xcrun ninja
+xcrun ninja install
 )

@@ -9,11 +9,11 @@ gsed -i '378i TARGET_INCLUDE_DIRECTORIES(portaudio_static PUBLIC "$<INSTALL_INTE
 
 cd portaudio/build
 
-cmake .. \
+xcrun cmake .. \
  -DCMAKE_BUILD_TYPE=Release \
  -DPA_BUILD_SHARED=Off \
  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/portaudio
 
-make -j$NPROC
-make install
+xcrun make -j$NPROC
+xcrun make install
