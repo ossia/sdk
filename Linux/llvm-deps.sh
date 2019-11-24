@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-LLVM_VERSION=tags/RELEASE_701/rc2
+LLVM_VERSION=tags/RELEASE_900/final
 (
 svn co http://llvm.org/svn/llvm-project/llvm/$LLVM_VERSION llvm
 cd llvm/tools

@@ -2,13 +2,13 @@
 
 source ./common.sh
 
-wget -nv https://ffmpeg.org/releases/ffmpeg-4.1.tar.xz
-tar -xaf ffmpeg-4.1.tar.xz
+wget -nv https://ffmpeg.org/releases/ffmpeg-4.2.tar.xz
+tar -xaf ffmpeg-4.2.tar.xz
 
 mkdir ffmpeg-build
 cd ffmpeg-build
 
- ../ffmpeg-4.1/configure \
+ ../ffmpeg-4.2/configure \
         --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
