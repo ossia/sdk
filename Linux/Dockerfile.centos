@@ -38,9 +38,6 @@ RUN /image/portaudio.sh
 ADD jack.sh /image/jack.sh 
 RUN /image/jack.sh
 
-ADD qt-deps.sh /image/qt-deps.sh
-RUN /image/qt-deps.sh
-
 ADD qt.sh /image/qt.sh
 RUN /image/qt.sh
 
