@@ -11,7 +11,8 @@ git clone https://code.qt.io/qt/qt5.git
   git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
 )
 
-echo 'QMAKE_LFLAGS+= -L/opt/score-sdk/llvm/lib -lc++ -lc++abi -Wl,-rpath,/opt/score-sdk/llvm/lib' >> qt5/qtbase/mkspecs/common/clang-mac.conf
+# disabled since we can't seem to make custom libc++ not crash...
+# echo 'QMAKE_LFLAGS+= -L/opt/score-sdk-osx/llvm/lib -lc++ -lc++abi -Wl,-rpath,/opt/score-sdk-osx/llvm/lib' >> qt5/qtbase/mkspecs/common/clang-mac.conf
 fi
 
 

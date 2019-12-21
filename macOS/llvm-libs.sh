@@ -22,12 +22,14 @@ xcrun cmake \
  -DLLVM_ENABLE_LIBCXX=OFF \
  -DLLVM_ENABLE_LLD=OFF \
  -DLLVM_ENABLE_RTTI=ON \
+ -DLLVM_ENABLE_EH=ON \
  -DCOMPILER_RT_ENABLE_IOS=OFF \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm-libs \
- -DCMAKE_SHARED_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
- -DCMAKE_EXE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
- -DCMAKE_MODULE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
  ../llvm
+
+# -DCMAKE_SHARED_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
+# -DCMAKE_EXE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
+# -DCMAKE_MODULE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
 
 xcrun ninja
 xcrun ninja install

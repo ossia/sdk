@@ -2,7 +2,10 @@
 
 source ./common.sh
 
-git clone --recursive -j4 https://github.com/grame-cncm/faust
+if [[ ! -d faust ]] ; 
+then
+  git clone --recursive -j4 https://github.com/grame-cncm/faust
+fi
 
 cd faust/build
 echo '
