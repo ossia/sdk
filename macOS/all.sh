@@ -1,9 +1,10 @@
 #!/bin/bash
 
-./deps.sh
-./llvm.sh
+# ./deps.sh
+# ./llvm.sh
 ./qt.sh
 ./ffmpeg.sh
 ./portaudio.sh
 ./sdl.sh
+./llvm-libs.sh
 ./faust.sh

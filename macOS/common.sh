@@ -1,5 +1,6 @@
 #!/bin/bash
-export MACOS_VERSION=10.11
+export MACOS_VERSION=10.14
+export MACOS_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk
 export NPROC=$(sysctl -n hw.logicalcpu)
 export INSTALL_PREFIX=/opt/score-sdk-osx
 export SDK_ROOT=$PWD
@@ -10,5 +11,5 @@ if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export PATH=$INSTALL_PREFIX/llvm/bin:$PATH
 fi
 
-export CFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION"
-export CXXFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION"
+export CFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION -march=ivybridge -mtune=haswell"
+export CXXFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION -march=ivybridge -mtune=haswell"

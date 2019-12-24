@@ -20,9 +20,12 @@ xcrun ../ffmpeg-4.2/configure \
  	--disable-videotoolbox \
  	--disable-network --disable-iconv \
  	--enable-protocols  --disable-lzma \
+ 	--disable-sse42 \
+ 	--disable-avx   \
+ 	--disable-fma4 \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
-        --cc="$CC" --cxx="$CXX" \
- 	--extra-cflags="-mmacosx-version-min=$MACOS_VERSION"
+    --cc="$CC" --cxx="$CXX" \
+ 	--extra-cflags="$CFLAGS"
 
 xcrun make -j$NPROC
 xcrun make install
