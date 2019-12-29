@@ -13,7 +13,7 @@ export QT_BRANCH=5.14
 
   (
   cd qtbase
-  $GIT checkout $QT_BRANCH
+  $GIT fetch "https://codereview.qt-project.org/qt/qtbase" refs/changes/27/285127/1 && $GIT checkout FETCH_HEAD
   sed -i 's/fuse-ld=gold/fuse-ld=lld/g' \
     mkspecs/common/gcc-base-unix.conf \
     mkspecs/features/qt_configure.prf \

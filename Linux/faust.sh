@@ -2,7 +2,11 @@
 
 source ./common.sh
 
+if [[ ! -d faust ]] ; 
+then
 $GIT clone --depth=1 https://github.com/grame-cncm/faust -b master-dev
+fi
+
 cd faust/build
 echo '
 set ( ASMJS_BACKEND  OFF CACHE STRING  "Include ASMJS backend" FORCE )
@@ -29,6 +33,7 @@ $CMAKE \
     -DINCLUDE_HTTP=0 \
     -DINCLUDE_EXECUTABLE=0 \
     -DINCLUDE_STATIC=1 \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust \
     .. 
     

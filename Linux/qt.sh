@@ -2,6 +2,11 @@
 
 source ./common.sh
 
+(
+  cd qt5/qtbase
+  $GIT checkout 5.14
+  $GIT cherry-pick a486c71
+)
 mkdir qt5-build-static
 (
   cd qt5-build-static
@@ -49,7 +54,16 @@ mkdir qt5-build-static
   make install -j$NPROC
 )
 
+(
+  cd qt5
+  git clone https://code.qt.io/qt-labs/qtshadertools.git
+  cd qtshadertools
+  $INSTALL_PREFIX/qt5-static/bin/qmake 
+  make -j$NPROC
+  make install -j$NPROC
+)
 exit 0
+
 mkdir qt5-build-dynamic
 (
   cd qt5-build-dynamic

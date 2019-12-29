@@ -2,8 +2,10 @@
 
 source ./common.sh
 
-wget -nv https://ffmpeg.org/releases/ffmpeg-4.2.tar.xz
-tar -xaf ffmpeg-4.2.tar.xz
+if [[ ! -d ffmpeg-4.2 ]]; then
+  wget -nv https://ffmpeg.org/releases/ffmpeg-4.2.tar.xz
+  tar -xaf ffmpeg-4.2.tar.xz
+fi
 
 mkdir ffmpeg-build
 cd ffmpeg-build
@@ -17,7 +19,8 @@ cd ffmpeg-build
  	--disable-openssl --disable-securetransport \
  	--disable-network --disable-iconv \
  	--enable-protocols --disable-lzma \
- 	--prefix=$INSTALL_PREFIX/ffmpeg 
+ 	--prefix=$INSTALL_PREFIX/ffmpeg \
+ 	--extra-cflags="$CFLAGS"
 
 make -j$NPROC
 make install
