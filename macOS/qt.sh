@@ -7,8 +7,10 @@ git clone https://code.qt.io/qt/qt5.git
 
 (
   cd qt5
-  git checkout 5.14
+  git checkout 5.15
   git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
+  
+  git clone https://code.qt.io/qt-labs/qtshadertools.git
 )
 
 # disabled since we can't seem to make custom libc++ not crash...
@@ -54,3 +56,11 @@ mkdir -p qt5-build-dynamic
   make -j$NPROC
   make install -j$NPROC
 )
+(
+  cd qt5
+  cd qtshadertools
+  $INSTALL_PREFIX/qt5-dynamic/bin/qmake 
+  make -j$NPROC
+  make install -j$NPROC
+)
+
