@@ -1,10 +1,44 @@
 #!/bin/bash
-rm -rf llvm-build
+
 source ./common.sh
 CMAKE=cmake
-CC=/c/score-sdk/llvm/bin/clang.exe
-CXX=/c/score-sdk/llvm/bin/clang++.exe
+
+
+# LLVM is bootstrapped so that it is all built with the same libc++ version
 (
+export PATH=$INSTALL_PREFIX/llvm/x86_64-w64-mingw32/bin:$PATH
+rm -rf llvm-build
+mkdir -p llvm-build
+cd llvm-build
+
+$CMAKE -G"MSYS Makefiles" \
+ -DCMAKE_C_FLAGS="-O3" \
+ -DCMAKE_CXX_FLAGS="-O3" \
+ -DCMAKE_BUILD_TYPE=Release \
+ -DBUILD_SHARED_LIBS=0 \
+ -DLLVM_INCLUDE_TOOLS=1 \
+ -DLLVM_BUILD_TOOLS=1 \
+ -DLLVM_INCLUDE_EXAMPLES=0 \
+ -DLLVM_INCLUDE_TESTS=0 \
+ -DLLVM_ENABLE_CXX1Z=1 \
+ -DLLVM_TARGETS_TO_BUILD="X86" \
+ -DLLVM_ENABLE_LIBCXX=OFF \
+ -DLLVM_ENABLE_LLD=OFF \
+ -DLLVM_ENABLE_EH=ON \
+ -DLLVM_ENABLE_RTTI=ON \
+ -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm-libs \
+ ../llvm/llvm
+
+make -j$NPROC
+make install/strip
+)
+
+exit 0
+# old stuff
+
+
+(
+rm -rf llvm-build
 mkdir -p llvm-build
 cd llvm-build
 $CMAKE -G"MSYS Makefiles" \
