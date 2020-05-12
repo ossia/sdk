@@ -4,7 +4,7 @@ source ./common.sh
 
 if [[ ! -f SDL2-2.0.10.tar.gz ]]; then
   wget -nv https://www.libsdl.org/release/SDL2-2.0.10.tar.gz
-  gtar xaf SDL2-2.0.10.tar.gz
+  tar xaf SDL2-2.0.10.tar.gz
 fi
 
 mkdir sdl-build

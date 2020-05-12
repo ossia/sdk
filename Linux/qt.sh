@@ -1,19 +1,27 @@
 #!/bin/bash -eux
-export SDK_ROOT=$(realpath $PWD/..)
+export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
 
-(
-  cd qt5/qtbase
-  $GIT checkout 5.15
-  # $GIT cherry-pick a486c71
-  sed -i "s/-O2/$CFLAGS/" mkspecs/common/gcc-base.conf
-)
-mkdir qt5-build-static
+if [[ ! -d qt5 ]]; then
+  git clone https://code.qt.io/qt/qt5.git
+  (
+    cd qt5
+    $GIT checkout 5.15
+    git submodule update --init --recursive qtbase qtdeclarative qtserialport qtimageformats qtwebsockets
+    (
+      cd qtbase
+      $GIT checkout 5.15
+      # $GIT cherry-pick a486c71
+      sed -i "s/-O2/$CFLAGS/" mkspecs/common/gcc-base.conf
+    )
+  )
+fi
+mkdir -p qt5-build-static
 (
   cd qt5-build-static
   
   export OPENSSL_LIBS="$INSTALL_PREFIX/openssl/lib/libssl.a $INSTALL_PREFIX/openssl/lib/libcrypto.a -ldl -pthread"
-  ../qt5/configure $(cat "$SDK_ROOT/common/qtfeatures") \
+  ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
                    -no-compile-examples \
                    -no-qml-debug \
@@ -33,6 +41,8 @@ mkdir qt5-build-static
   cd qt5
   $GIT clone https://code.qt.io/qt-labs/qtshadertools.git
   cd qtshadertools
+  sed -i '311d' src/3rdparty/glslang/glslang/Include/PoolAlloc.h
+  sed -i '244d' src/3rdparty/glslang/glslang/Include/PoolAlloc.h
   $INSTALL_PREFIX/qt5-static/bin/qmake 
   make -j$NPROC
   make install -j$NPROC
