@@ -1,5 +1,6 @@
 #!/bin/bash -eux
 
+export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
 
 if [[ ! -d qt5 ]]; then
@@ -8,7 +9,7 @@ git clone https://code.qt.io/qt/qt5.git
 (
   cd qt5
   git checkout 5.15
-  git submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
+  git submodule update --init --recursive qtbase qtdeclarative qtserialport qtimageformats qtwebsockets
   
   git clone https://code.qt.io/qt-labs/qtshadertools.git
 )
@@ -22,16 +23,13 @@ gsed -i "s/10.13/10.14/" qt5/qtbase/mkspecs/common/macx.conf
 fi
 
 
-mkdir -p qt5-build-dynamic
+mkdir -p qt5-build-static
 (
-  cd qt5-build-dynamic
-  ../qt5/configure -release \
-                   -ltcg \
-                   -opensource \
-                   -confirm-license \
+  exit 0
+  cd qt5-build-static
+  ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -c++std c++17 \
-                   -nomake examples \
-                   -nomake tests \
+                   -static \
                    -no-compile-examples \
                    -no-qml-debug \
                    -qt-zlib \
@@ -49,9 +47,8 @@ mkdir -p qt5-build-dynamic
                    -no-iconv \
                    -no-tslib \
                    -no-icu \
-                   -no-pch \
                    -no-system-proxies \
-                   -prefix $INSTALL_PREFIX/qt5-dynamic
+                   -prefix $INSTALL_PREFIX/qt5-static
 
   make -j$NPROC
   make install -j$NPROC
@@ -59,7 +56,8 @@ mkdir -p qt5-build-dynamic
 (
   cd qt5
   cd qtshadertools
-  $INSTALL_PREFIX/qt5-dynamic/bin/qmake 
+  git clean -dffx
+  $INSTALL_PREFIX/qt5-static/bin/qmake 
   make -j$NPROC
   make install -j$NPROC
 )
