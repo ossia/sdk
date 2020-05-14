@@ -1,29 +1,34 @@
 #!/bin/bash -eux
 
 source ./common.sh
+export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 $GIT clone https://code.qt.io/qt/qt5.git
 
-export QT_BRANCH=5.14
+export QT_BRANCH=5.15
+
+if [[ ! -d qt5 ]]; then
+  $GIT clone https://code.qt.io/qt/qt5.git
+  (
+    cd qt5
+    $GIT checkout 5.15
+    $GIT submodule update --init --recursive qtbase qtdeclarative qtserialport qtimageformats qtwebsockets
+  )
+fi
+
 (
   cd qt5
   $GIT checkout $QT_BRANCH
-  $GIT submodule update --init --recursive qtbase qtdeclarative qtquickcontrols2 qtserialport qtimageformats qtgraphicaleffects qtsvg qtwebsockets
+  $GIT submodule update --init --recursive $(cat "$SDK_COMMON_ROOT/common/qtmodules")
   $GIT config --global user.email "you@example.com"
   $GIT config --global user.name "Your Name"
 
   (
-  cd qtbase
-  $GIT fetch "https://codereview.qt-project.org/qt/qtbase" refs/changes/27/285127/1 && $GIT checkout FETCH_HEAD
-  sed -i 's/fuse-ld=gold/fuse-ld=lld/g' \
-    mkspecs/common/gcc-base-unix.conf \
-    mkspecs/features/qt_configure.prf \
-    configure.json   
+    cd qtbase
+    sed -i 's/fuse-ld=gold/fuse-ld=lld/g' \
+      mkspecs/common/gcc-base-unix.conf \
+      mkspecs/features/qt_configure.prf \
+      configure.json   
+
+    sed -i "s/-O2/$CFLAGS/" mkspecs/common/gcc-base.conf
   )
-  (cd qtdeclarative ; $GIT checkout $QT_BRANCH)
-  (cd qtquickcontrols2 ; $GIT checkout $QT_BRANCH)
-  (cd qtserialport ; $GIT checkout $QT_BRANCH)
-  (cd qtimageformats ; $GIT checkout $QT_BRANCH)
-  (cd qtgraphicaleffects ; $GIT checkout $QT_BRANCH)
-  (cd qtsvg ; $GIT checkout $QT_BRANCH)
-  (cd qtwebsockets ; $GIT checkout $QT_BRANCH)
 )

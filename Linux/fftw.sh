@@ -8,10 +8,10 @@ if [[ ! -f fftw-$FFTW_VERSION.tar.gz ]]; then
   tar xaf fftw-$FFTW_VERSION.tar.gz
 fi
 
-mkdir fftw-build
+mkdir -p fftw-build
 cd fftw-build
 
-CFLAGS+=" -O3 -fomit-frame-pointer -malign=double -fstrict-aliasing -ffast-math"
+CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
 ../fftw-$FFTW_VERSION/configure   \
     --prefix=$INSTALL_PREFIX/fftw \
     --enable-fma                  \

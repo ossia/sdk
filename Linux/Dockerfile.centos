@@ -26,11 +26,11 @@ RUN /image/qt-deps.sh
 ADD ./llvm.sh /image/llvm.sh
 RUN /image/llvm.sh
 
-ADD ./openssl.sh /image/openssl.sh
-RUN /image/openssl.sh
-
 ADD ffmpeg.sh /image/ffmpeg.sh 
 RUN /image/ffmpeg.sh
+
+ADD ./openssl.sh /image/openssl.sh
+RUN /image/openssl.sh
 
 ADD portaudio.sh /image/portaudio.sh 
 RUN /image/portaudio.sh
@@ -38,8 +38,12 @@ RUN /image/portaudio.sh
 ADD jack.sh /image/jack.sh 
 RUN /image/jack.sh
 
+ADD fftw.sh /image/fftw.sh 
+RUN /image/fftw.sh
+
 ADD qt.sh /image/qt.sh
 RUN /image/qt.sh
 
 ADD faust.sh /image/faust.sh 
 RUN /image/faust.sh
+

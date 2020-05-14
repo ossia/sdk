@@ -5,7 +5,7 @@ source ./common.sh
 (
 mkdir -p llvm-build
 cd llvm-build
-$CMAKE \
+$CMAKE -GNinja \
  -DCMAKE_BUILD_TYPE=Release \
  -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
  -DLLVM_TARGETS_TO_BUILD="X86" \
@@ -21,8 +21,8 @@ $CMAKE \
  -DCMAKE_INSTALL_PREFIX=$SDK_ROOT/llvm-bootstrap \
  ../llvm
 
-make -j$NPROC
-make install/strip
+ninja
+ninja install/strip
 )
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version
@@ -33,11 +33,11 @@ cd llvm-build
 export PATH=$SDK_ROOT/llvm-bootstrap/bin:$PATH
 export LD_LIBRARY_PATH=$SDK_ROOT/llvm-bootstrap/lib:$LD_LIBRARY_PATH
 
-$CMAKE \
+$CMAKE -GNinja \
  -DCMAKE_C_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang \
  -DCMAKE_CXX_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang++ \
- -DCMAKE_C_FLAGS="-O3" \
- -DCMAKE_CXX_FLAGS="-O3" \
+ -DCMAKE_C_FLAGS="-O3 -mtune=haswell" \
+ -DCMAKE_CXX_FLAGS="-O3 -mtune=haswell" \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=0 \
  -DLLVM_INCLUDE_TOOLS=1 \
@@ -63,6 +63,6 @@ $CMAKE \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm \
  ../llvm
 
-make -j$NPROC
-make install/strip
+ninja -j$NPROC
+ninja install/strip
 )
