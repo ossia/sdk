@@ -20,10 +20,8 @@ mkdir -p qt5-build-static
 
 (
   cd qt5
-  $GIT clone https://code.qt.io/qt-labs/qtshadertools.git
+  $GIT clone https://github.com/jcelerier/qtshadertools.git
   cd qtshadertools
-  sed -i '311d' src/3rdparty/glslang/glslang/Include/PoolAlloc.h
-  sed -i '244d' src/3rdparty/glslang/glslang/Include/PoolAlloc.h
   $INSTALL_PREFIX/qt5-static/bin/qmake 
   make -j$NPROC
   make install -j$NPROC
