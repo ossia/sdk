@@ -7,11 +7,12 @@
 mkdir portaudio-build
 cd portaudio-build
 cmake ../portaudio `
-    -G "Visual Studio 15 2017 Win64" `
+    -G "Visual Studio 16 2019" `
+    -A x64 `
     -T host=x64 `
     -DCMAKE_BUILD_TYPE=Release `
     -DPA_BUILD_SHARED=Off `
     -DPA_DLL_LINK_WITH_STATIC_RUNTIME=Off `
-    -DCMAKE_INSTALL_PREFIX=c:\score-sdk\portaudio_release
+    -DCMAKE_INSTALL_PREFIX=c:\score-sdk-msvc\portaudio
 cmake --build . --config Release
 cmake --build . --config Release --target INSTALL

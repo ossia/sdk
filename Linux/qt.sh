@@ -7,7 +7,7 @@ if [[ ! -d qt5 ]]; then
   (
     cd qt5
     $GIT checkout 5.15
-    git submodule update --init --recursive qtbase qtdeclarative qtserialport qtimageformats qtwebsockets
+    git submodule update --init --recursive  $(cat "$SDK_COMMON_ROOT/common/qtmodules")
     (
       cd qtbase
       $GIT checkout 5.15
@@ -23,16 +23,12 @@ mkdir -p qt5-build-static
   export OPENSSL_LIBS="$INSTALL_PREFIX/openssl/lib/libssl.a $INSTALL_PREFIX/openssl/lib/libcrypto.a -ldl -pthread"
   ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
-                   -no-compile-examples \
-                   -no-qml-debug \
                    -system-zlib \
                    -openssl-linked \
                    -I$INSTALL_PREFIX/openssl/include \
                    -platform linux-clang-libc++ \
                    -prefix $INSTALL_PREFIX/qt5-static
 
-                   #-qt-xcb \
-                   
   make -j$NPROC
   make install -j$NPROC
 )

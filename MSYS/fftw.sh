@@ -5,14 +5,14 @@ source ./common.sh
 export FFTW_VERSION=3.3.8
 if [[ ! -f fftw-$FFTW_VERSION.tar.gz ]]; then
   wget -nv http://fftw.org/fftw-$FFTW_VERSION.tar.gz
-  gtar xaf fftw-$FFTW_VERSION.tar.gz
+  tar xaf fftw-$FFTW_VERSION.tar.gz
 fi
 
 mkdir fftw-build
 cd fftw-build
 
 CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
-xcrun ../fftw-$FFTW_VERSION/configure   \
+../fftw-$FFTW_VERSION/configure   \
     --prefix=$INSTALL_PREFIX/fftw \
     --enable-fma                  \
     --enable-generic-simd128      \
@@ -23,9 +23,10 @@ xcrun ../fftw-$FFTW_VERSION/configure   \
     --enable-avx2                 \
     --enable-fma                  \
     --disable-fortran             \
+    --with-our-malloc16           \
     --with-gcc-arch=haswell       \
     CC="clang"                    \
     CXX="clang++"
 
-xcrun make -j$NPROC
-xcrun make install
+make -j$NPROC
+make install

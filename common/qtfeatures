@@ -1,6 +1,8 @@
 -release
+-c++std c++17
 -nomake examples
--nomake tests
+-nomake tests      
+-no-compile-examples
 -no-qml-debug
 -no-mtdev 
 -no-journald 
@@ -21,7 +23,8 @@
 -no-dbus 
 -no-directfb 
 -no-eglfs 
--feature-qml-devtools              
+-feature-qml-devtools
+-no-qml-debug         
 -opensource                        
 -confirm-license                   
 -no-feature-accessibility          
