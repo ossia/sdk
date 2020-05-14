@@ -18,11 +18,12 @@ $CMAKE -GNinja \
  -DLIBCXX_USE_COMPILER_RT=OFF \
  -DLIBCXXABI_USE_COMPILER_RT=OFF \
  -DLIBUNWIND_USE_COMPILER_RT=OFF \
+ -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind;lld;polly" \
  -DCMAKE_INSTALL_PREFIX=$SDK_ROOT/llvm-bootstrap \
- ../llvm
+ ../llvm/llvm
 
-ninja
-ninja install/strip
+$CMAKE --build .
+$CMAKE --build . --target install/strip
 )
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version
@@ -36,8 +37,8 @@ export LD_LIBRARY_PATH=$SDK_ROOT/llvm-bootstrap/lib:$LD_LIBRARY_PATH
 $CMAKE -GNinja \
  -DCMAKE_C_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang \
  -DCMAKE_CXX_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang++ \
- -DCMAKE_C_FLAGS="-O3 -mtune=haswell" \
- -DCMAKE_CXX_FLAGS="-O3 -mtune=haswell" \
+ -DCMAKE_C_FLAGS="$CFLAGS" \
+ -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=0 \
  -DLLVM_INCLUDE_TOOLS=1 \
@@ -50,6 +51,7 @@ $CMAKE -GNinja \
  -DLLVM_ENABLE_LLD=ON \
  -DLLVM_ENABLE_EH=ON \
  -DLLVM_ENABLE_RTTI=ON \
+ -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind;lld;polly" \
  -DCLANG_DEFAULT_CXX_STDLIB:STRING=libc++ \
  -DCLANG_DEFAULT_RTLIB:STRING=libgcc \
  -DLIBCXX_ABI_UNSTABLE=ON \
@@ -61,8 +63,8 @@ $CMAKE -GNinja \
  -DLIBUNWIND_USE_COMPILER_RT=OFF \
  -DCOMPILER_RT_USE_BUILTINS_LIBRARY=OFF \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm \
- ../llvm
+ ../llvm/llvm
 
-ninja -j$NPROC
-ninja install/strip
+$CMAKE --build .
+$CMAKE --build . --target install/strip
 )

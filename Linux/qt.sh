@@ -1,5 +1,4 @@
 #!/bin/bash -eux
-export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
 
 mkdir -p qt5-build-static
@@ -7,7 +6,7 @@ mkdir -p qt5-build-static
   cd qt5-build-static
   
   export OPENSSL_LIBS="$INSTALL_PREFIX/openssl/lib/libssl.a $INSTALL_PREFIX/openssl/lib/libcrypto.a -ldl -pthread"
-  ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
+  ../qt5/configure $(cat "$SDK_ROOT/common/qtfeatures") \
                    -static \
                    -system-zlib \
                    -openssl-linked \
