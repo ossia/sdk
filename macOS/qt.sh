@@ -25,7 +25,6 @@ fi
 
 mkdir -p qt5-build-static
 (
-  exit 0
   cd qt5-build-static
   ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
