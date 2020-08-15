@@ -11,7 +11,7 @@ git clone https://code.qt.io/qt/qt5.git
   git checkout 5.15
   git submodule update --init --recursive $(cat "$SDK_COMMON_ROOT/common/qtmodules")
   
-  git clone https://code.qt.io/qt-labs/qtshadertools.git
+  git clone https://github.com/jcelerier/qtshadertools.git
 )
 
 # disabled since we can't seem to make custom libc++ not crash...
