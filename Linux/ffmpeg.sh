@@ -1,17 +1,18 @@
 #!/bin/bash
 
 source ./common.sh
+VERSION=4.3
 
-if [[ ! -d ffmpeg-4.2 ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-4.2.tar.xz
-  tar -xaf ffmpeg-4.2.tar.xz
+if [[ ! -d ffmpeg-$VERSION ]]; then
+  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
+  gtar xaf ffmpeg-$VERSION.tar.bz2
 fi
 
 mkdir ffmpeg-build
 cd ffmpeg-build
 
- ../ffmpeg-4.2/configure \
-        --arch=x86_64 --cpu=x86_64 \
+ ../ffmpeg-$VERSION/configure \
+    --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
  	--pkg-config-flags="--static" \
