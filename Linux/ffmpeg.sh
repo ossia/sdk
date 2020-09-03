@@ -25,4 +25,3 @@ cd ffmpeg-build
 
 make -j$NPROC
 make install
-cd ..

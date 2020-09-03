@@ -11,7 +11,7 @@ fi
 mkdir -p fftw-build
 cd fftw-build
 
-CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
+CFLAGS+=" -O3 -fstrict-aliasing -ffast-math"
 ../fftw-$FFTW_VERSION/configure   \
     --prefix=$INSTALL_PREFIX/fftw \
     --enable-fma                  \
@@ -22,9 +22,8 @@ CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
     --enable-avx-128-fma          \
     --enable-avx2                 \
     --enable-fma                  \
-    --disable-fortran             \
-    --with-gcc-arch=haswell       \
-    --disable-fortran
+    --disable-fortran           # \
+#    --with-gcc-arch=haswell
 
 make -j$NPROC
 make install

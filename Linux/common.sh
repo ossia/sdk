@@ -4,8 +4,8 @@ export INSTALL_PREFIX=/opt/score-sdk
 export SDK_ROOT=$PWD
 export GIT=git
 export CMAKE=cmake
-export CFLAGS="-O3 -march=ivybridge -mtune=haswell"
-export CXXFLAGS="-O3 -march=ivybridge -mtune=haswell"
+export CFLAGS="-O3 -march=x86-64 -mtune=haswell" # -march=ivybridge -mtune=haswell"
+export CXXFLAGS="-O3 -march=x86-64 -mtune=haswell" # -march=ivybridge -mtune=haswell"
 
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export CC=$INSTALL_PREFIX/llvm/bin/clang

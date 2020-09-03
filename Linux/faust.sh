@@ -38,4 +38,4 @@ $CMAKE \
     .. 
     
 make -j$NPROC
-make install
+make install/strip

@@ -35,4 +35,4 @@ $CMAKE -DSDL_STATIC=1 \
  ../SDL2-2.0.10
 
 make -j$NPROC
-make install
+make install/strip

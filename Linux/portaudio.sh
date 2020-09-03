@@ -24,4 +24,4 @@ $CMAKE .. \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/portaudio
 
 make -j$NPROC
-make install
+make install/strip
