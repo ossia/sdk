@@ -20,7 +20,7 @@ git clone https://code.qt.io/qt/qt5.git
 )
 fi
 
-mkdir qt5-build-dynamic
+mkdir -p qt5-build-dynamic
 (
   cd qt5-build-dynamic
   ../qt5/configure -release \

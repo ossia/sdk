@@ -7,10 +7,9 @@ if [[ ! -f ffmpeg-4.2.2.tar.bz2 ]]; then
   tar xaf ffmpeg-4.2.2.tar.bz2
 fi
 
-mkdir ffmpeg-build
-cd ffmpeg-build
+cd ffmpeg-4.2.2
 
- ../ffmpeg-4.2.2/configure \
+ ./configure \
     --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \

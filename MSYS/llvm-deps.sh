@@ -1,8 +1,9 @@
 #!/bin/bash
 
 source ./common.sh
-cp -rf /c/dev/llvm-mingw/llvm-project/ llvm
-
+git clone https://github.com/llvm/llvm-project llvm
+cd llvm 
+git checkout release/10.x
 # LLVM_VERSION=trunk
 # (
 # svn co http://llvm.org/svn/llvm-project/llvm/$LLVM_VERSION llvm

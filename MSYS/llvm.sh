@@ -7,11 +7,11 @@ CMAKE=cmake
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
 export PATH=$INSTALL_PREFIX/llvm/x86_64-w64-mingw32/bin:$PATH
-rm -rf llvm-build
+# rm -rf llvm-build
 mkdir -p llvm-build
 cd llvm-build
 
-$CMAKE -G"MSYS Makefiles" \
+$CMAKE -GNinja \
  -DCMAKE_C_FLAGS="-O3" \
  -DCMAKE_CXX_FLAGS="-O3" \
  -DCMAKE_BUILD_TYPE=Release \
@@ -21,6 +21,7 @@ $CMAKE -G"MSYS Makefiles" \
  -DLLVM_INCLUDE_EXAMPLES=0 \
  -DLLVM_INCLUDE_TESTS=0 \
  -DLLVM_ENABLE_CXX1Z=1 \
+ -DLLVM_ENABLE_PROJECTS="clang" \
  -DLLVM_TARGETS_TO_BUILD="X86" \
  -DLLVM_ENABLE_LIBCXX=OFF \
  -DLLVM_ENABLE_LLD=OFF \
@@ -29,8 +30,8 @@ $CMAKE -G"MSYS Makefiles" \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm-libs \
  ../llvm/llvm
 
-make -j$NPROC
-make install/strip
+ninja -j$NPROC
+ninja install/strip
 )
 
 exit 0

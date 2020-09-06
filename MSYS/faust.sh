@@ -22,12 +22,17 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 mkdir -p faustdir
 cd faustdir
 
+#For some reason DNDEBUG is not included even though it is in 
+#CMAKE_CXX_FLAGS_RELEASE, which causes issues with 
+# undefined symbol: llvm::cfg::Update<llvm::BasicBlock*>::dump() const
+
 cmake -G "MSYS Makefiles" -C ../backends/llvm.cmake .. \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
   -DINCLUDE_HTTP=0 \
   -DINCLUDE_EXECUTABLE=0 \
   -DINCLUDE_STATIC=1 \
+  -DCMAKE_CXX_FLAGS="-DNDEBUG" \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/faust
 
 make -j$NPROC
