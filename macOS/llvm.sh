@@ -3,11 +3,19 @@
 #source ./common.sh
 SDK_ROOT=$PWD
 INSTALL_PREFIX=/opt/score-sdk-osx
-LLVM_VERSION=tags/RELEASE_900/final
+
+
+
+# LLVM_VERSION=tags/RELEASE_900/final
 (
 if [[ -d llvm ]]; then 
   exit
 fi
+
+git clone https://github.com/llvm/llvm-project -b release/11.x --depth=1 llvm
+cd llvm
+git checkout release/11.x
+exit
 
 svn co http://llvm.org/svn/llvm-project/llvm/$LLVM_VERSION llvm
 cd llvm/tools
@@ -36,6 +44,8 @@ cd ../..
 #svn co http://llvm.org/svn/llvm-project/libcxxabi/$LLVM_VERSION libcxxabi
 #cd ../..
 )
+
+exit
 
 (
 if [[ -d llvm-boostrap ]]; then
