@@ -15,6 +15,7 @@ fi
 git clone https://github.com/llvm/llvm-project -b release/11.x --depth=1 llvm
 cd llvm
 git checkout release/11.x
+gsed -i 's/Diags.isIgnored/!Diags.isIgnored/g' llvm/clang/lib/Frontend/CompilerInvocation.cpp
 exit
 
 svn co http://llvm.org/svn/llvm-project/llvm/$LLVM_VERSION llvm
