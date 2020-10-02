@@ -6,9 +6,10 @@ if [[ ! -f ASIOSDK2.3.2.zip ]]; then
   unzip ASIOSDK2.3.2.zip
 fi
 
-if [[ ! -f pa_snapshot.tgz ]]; then
-  wget -nv http://www.portaudio.com/archives/pa_snapshot.tgz
-  tar xaf pa_snapshot.tgz
+if [[ ! -d portaudio ]]; then
+  git clone https://github.com/portaudio/portaudio
+  cd portaudio
+  git merge origin/winrt -m 'merge wasapi patch'
 fi
 
 sed -i '378i TARGET_INCLUDE_DIRECTORIES(portaudio_static PUBLIC "$<INSTALL_INTERFACE:include>")' portaudio/CMakeLists.txt
