@@ -1,7 +1,17 @@
 #!/bin/bash
 
 source ./common.sh
-cp -rf /c/dev/llvm-mingw/llvm-project/ llvm
+
+
+git clone https://github.com/llvm/llvm-project.git llvm
+(
+    cd llvm
+    git checkout release/11.x
+    sed -i 's/Diags.isIgnored/!Diags.isIgnored/g' clang/lib/Frontend/CompilerInvocation.cpp
+)
+
+
+# cp -rf /c/dev/llvm-mingw/llvm-project/ llvm
 
 # LLVM_VERSION=trunk
 # (

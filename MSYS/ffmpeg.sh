@@ -2,15 +2,17 @@
 
 source ./common.sh
 
-if [[ ! -f ffmpeg-4.2.2.tar.bz2 ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-4.2.2.tar.bz2
-  tar xaf ffmpeg-4.2.2.tar.bz2
+export VERSION=4.3.1
+
+if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
+  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
+  tar xaf ffmpeg-$VERSION.tar.bz2
 fi
 
 mkdir ffmpeg-build
 cd ffmpeg-build
 
- ../ffmpeg-4.2.2/configure \
+ ../ffmpeg-$VERSION/configure \
     --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \

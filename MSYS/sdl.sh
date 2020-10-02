@@ -1,9 +1,10 @@
 #!/bin/bash
 
 source ./common.sh
+VERSION=2.0.12
 
-wget -nv https://www.libsdl.org/release/SDL2-2.0.10.tar.gz
-tar.exe xaf SDL2-2.0.10.tar.gz
+wget -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
+tar.exe xaf SDL2-$VERSION.tar.gz
 
 mkdir sdl-build
 cd sdl-build
@@ -32,7 +33,7 @@ cmake \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
- ../SDL2-2.0.10
+ ../SDL2-$VERSION
 
 make -j$NPROC
 make install

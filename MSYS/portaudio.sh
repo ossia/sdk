@@ -14,6 +14,8 @@ fi
 
 sed -i '378i TARGET_INCLUDE_DIRECTORIES(portaudio_static PUBLIC "$<INSTALL_INTERFACE:include>")' portaudio/CMakeLists.txt
 
+rm -rf portaudio/build
+mkdir -p portaudio/build
 cd portaudio/build
 
 cmake .. \

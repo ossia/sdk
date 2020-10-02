@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 source ./common.sh
 
-git clone --recursive -j4 https://github.com/grame-cncm/faust
+if [[ ! -d faust ]]; then
+  git clone --recursive -j4 https://github.com/grame-cncm/faust
+fi
 
 cd faust/build
 echo '
@@ -22,12 +24,19 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 mkdir -p faustdir
 cd faustdir
 
-cmake -G "MSYS Makefiles" -C ../backends/llvm.cmake .. \
+ls /c/score-sdk/llvm-libs
+export PATH=$INSTALL_PREFIX/llvm-libs/bin:$PATH
+echo $PATH
+which llvm-config
+
+cmake -G "MSYS Makefiles" -C ../backends/llvm.cmake ..  \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
   -DINCLUDE_HTTP=0 \
   -DINCLUDE_EXECUTABLE=0 \
   -DINCLUDE_STATIC=1 \
+  -DCMAKE_PREFIX_PATH=c:/score-sdk/llvm-libs \
+  -DLLVM_CONFIG=c:/score-sdk/llvm-libs/bin/llvm-config.exe \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/faust
 
 make -j$NPROC
