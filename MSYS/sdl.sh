@@ -3,8 +3,11 @@
 source ./common.sh
 VERSION=2.0.12
 
-wget -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
-tar.exe xaf SDL2-$VERSION.tar.gz
+if [[ ! -f SDL2-$VERSION.tar.gz ]]; then
+  wget -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
+fi
+
+tar xaf SDL2-$VERSION.tar.gz
 
 mkdir sdl-build
 cd sdl-build
@@ -24,15 +27,16 @@ cmake \
  -DSDL_FILE=1 \
  -DSDL_ATOMIC=0 \
  -DSDL_AUDIO=0 \
- -DSDL_VIDEO=0 \
+ -DSDL_VIDEO=1 \
  -DSDL_RENDER=0 \
- -DSDL_POWER=0 \
+ -DSDL_POWER=1 \
  -DSDL_THREADS=0 \
  -DSDL_TIMERS=0 \
- -DSDL_LOADSO=0 \
- -DSDL_CPUINFO=0 \
+ -DSDL_LOADSO=1 \
+ -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
+ -DSDL_SYSTEM=1 \
  ../SDL2-$VERSION
 
 make -j$NPROC
