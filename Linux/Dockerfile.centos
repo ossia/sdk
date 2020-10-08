@@ -5,7 +5,7 @@ RUN yum -y update
 RUN yum -y install epel-release centos-release-scl  
 RUN yum -y update
 RUN yum -y install \
-    devtoolset-8-gcc devtoolset-8-make devtoolset-8 \
+    devtoolset-9-gcc devtoolset-9-make devtoolset-9 \
     libxcb-devel glibc-devel \
     rh-git218 svn perl-Data-Dump perl-Data-Dumper \
     ncurses-devel zlib-devel cmake3 scl-utils \
@@ -16,7 +16,7 @@ RUN yum -y install \
     vulkan vulkan-devel xcb-util-wm xcb-util-wm-devel libxkbcommon-devel \
     xcb-util-image-devel xcb-util-keysyms-devel xcb-util-cursor-devel xcb-util-renderutil-devel
 
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-8" ]
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-9" ]
 
 ADD ./CentOS/common-centos.sh /common.sh
 ADD ./llvm-deps.sh /image/llvm-deps.sh
@@ -30,27 +30,26 @@ RUN /image/qt-deps.sh
 ADD ./llvm.sh /image/llvm.sh
 RUN /image/llvm.sh
 
+ADD faust.sh /image/faust.sh 
+RUN /image/faust.sh
+
 ADD ffmpeg.sh /image/ffmpeg.sh 
 RUN /image/ffmpeg.sh
 
+ADD fftw.sh /image/fftw.sh 
+RUN /image/fftw.sh
+
 ADD ./openssl.sh /image/openssl.sh
 RUN /image/openssl.sh
+
+ADD qt.sh /image/qt.sh
+RUN /image/qt.sh
+
+ADD sdl.sh /image/sdl.sh 
+RUN /image/sdl.sh
 
 ADD portaudio.sh /image/portaudio.sh 
 RUN /image/portaudio.sh
 
 ADD jack.sh /image/jack.sh 
 RUN /image/jack.sh
-
-ADD fftw.sh /image/fftw.sh 
-RUN /image/fftw.sh
-
-ADD qt.sh /image/qt.sh
-RUN /image/qt.sh
-
-ADD faust.sh /image/faust.sh 
-RUN /image/faust.sh
-
-ADD sdl.sh /image/sdl.sh 
-RUN /image/sdl.sh
-

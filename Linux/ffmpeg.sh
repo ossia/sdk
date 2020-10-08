@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=4.3
+VERSION=4.3.1
 
 if [[ ! -d ffmpeg-$VERSION ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
