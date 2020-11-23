@@ -3,7 +3,6 @@
 source ./common.sh
 export PATH=/c/Perl64/bin:$HOMEPATH/AppData/Local/Programs/Python/Python37:$PATH
 (
-  exit 0
   git clone https://code.qt.io/qt/qt5.git
 
   cd qt5

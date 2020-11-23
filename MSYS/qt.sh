@@ -33,7 +33,9 @@ mkdir -p qt5-build-static
                    -static \
                    -platform win32-clang-g++ \
                    -opengl desktop \
+                   -feature-schannel \
                    -prefix $INSTALL_PREFIX/qt5-static
+# -openssl-linked OPENSSL_PREFIX="$INSTALL_PREFIX/openssl" \
 
 make -j$NPROC
 make install -j$NPROC
