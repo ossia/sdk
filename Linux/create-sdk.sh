@@ -9,10 +9,11 @@ cp -rf * /tmp/image/
 
 docker run --rm -it \
            -v "/tmp/image:/image" \
-           -v "/tmp/image/score-sdk:/opt/score-sdk" \
+           -v "/opt/score-sdk:/opt/score-sdk" \
            -w="/image" \
            ossia/score-sdk-base \
            /bin/bash /image/build-all.sh
+
 
 # docker rmi ossia/score-sdk-build
 # docker run -t ossia/score-sdk-build -f Dockerfile.centos -v /tmp/image:/image . 
