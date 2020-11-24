@@ -11,12 +11,7 @@ git clone https://code.qt.io/qt/qt5.git
   git checkout 5.15
   git submodule update --init --recursive $(cat "$SDK_COMMON_ROOT/common/qtmodules")
   
-  git clone https://code.qt.io/qt-labs/qtshadertools.git
-  (
-    cd qtshadertools 
-    sed -i '311d' src/3rdparty/glslang/glslang/Include/PoolAlloc.h
-    sed -i '244d' src/3rdparty/glslang/glslang/Include/PoolAlloc.h
-  )
+  git clone https://github.com/jcelerier/qtshadertools.git
 
   (
     cd qtbase
