@@ -1,6 +1,6 @@
 #!/bin/bash
 export NPROC=$(nproc)
-export INSTALL_PREFIX=/opt/score-sdk
+export INSTALL_PREFIX=/opt/ossia-sdk
 export SDK_ROOT=$PWD
 export GIT=git
 export CMAKE=cmake
