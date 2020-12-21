@@ -28,7 +28,6 @@ mkdir -p qt5-build-static
   cd qt5-build-static
   ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
-                   -no-system-proxies \
                    -system-zlib \
                    -prefix $INSTALL_PREFIX/qt5-static
 
