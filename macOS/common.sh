@@ -1,6 +1,6 @@
 #!/bin/bash
 export MACOS_VERSION=10.14
-export MACOS_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk
+export MACOS_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.0.sdk
 export NPROC=$(sysctl -n hw.logicalcpu)
 export INSTALL_PREFIX=/opt/score-sdk-osx
 export SDK_ROOT=$PWD
