@@ -14,6 +14,7 @@ cd fftw-build
 CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
 ../fftw-$FFTW_VERSION/configure   \
     --prefix=$INSTALL_PREFIX/fftw \
+    --enable-threads              \
     --enable-fma                  \
     --enable-generic-simd128      \
     --enable-generic-simd256      \

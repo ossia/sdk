@@ -13,6 +13,7 @@ cd fftw-build
 
 CFLAGS+=" -O3 -fstrict-aliasing -ffast-math"
 ../fftw-$FFTW_VERSION/configure   \
+    --enable-threads              \
     --prefix=$INSTALL_PREFIX/fftw \
     --enable-fma                  \
     --enable-generic-simd128      \
