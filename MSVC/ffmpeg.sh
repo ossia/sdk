@@ -6,8 +6,16 @@ if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
   tar xaf ffmpeg-$VERSION.tar.bz2
 fi
 
-export PATH="/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.25.28610/bin/Hostx64/x64:$PATH"
-mkdir ffmpeg-build
+
+shopt -s nullglob
+
+msvc_version=$(ls "/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/")
+msvc_path="/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/$msvc_version/bin/Hostx64/x64"
+
+export PATH="$msvc_path:$PATH"
+
+rm -rf ffmpeg-build
+mkdir -p ffmpeg-build
 cd ffmpeg-build
 
  ../ffmpeg-$VERSION/configure \
@@ -21,7 +29,7 @@ cd ffmpeg-build
  	--disable-videotoolbox \
  	--disable-network --disable-iconv \
  	--enable-protocols  --disable-lzma \
- 	--prefix=/c/score-sdk-msvc/ffmpeg 
+ 	--prefix=/c/score-sdk-msvc-release/ffmpeg 
 
  make -j$NPROC
  make install
