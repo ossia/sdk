@@ -18,7 +18,7 @@ xcrun ../ffmpeg-$VERSION/configure \
  	--pkg-config-flags="--static" \
  	--enable-gpl --enable-version3 \
  	--disable-openssl --disable-securetransport \
- 	--disable-network --disable-iconv \
+ 	--disable-network --disable-iconv --disable-libxcb \
  	--enable-protocols --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
         --cc="$CC" --cxx="$CXX" \

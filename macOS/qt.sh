@@ -17,7 +17,7 @@ git clone https://code.qt.io/qt/qt5.git
 # disabled since we can't seem to make custom libc++ not crash...
 # echo 'QMAKE_LFLAGS+= -L/opt/score-sdk-osx/llvm/lib -lc++ -lc++abi -Wl,-rpath,/opt/score-sdk-osx/llvm/lib' >> qt5/qtbase/mkspecs/common/clang-mac.conf
 gsed -i "s/-O2/$CFLAGS/" qt5/qtbase/mkspecs/common/gcc-base.conf
-gsed -i "s/10.13/10.14/" qt5/qtbase/mkspecs/common/macx.conf
+# gsed -i "s/10.13/10.14/" qt5/qtbase/mkspecs/common/macx.conf
 #echo "QMAKE_CFLAGS+=$CFLAGS" >> qt5/qtbase/mkspecs/common/clang-mac.conf
 #echo "QMAKE_CXXFLAGS+=$CXXFLAGS" >> qt5/qtbase/mkspecs/common/clang-mac.conf
 fi

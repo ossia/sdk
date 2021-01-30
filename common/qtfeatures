@@ -1,5 +1,4 @@
 -release
--c++std c++17
 -nomake examples
 -nomake tests      
 -no-compile-examples
