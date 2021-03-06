@@ -1,0 +1,13 @@
+FROM  yummygooey/raspbian-buster
+
+RUN echo 'deb http://archive.raspbian.org/raspbian buster main contrib non-free rpi firmware' > /etc/apt/sources.list && \
+    echo 'deb-src http://archive.raspbian.org/raspbian buster main contrib non-free rpi firmware' >> /etc/apt/sources.list && \
+    apt update && \
+    apt dist-upgrade && \
+    apt install build-essential cmake unzip pkg-config gfortran \
+        va-driver-all wget libxcb-randr0-dev libxcb-xtest0-dev \
+        libxcb-shape0-dev libxcb-xkb-dev libegl1-mesa-dev libbluetooth-dev \
+        libraspberrypi0 libraspberrypi-dev libraspberrypi-bin rsync \
+    && \
+    apt build-dep qt5-qmake libqt5gui5 libqt5qml5 libqt5websockets5 libudev-dev libinput-dev libts-dev libxcb-xinerama0-dev libxcb-xinerama0 gdbserver
+
