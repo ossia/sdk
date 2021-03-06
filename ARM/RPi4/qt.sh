@@ -8,7 +8,6 @@ mkdir -p qt5-build-static
   export CROSS_COMPILER_LOCATION=$SDK_INSTALL_ROOT/cross-pi-gcc-10.2.0-2
   export SYSROOT_LOCATION=$SDK_INSTALL_ROOT/pi/sysroot
 
-
   export LD_LIBRARY_PATH=$CROSS_COMPILER_LOCATION/lib
   export LD_LIBRARY_PATH=$CROSS_COMPILER_LOCATION/arm-linux-gnueabihf/lib:$LD_LIBRARY_PATH
   export LD_LIBRARY_PATH=$CROSS_COMPILER_LOCATION/arm-linux-gnueabihf/libc/usr/lib:$LD_LIBRARY_PATH
@@ -38,9 +37,14 @@ mkdir -p qt5-build-static
 
 (
   cd qt5
-  $GIT clone https://github.com/jcelerier/qtshadertools.git
+  if [[ ! -d qtshadertools ]]; then
+    git clone https://github.com/jcelerier/qtshadertools.git
+  fi
   cd qtshadertools
+  git clean -dffx
+
   $INSTALL_PREFIX/qt5-static/bin/qmake
+
   make -j$NPROC
   make install -j$NPROC
 )
