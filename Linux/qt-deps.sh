@@ -2,6 +2,8 @@
 
 source ./common.sh
 if [[ ! -d qt5 ]]; then
+  yum install wayland-devel egl-wayland-devel wayland-protocols-devel libwayland-egl libwayland-cursor libwayland-client
+
   $GIT clone https://code.qt.io/qt/qt5.git
   (
     cd qt5
