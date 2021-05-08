@@ -2,8 +2,6 @@
 
 source ./common.sh
 if [[ ! -d qt5 ]]; then
-  yum install wayland-devel egl-wayland-devel wayland-protocols-devel libwayland-egl libwayland-cursor libwayland-client
-
   $GIT clone https://code.qt.io/qt/qt5.git
   (
     cd qt5
@@ -14,6 +12,10 @@ if [[ ! -d qt5 ]]; then
     $GIT config --global user.name "Your Name"
 
     cd qtbase
+    $GIT remote add kde https://invent.kde.org/qt/qt/qtbase
+    $GIT fetch kde
+    $GIT checkout kde/kde/5.15
+
     sed -i 's/fuse-ld=gold/fuse-ld=lld/g' \
       mkspecs/common/gcc-base-unix.conf \
       mkspecs/features/qt_configure.prf \
