@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-export VERSION=4.3.1
+export VERSION=4.4
 
 if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2

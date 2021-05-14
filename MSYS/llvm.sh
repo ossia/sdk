@@ -3,7 +3,6 @@
 source ./common.sh
 CMAKE=cmake
 
-
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
 export PATH=$INSTALL_PREFIX/llvm/x86_64-w64-mingw32/bin:$PATH
