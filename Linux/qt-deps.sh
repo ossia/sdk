@@ -20,7 +20,8 @@ if [[ ! -d qt5 ]]; then
       mkspecs/common/gcc-base-unix.conf \
       mkspecs/features/qt_configure.prf \
       configure.json
-
+    sed -i 's/-fvisibility=hidden/-fvisibility=default/g' mkspecs/common/gcc-base.conf
+    sed -i 's/-fvisibility-inlines-hidden/ /g' mkspecs/common/gcc-base.conf
     sed -i "s/-O3/$CFLAGS/" mkspecs/common/gcc-base.conf
     sed -i "s/-O2/$CFLAGS/" mkspecs/common/gcc-base.conf
   )
