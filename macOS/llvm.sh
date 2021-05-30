@@ -2,51 +2,7 @@
 
 #source ./common.sh
 SDK_ROOT=$PWD
-INSTALL_PREFIX=/opt/score-sdk-osx
-
-
-
-# LLVM_VERSION=tags/RELEASE_900/final
-(
-if [[ -d llvm ]]; then 
-  exit
-fi
-
-git clone https://github.com/llvm/llvm-project -b release/11.x --depth=1 llvm
-cd llvm
-git checkout release/11.x
-gsed -i 's/Diags.isIgnored/!Diags.isIgnored/g' clang/lib/Frontend/CompilerInvocation.cpp
-exit
-
-svn co http://llvm.org/svn/llvm-project/llvm/$LLVM_VERSION llvm
-cd llvm/tools
-svn co http://llvm.org/svn/llvm-project/cfe/$LLVM_VERSION clang
-cd ../..
-#cd llvm/tools/clang/tools
-#svn co http://llvm.org/svn/llvm-project/clang-tools-extra/$LLVM_VERSION extra
-#cd ../../../..
-#cd llvm/tools
-#svn co http://llvm.org/svn/llvm-project/lld/$LLVM_VERSION lld
-#cd ../..
-cd llvm/tools
-svn co http://llvm.org/svn/llvm-project/polly/$LLVM_VERSION polly
-cd ../..
-
-#cd llvm/projects
-#svn co http://llvm.org/svn/llvm-project/compiler-rt/$LLVM_VERSION compiler-rt
-#cd ../..
-#cd llvm/projects
-#svn co http://llvm.org/svn/llvm-project/openmp/$LLVM_VERSION openmp
-#cd ../..
-cd llvm/projects
-svn co http://llvm.org/svn/llvm-project/libcxx/$LLVM_VERSION libcxx
-cd ../..
-#cd llvm/projects
-#svn co http://llvm.org/svn/llvm-project/libcxxabi/$LLVM_VERSION libcxxabi
-#cd ../..
-)
-
-exit
+INSTALL_PREFIX=$(cat common.sh| grep PREFIX= | cut -d '=' -f 2)
 
 (
 if [[ -d llvm-boostrap ]]; then

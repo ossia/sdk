@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # ./deps.sh
-# ./llvm.sh
+./llvm-deps.sh
 ./qt.sh
 ./fftw.sh
 ./ffmpeg.sh
+./sndfile.sh
 ./portaudio.sh
 ./sdl.sh
 ./jack.sh
@@ -12,5 +13,6 @@
 ./faust.sh
 
 
-tar caf score-sdk-mac.tar.gz /opt/ossia-sdk
+
+tar caf score-sdk-mac.tar.gz $INSTALL_PREFIX
 

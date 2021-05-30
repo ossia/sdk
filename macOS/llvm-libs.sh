@@ -8,7 +8,7 @@ mkdir -p llvm-build-3
 cd llvm-build-3
 # set PATH=/opt/score-sdk/llvm/bin:$PATH
 
-xcrun cmake \
+xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.1.sdk cmake -Wno-dev \
  -G Ninja \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=0 \
