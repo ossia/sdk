@@ -34,8 +34,8 @@ cmake -G "MSYS Makefiles" -C ../backends/llvm.cmake ..  \
   -DINCLUDE_HTTP=0 \
   -DINCLUDE_EXECUTABLE=0 \
   -DINCLUDE_STATIC=1 \
-  -DCMAKE_PREFIX_PATH=c:/ossia-sdk/llvm-libs \
-  -DLLVM_CONFIG=c:/ossia-sdk/llvm-libs/bin/llvm-config.exe \
+  -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX_CMAKE/llvm-libs \
+  -DLLVM_CONFIG=$INSTALL_PREFIX_CMAKE/llvm-libs/bin/llvm-config.exe \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/faust
 
 make -j$NPROC

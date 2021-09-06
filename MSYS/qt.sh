@@ -15,6 +15,9 @@ git clone https://invent.kde.org/qt/qt/qt5
 
   (
     cd qtbase
+    
+    sed -i 's/-fvisibility=hidden/-fvisibility=default/g' mkspecs/common/gcc-base.conf
+    sed -i 's/-fvisibility-inlines-hidden/ /g' mkspecs/common/gcc-base.conf
     sed -i "s/-O2/$CFLAGS/" mkspecs/common/gcc-base.conf 
   )
 )
