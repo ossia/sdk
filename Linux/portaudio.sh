@@ -6,6 +6,7 @@ if [[ ! -d portaudio ]]; then
   $GIT clone https://github.com/portaudio/portaudio
 fi
 
+mkdir -p portaudio/build
 cd portaudio/build
 
 $CMAKE .. \

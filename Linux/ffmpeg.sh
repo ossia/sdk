@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=4.3.1
+VERSION=snapshot
 
 if [[ ! -d ffmpeg-$VERSION ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
@@ -13,6 +13,7 @@ cd ffmpeg-build
 
  ../ffmpeg-$VERSION/configure \
     --arch=x86_64 --cpu=x86_64 \
+        --enable-pic \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
  	--pkg-config-flags="--static" \

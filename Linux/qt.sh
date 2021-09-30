@@ -28,11 +28,3 @@ mkdir -p qt5-build-static
   make install -j$NPROC
 )
 
-(
-  cd qt5
-  $GIT clone https://github.com/FedoraQt/QGnomePlatform
-  cd QGnomePlatform
-  $INSTALL_PREFIX/qt5-static/bin/qmake
-  make -j$NPROC
-  make install -j$NPROC
-)
