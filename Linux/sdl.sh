@@ -2,12 +2,13 @@
 
 source ./common.sh
 
-export SDL_VER=2.0.16
+export SDL_VER=2.0.14
 if [[ ! -f SDL2-$SDL_VER.tar.gz ]]; then
   wget -nv https://www.libsdl.org/release/SDL2-$SDL_VER.tar.gz
   tar xaf SDL2-$SDL_VER.tar.gz
 fi
 
+rm -rf sdl-build
 mkdir sdl-build
 cd sdl-build
 

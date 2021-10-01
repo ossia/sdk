@@ -11,8 +11,8 @@ fi
 mkdir ffmpeg-build
 cd ffmpeg-build
 
- ../ffmpeg-$VERSION/configure \
-    --arch=x86_64 --cpu=x86_64 \
+../ffmpeg/configure \
+        --arch=x86_64 --cpu=x86_64 \
         --enable-pic \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
