@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=2.0.12
+VERSION=2.0.14
 
 if [[ ! -f SDL2-$VERSION.tar.gz ]]; then
   wget -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz

@@ -8,6 +8,7 @@ git clone https://invent.kde.org/qt/qt/qt5
 
 (
   cd qt5
+
   git checkout kde/5.15
   git submodule update --init --recursive $(cat "$SDK_COMMON_ROOT/common/qtmodules")
   
@@ -15,6 +16,10 @@ git clone https://invent.kde.org/qt/qt/qt5
 
   (
     cd qtbase
+  
+    git remote add jcelerier https://github.com/jcelerier/qtbase
+    git fetch jcelerier
+    git checkout jcelerier/kde/5.15
     
     sed -i 's/-fvisibility=hidden/-fvisibility=default/g' mkspecs/common/gcc-base.conf
     sed -i 's/-fvisibility-inlines-hidden/ /g' mkspecs/common/gcc-base.conf
