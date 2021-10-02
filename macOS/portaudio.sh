@@ -4,11 +4,12 @@ source ./common.sh
 
 git clone https://github.com/portaudio/portaudio
 
-cd portaudio/build
+mkdir -p portaudio_build
+cd portaudio_build
 
 xcrun cmake .. \
  -DCMAKE_BUILD_TYPE=Release \
- -DPA_BUILD_SHARED=OFF \
+ -DBUILD_SHARED_LIBS=OFF \
  -DPA_USE_JACK=OFF \
  -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \

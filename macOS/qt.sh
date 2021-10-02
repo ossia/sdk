@@ -10,6 +10,13 @@ git clone https://code.qt.io/qt/qt5.git
   cd qt5
   git checkout 5.15
   git submodule update --init --recursive $(cat "$SDK_COMMON_ROOT/common/qtmodules")
+
+  (
+    cd qtbase
+    git remote add kde https://github.com/jcelerier/qtbase
+    git fetch kde
+    git checkout kde/kde/5.15
+  )
   
   git clone https://github.com/jcelerier/qtshadertools.git
 )

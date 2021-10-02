@@ -2,9 +2,10 @@
 
 source ./common.sh
 
-if [[ ! -f SDL2-2.0.10.tar.gz ]]; then
-  wget -nv https://www.libsdl.org/release/SDL2-2.0.10.tar.gz
-  gtar xaf SDL2-2.0.10.tar.gz
+export SDL_VER=2.0.14
+if [[ ! -f SDL2-$SDL_VER.tar.gz ]]; then
+  wget -nv https://www.libsdl.org/release/SDL2-$SDL_VER.tar.gz
+  tar xaf SDL2-$SDL_VER.tar.gz
 fi
 
 mkdir sdl-build
@@ -35,7 +36,7 @@ xcrun cmake \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
- ../SDL2-2.0.10
+ ../SDL2-$SDL_VER
 
 xcrun make -j$NPROC
 xcrun make install

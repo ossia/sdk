@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=4.4
+VERSION=snapshot
 
 if [[ ! -d ffmpeg-$VERSION ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
@@ -11,7 +11,7 @@ fi
 mkdir ffmpeg-build
 cd ffmpeg-build
 
-xcrun ../ffmpeg-$VERSION/configure \
+xcrun ../ffmpeg/configure \
     --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
