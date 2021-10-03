@@ -7,7 +7,7 @@ git clone https://github.com/portaudio/portaudio
 mkdir -p portaudio_build
 cd portaudio_build
 
-xcrun cmake .. \
+xcrun cmake ../portaudio \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=OFF \
  -DPA_USE_JACK=OFF \
