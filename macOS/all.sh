@@ -14,5 +14,5 @@
 
 
 
-tar caf score-sdk-mac.tar.gz $INSTALL_PREFIX
+tar caf sdk-macOS.tar.gz $INSTALL_PREFIX
 
