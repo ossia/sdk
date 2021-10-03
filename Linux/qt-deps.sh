@@ -12,7 +12,7 @@ if [[ ! -d qt5 ]]; then
     $GIT config --global user.name "Your Name"
 
     cd qtbase
-    $GIT remote add kde https://invent.kde.org/qt/qt/qtbase
+    $GIT remote add kde https://github.com/jcelerier/qtbase
     $GIT fetch kde
     $GIT checkout kde/kde/5.15
 

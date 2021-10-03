@@ -3,7 +3,11 @@
 source ./common.sh
 
 if [[ ! -d portaudio ]]; then
-  $GIT clone https://github.com/portaudio/portaudio
+(
+  $GIT clone https://github.com/jcelerier/portaudio
+  cd portaudio
+  git checkout patch-2
+)
 fi
 
 mkdir -p portaudio/build
