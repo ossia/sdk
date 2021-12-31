@@ -9,7 +9,9 @@
 -no-syslog 
 -qt-libpng 
 -qt-libjpeg 
--qt-freetype 
+-system-freetype 
+FREETYPE_INCDIR=/opt/ossia-sdk/freetype/include/freetype2
+FREETYPE_LIBS=/opt/ossia-sdk/freetype/lib64/libfreetype.a
 -qt-harfbuzz 
 -qt-pcre 
 -no-glib
@@ -41,7 +43,7 @@
 -no-sql-odbc                       
 -no-sql-ibase                      
 -no-sql-psql                       
--no-feature-vnc                    
+-feature-vnc                    
 -no-feature-linuxfb                
 -no-feature-glib                   
 -no-feature-dbus                   

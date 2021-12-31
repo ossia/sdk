@@ -21,5 +21,5 @@ $CMAKE \
   -DCMAKE_POSITION_INDEPENDENT_CODE=1 \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/freetype
 
-cmake --build freetype-build --parallel
-cmake --build freetype-build --target install/strip
+$CMAKE --build freetype-build --parallel
+$CMAKE --build freetype-build --target install/strip

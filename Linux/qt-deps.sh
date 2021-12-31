@@ -2,19 +2,19 @@
 
 source ./common.sh
 if [[ ! -d qt5 ]]; then
-  $GIT clone https://code.qt.io/qt/qt5.git
+  $GIT clone https://invent.kde.org/qt/qt/qt5
   (
     cd qt5
-    $GIT checkout 5.15
+    $GIT checkout kde/5.15
     $GIT submodule update --init --recursive $(cat "$SDK_ROOT/common/qtmodules")
     $GIT submodule update --init --recursive qtwayland
     $GIT config --global user.email "you@example.com"
     $GIT config --global user.name "Your Name"
 
     cd qtbase
-    $GIT remote add kde https://github.com/jcelerier/qtbase
-    $GIT fetch kde
-    $GIT checkout kde/kde/5.15
+    $GIT remote add jcelerier https://github.com/jcelerier/qtbase
+    $GIT fetch jcelerier
+    $GIT checkout jcelerier/kde/5.15
 
     sed -i 's/fuse-ld=gold/fuse-ld=lld/g' \
       mkspecs/common/gcc-base-unix.conf \

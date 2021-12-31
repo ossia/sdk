@@ -11,6 +11,7 @@ cp ./CentOS/common-centos.sh ./common.sh
 ./ffmpeg.sh
 ./fftw.sh
 ./openssl.sh
+./freetype.sh
 ./qt.sh
 ./sdl.sh
 ./portaudio.sh
