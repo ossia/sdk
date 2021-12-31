@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-if [[ ! -d freetype ]]; then
+if [[ ! -d ysfx ]]; then
 (
   $GIT clone --recursive https://github.com/jcelerier/ysfx
 )

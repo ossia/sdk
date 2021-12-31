@@ -5,5 +5,5 @@ source ./common.sh
 $GIT clone https://github.com/llvm/llvm-project.git llvm
 (
     cd llvm
-    $GIT checkout release/12.x
+    $GIT checkout release/13.x
 )

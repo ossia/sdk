@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source scl_source enable devtoolset-9
+source scl_source enable gcc-toolset-11
 
 cd /image
 cp ./CentOS/common-centos.sh ./common.sh
@@ -16,3 +16,5 @@ cp ./CentOS/common-centos.sh ./common.sh
 ./sdl.sh
 ./portaudio.sh
 ./jack.sh
+./ysfx.sh
+
