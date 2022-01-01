@@ -21,6 +21,7 @@ cd ffmpeg-build
  	--disable-openssl --disable-securetransport \
  	--disable-network --disable-iconv \
         --disable-libxcb --disable-libxcb-shm --disable-libxcb-xfixes \
+        --disable-alsa \
  	--enable-protocols --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
  	--extra-cflags="$CFLAGS"

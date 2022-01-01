@@ -10,6 +10,7 @@ mkdir -p qt5-build-static
                    -static \
                    -system-zlib \
                    -openssl-linked \
+                   -no-dbus -no-feature-zstd \
                    -no-feature-wayland-server \
                    -I$INSTALL_PREFIX/openssl/include \
                    -platform linux-clang-libc++ \
