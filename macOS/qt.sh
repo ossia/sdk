@@ -4,18 +4,18 @@ export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
 
 if [[ ! -d qt5 ]]; then
-git clone https://code.qt.io/qt/qt5.git
+git clone https://invent.kde.org/qt/qt/qt5
 
 (
   cd qt5
-  git checkout 5.15
+  git checkout kde/5.15
   git submodule update --init --recursive $(cat "$SDK_COMMON_ROOT/common/qtmodules")
 
   (
     cd qtbase
-    git remote add kde https://github.com/jcelerier/qtbase
-    git fetch kde
-    git checkout kde/kde/5.15
+    git remote add jcelerier https://github.com/jcelerier/qtbase
+    git fetch jcelerier
+    git checkout jcelerier/kde/5.15
   )
   
   git clone https://github.com/jcelerier/qtshadertools.git
@@ -42,7 +42,10 @@ mkdir -p qt5-build-static
   cd qt5-build-static
   ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
-                   -system-zlib \
+                   -system-zlib -no-feature-zstd \
+                   -system-freetype \
+                   FREETYPE_INCDIR=$INSTALL_PREFIX/freetype/include/freetype2 \
+                   FREETYPE_LIBS=$INSTALL_PREFIX/freetype/lib/libfreetype.a \
                    -prefix $INSTALL_PREFIX/qt5-static
 
   make -j$NPROC
