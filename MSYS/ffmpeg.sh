@@ -5,7 +5,7 @@ source ./common.sh
 export VERSION=snapshot
 
 if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
+  wget -nv --no-check-certificate https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
   tar xaf ffmpeg-$VERSION.tar.bz2
 fi
 

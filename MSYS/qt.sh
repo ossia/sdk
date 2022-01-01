@@ -36,6 +36,10 @@ mkdir -p qt5-build-static
                    -platform win32-clang-g++ \
                    -opengl desktop \
                    -feature-schannel \
+                   -no-feature-zstd \
+                   -system-freetype \
+                   FREETYPE_INCDIR=$INSTALL_PREFIX/freetype/include/freetype2 \
+                   FREETYPE_LIBS=$INSTALL_PREFIX/freetype/lib/libfreetype.a \
                    -prefix $INSTALL_PREFIX/qt5-static
 
 make -j$NPROC
