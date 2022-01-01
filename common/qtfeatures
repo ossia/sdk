@@ -59,8 +59,6 @@
 -no-feature-qml-xml-http-request
 -no-feature-stack-protector-strong
 -no-feature-style-android
--no-feature-style-fusion
--no-feature-style-mac
 -no-feature-style-stylesheet
 -no-feature-style-windowsvista
 -no-feature-textmarkdownreader
@@ -68,7 +66,6 @@
 -no-feature-textodfwriter
 -no-feature-effects
 -no-feature-movie
--no-feature-calendarwidget
 -no-feature-fontcombobox
 -no-feature-fontdialog
 -no-feature-lcdnumber

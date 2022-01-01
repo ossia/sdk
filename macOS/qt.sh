@@ -43,11 +43,13 @@ mkdir -p qt5-build-static
   ../qt5/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
                    -system-zlib \
+                   -feature-datetimeedit \
                    -prefix $INSTALL_PREFIX/qt5-static
-
+  exit 0
   make -j$NPROC
   make install -j$NPROC
 )
+exit 0
 (
   cd qt5
   cd qtshadertools
