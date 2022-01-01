@@ -14,4 +14,4 @@ docker run --rm -it \
            ossia/score-sdk-base \
            /bin/bash /image/build-all.sh
 
-tar caf score-sdk-linux-llvm.tar.xz /opt/ossia-sdk
+tar caf sdk-linux.tar.xz /opt/ossia-sdk
