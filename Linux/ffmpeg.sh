@@ -20,6 +20,7 @@ cd ffmpeg-build
  	--enable-gpl --enable-version3 \
  	--disable-openssl --disable-securetransport \
  	--disable-network --disable-iconv \
+        --disable-libxcb --disable-libxcb-shm --disable-libxcb-xfixes \
  	--enable-protocols --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
  	--extra-cflags="$CFLAGS"
