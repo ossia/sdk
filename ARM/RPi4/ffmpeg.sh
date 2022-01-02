@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=4.3.1
+VERSION=snapshot
 
 if [[ ! -d ffmpeg-$VERSION ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
@@ -13,8 +13,8 @@ cd ffmpeg-build
 
 
 
-export PATH=$PATH:/opt/ossia-sdk-rpi/cross-pi-gcc-10.2.0-2/bin
-export CCPREFIX=/opt/ossia-sdk-rpi/cross-pi-gcc-10.2.0-2/bin/arm-linux-gnueabihf-
+export PATH=$PATH:$CROSS_COMPILER_LOCATION/bin
+export CCPREFIX=$CROSS_COMPILER_LOCATION/bin/arm-linux-gnueabihf-
 
 ../ffmpeg-$VERSION/configure \
     --enable-cross-compile \

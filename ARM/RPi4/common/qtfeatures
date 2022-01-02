@@ -41,7 +41,7 @@
 -no-sql-odbc
 -no-sql-ibase
 -no-sql-psql
--no-feature-vnc
+-feature-vnc
 -no-feature-linuxfb
 -no-feature-glib
 -no-feature-dbus

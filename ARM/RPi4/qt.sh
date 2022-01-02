@@ -5,7 +5,6 @@ mkdir -p qt5-build-static
 (
   cd qt5-build-static
 
-  export CROSS_COMPILER_LOCATION=$SDK_INSTALL_ROOT/cross-pi-gcc-10.2.0-2
   export SYSROOT_LOCATION=$SDK_INSTALL_ROOT/pi/sysroot
 
   export LD_LIBRARY_PATH=$CROSS_COMPILER_LOCATION/lib
@@ -27,6 +26,7 @@ mkdir -p qt5-build-static
                    -static \
                    -system-zlib \
                    -no-feature-wayland-server \
+                   -no-feature-zstd \
                    -v -recheck \
                    -L$CROSS_COMPILER_LOCATION/lib/ -L$CROSS_COMPILER_LOCATION/arm-linux-gnueabihf/lib/ \
                    -L$SYSROOT_LOCATION/usr/lib/arm-linux-gnueabihf -I$SYSROOT_LOCATION/usr/include/arm-linux-gnueabihf
