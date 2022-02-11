@@ -1,5 +1,6 @@
 -release
 -c++std c++17
+-linker lld
 -nomake examples
 -nomake tests      
 -no-compile-examples
@@ -12,7 +13,9 @@
 -system-freetype 
 FREETYPE_INCDIR=/opt/ossia-sdk/freetype/include/freetype2
 FREETYPE_LIBS=/opt/ossia-sdk/freetype/lib64/libfreetype.a
--qt-harfbuzz 
+-system-harfbuzz 
+HARFBUZZ_INCDIR=/opt/ossia-sdk/harfbuzz/include
+HARFBUZZ_LIBS=/opt/ossia-sdk/harfbuzz/lib64/libharfbuzz.a
 -qt-pcre 
 -no-glib
 -no-cups 

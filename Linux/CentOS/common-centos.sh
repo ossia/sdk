@@ -3,8 +3,8 @@
 export NPROC=$(nproc)
 export INSTALL_PREFIX=/opt/ossia-sdk
 export SDK_ROOT=$PWD
-export CFLAGS="-O3 -march=x86-64 -mtune=generic" # -march=ivybridge -mtune=haswell"
-export CXXFLAGS="-O3 -march=x86-64 -mtune=generic" # -march=ivybridge -mtune=haswell"
+export CFLAGS="-O3 -march=x86-64 -mtune=generic -fno-semantic-interposition -fno-stack-protector -fno-ident" # -march=ivybridge -mtune=haswell"
+export CXXFLAGS="-O3 -march=x86-64 -mtune=generic -fno-semantic-interposition -fno-stack-protector -fno-ident" # -march=ivybridge -mtune=haswell"
 
 export LD_LIBRARY_PATH=
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
