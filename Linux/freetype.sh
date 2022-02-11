@@ -33,7 +33,7 @@ $CMAKE --build freetype-build --target install/strip
 (
   cd harfbuzz
   export LIBRARY_PATH=$INSTALL_PREFIX/freetype
-  export PKG_CONFIG_PATH=/opt/ossia-sdk/freetype/lib64/pkgconfig
+  export PKG_CONFIG_PATH=$INSTALL_PREFIX/freetype/lib64/pkgconfig
   meson build -Dbuildtype=release -Ddefault_library=static -Dglib=disabled -Dgobject=disabled -Dicu=disabled -Ddocs=disabled -Dprefix=$INSTALL_PREFIX/harfbuzz 
   cd build
   ninja

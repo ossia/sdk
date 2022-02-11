@@ -46,6 +46,9 @@ mkdir -p qt5-build-static
                    -system-freetype \
                    FREETYPE_INCDIR=$INSTALL_PREFIX/freetype/include/freetype2 \
                    FREETYPE_LIBS=$INSTALL_PREFIX/freetype/lib/libfreetype.a \
+                   -system-harfbuzz \
+                   HARFBUZZ_INCDIR=$INSTALL_PREFIX/harfbuzz/include \
+                   HARFBUZZ_LIBS=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a \
                    -prefix $INSTALL_PREFIX/qt5-static
 
   make -j$NPROC
