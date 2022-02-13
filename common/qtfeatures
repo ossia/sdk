@@ -22,9 +22,9 @@
 -no-dbus
 -no-directfb
 -feature-qml-devtools
--no-qml-debug
 -opensource
 -confirm-license
+-no-feature-bearermanagement
 -no-feature-accessibility
 -no-feature-graphicseffect
 -no-feature-lttng
@@ -37,6 +37,8 @@
 -no-feature-cups
 -no-feature-sqlmodel
 -no-feature-sql
+-no-feature-zstd
+-no-feature-mimetype
 -no-sql-mysql
 -no-sql-sqlite
 -no-sql-odbc
@@ -77,3 +79,5 @@
 -no-feature-undostack
 -no-feature-undoview
 -no-feature-wizard
+-no-feature-signaling_nan
+
