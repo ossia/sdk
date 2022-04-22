@@ -22,7 +22,8 @@ mkdir -p qt5-build-static
 
 (
   cd qt5
-  $GIT clone https://github.com/jcelerier/qtshadertools.git
+
+  $GIT clone https://github.com/jcelerier/qtshadertools.git || true
   cd qtshadertools
   $INSTALL_PREFIX/qt5-static/bin/qmake
   make -j$NPROC

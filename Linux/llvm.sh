@@ -3,14 +3,8 @@
 source ./common.sh
 
 (
-# Once we have llvm 12 build llvm 13...
-(
-  cd llvm 
-  $GIT checkout release/13.x
-)
-
-mkdir -p llvm-build-13
-cd llvm-build-13
+mkdir -p llvm-build-14
+cd llvm-build-14
 $CMAKE  -GNinja \
  -DCMAKE_BUILD_TYPE=Release \
  -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
@@ -74,4 +68,9 @@ $CMAKE \
 
 $CMAKE --build . --parallel
 $CMAKE --build . --target install/strip
+)
+
+(
+  cd $INSTALL_PREFIX/llvm
+  ln -s lib lib64
 )

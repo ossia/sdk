@@ -17,4 +17,6 @@ cp ./CentOS/common-centos.sh ./common.sh
 ./portaudio.sh
 ./jack.sh
 ./ysfx.sh
+# ./qgnomeplatform.sh
+
 
