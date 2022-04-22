@@ -15,7 +15,7 @@ mkdir -p portaudio/build
 cd portaudio/build
 
 cmake .. \
- -G"MSYS Makefiles" \
+ -GNinja \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=Off \
  -DPA_USE_ASIO=ON \
@@ -23,5 +23,5 @@ cmake .. \
  -DASIOSDK_PATH_HINT=$PWD/ASIOSDK2.3.2 \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/portaudio
 
-make -j$NPROC
-make install
+cmake --build .
+cmake --build . --target install/strip

@@ -1,22 +1,20 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=2.0.14
+VERSION=2.0.20
 
 if [[ ! -f SDL2-$VERSION.tar.gz ]]; then
   wget -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
+  tar xaf SDL2-$VERSION.tar.gz
 fi
 
-tar xaf SDL2-$VERSION.tar.gz
 
 mkdir sdl-build
 cd sdl-build
 
-cmake \
+cmake -GNinja \
  -DSDL_STATIC_PIC=1 \
  -DBUILD_SHARED_LIBS=0 \
- -DCMAKE_BUILD_TYPE=Release \
- -G"MSYS Makefiles" \
  -DCMAKE_BUILD_TYPE=Release \
  -DCMAKE_C_FLAGS="-DSDL_DYNAMIC_API=0" \
  -DCMAKE_CXX_FLAGS="-DSDL_DYNAMIC_API=0" \
@@ -39,5 +37,5 @@ cmake \
  -DSDL_SYSTEM=1 \
  ../SDL2-$VERSION
 
-make -j$NPROC
-make install
+cmake --build .
+cmake --build . --target install/strip

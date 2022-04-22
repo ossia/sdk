@@ -18,4 +18,4 @@ cmake \
  ../zlib-ng
 
 cmake --build . --config Release
-cmake --build . --config Release --target install
+cmake --build . --config Release --target install/strip

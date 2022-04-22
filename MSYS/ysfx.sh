@@ -11,7 +11,7 @@ fi
 export FREETYPE_DIR=$INSTALL_PREFIX/freetype
 
 cmake \
-  -G"MSYS Makefiles" \
+  -GNinja \
   -S ysfx \
   -B ysfx-build \
   -DYSFX_PLUGIN=OFF \

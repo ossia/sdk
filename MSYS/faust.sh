@@ -28,7 +28,7 @@ export PATH=$INSTALL_PREFIX/llvm-libs/bin:$PATH
 echo $PATH
 which llvm-config
 
-cmake -G "MSYS Makefiles" -C ../backends/llvm.cmake ..  \
+cmake -G Ninja -C ../backends/llvm.cmake ..  \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
   -DINCLUDE_HTTP=0 \
@@ -38,5 +38,5 @@ cmake -G "MSYS Makefiles" -C ../backends/llvm.cmake ..  \
   -DLLVM_CONFIG=$INSTALL_PREFIX_CMAKE/llvm-libs/bin/llvm-config.exe \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/faust
 
-make -j$NPROC
-make install
+cmake --build .
+cmake --build . --target install/strip

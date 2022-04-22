@@ -9,7 +9,7 @@ if [[ ! -d freetype ]]; then
 fi
 
 cmake \
-  -G"MSYS Makefiles" \
+  -GNinja \
   -S freetype \
   -B freetype-build \
   -DFT_DISABLE_ZLIB=TRUE \
