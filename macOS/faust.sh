@@ -29,7 +29,10 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 mkdir -p faustdir
 cd faustdir
 export PATH=$PATH:$INSTALL_PREFIX/llvm-libs/bin
-xcrun cmake -C ../backends/llvm.cmake .. \
+xcrun cmake \
+  .. \
+  -GNinja \
+  -C ../backends/llvm.cmake \
   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX/llvm-libs \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
@@ -43,5 +46,5 @@ xcrun cmake -C ../backends/llvm.cmake .. \
   -DCMAKE_CXX_VISIBLITY_PRESET=hidden \
   -DCMAKE_VISIBLITY_INLINES_HIDDEN=1
   
-xcrun make -j$NPROC
-xcrun make install
+xcrun cmake --build . --parallel
+xcrun cmake --build . --parallel --target install/strip

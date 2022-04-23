@@ -11,6 +11,7 @@
 ./jack.sh
 ./llvm-libs.sh
 ./faust.sh
+./ysfx.sh
 
 
 

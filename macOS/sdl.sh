@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-export SDL_VER=2.0.14
+export SDL_VER=2.0.20
 if [[ ! -f SDL2-$SDL_VER.tar.gz ]]; then
   wget -nv https://www.libsdl.org/release/SDL2-$SDL_VER.tar.gz
   gtar xaf SDL2-$SDL_VER.tar.gz
@@ -12,6 +12,7 @@ mkdir sdl-build
 cd sdl-build
 
 xcrun cmake \
+ -GNinja \
  -DSDL_STATIC=1 \
  -DSDL_STATIC_PIC=1 \
  -DBUILD_SHARED_LIBS=0 \
@@ -33,12 +34,12 @@ xcrun cmake \
  -DSDL_THREADS=0 \
  -DSDL_TIMERS=0 \
  -DSDL_LOADSO=0 \
- -DSDL_CPUINFO=0 \
+ -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
  ../SDL2-$SDL_VER
 
-xcrun make -j$NPROC
-xcrun make install
+xcrun cmake --build . --parallel
+xcrun cmake --build . --parallel --target install/strip
 
 ln -s $INSTALL_PREFIX/SDL2/SDL2.framework/Resources $INSTALL_PREFIX/SDL2/cmake

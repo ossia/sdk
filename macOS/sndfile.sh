@@ -9,6 +9,7 @@ mkdir sndfile-build
 cd sndfile-build
 
 xcrun cmake \
+ -GNinja \
  -DBUILD_PROGRAMS=0 \
  -DBUILD_EXAMPLES=0 \
  -DENABLE_PACKAGE_CONFIG=0 \
@@ -23,6 +24,6 @@ xcrun cmake \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/sndfile \
  ../libsndfile
 
-xcrun make -j$NPROC
-xcrun make install
+xcrun cmake --build . --parallel
+xcrun cmake --build . --parallel --target install/strip
 

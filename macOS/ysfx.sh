@@ -13,6 +13,7 @@ export FREETYPE_DIR=$INSTALL_PREFIX/freetype
 cmake \
   -S ysfx \
   -B ysfx-build \
+  -GNinja \
   -DYSFX_PLUGIN=OFF \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \

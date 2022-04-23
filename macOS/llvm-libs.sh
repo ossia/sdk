@@ -9,7 +9,7 @@ cd llvm-build-3
 # set PATH=/opt/score-sdk/llvm/bin:$PATH
 
 xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk cmake -Wno-dev \
- -G Ninja \
+ -GNinja \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=0 \
  -DLLVM_INCLUDE_TOOLS=1 \
@@ -34,6 +34,7 @@ xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
 # -DCMAKE_EXE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
 # -DCMAKE_MODULE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
 
-xcrun ninja
-xcrun ninja install
+xcrun cmake --build . --parallel
+xcrun cmake --build . --parallel --target install/strip
+
 )
