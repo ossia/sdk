@@ -4,7 +4,7 @@ source ./common.sh
 
 if [[ ! -d ysfx ]]; then
 (
-  git clone --recursive https://github.com/jcelerier/ysfx
+  git clone --recursive https://github.com/jpcima/ysfx
 )
 fi
 
