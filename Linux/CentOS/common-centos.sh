@@ -8,6 +8,7 @@ export CXXFLAGS="-O3 -march=x86-64 -mtune=generic -fno-plt -fno-semantic-interpo
 
 export LD_LIBRARY_PATH=
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
+  export CXXFLAGS="$CXXFLAGS -fnew-infallible"
   export CC=$INSTALL_PREFIX/llvm/bin/clang
   export CXX=$INSTALL_PREFIX/llvm/bin/clang++
   export PATH=$INSTALL_PREFIX/llvm/bin:$PATH

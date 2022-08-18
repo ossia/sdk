@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-export FFTW_VERSION=3.3.8
+export FFTW_VERSION=3.3.10
 if [[ ! -f fftw-$FFTW_VERSION.tar.gz ]]; then
   wget -nv http://fftw.org/fftw-$FFTW_VERSION.tar.gz
   tar xaf fftw-$FFTW_VERSION.tar.gz
