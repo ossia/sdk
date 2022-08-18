@@ -20,13 +20,13 @@ cd portaudio-build
 # portaudio_static_x64.lib(pa_win_wdmks.obj) : error LNK2005: CODECAPI_CURRENTCHANGELIST déjà défini(e) dans strmiids.lib(strmiids.obj) [C:\dev\build-msvc\src\app\score.vcxproj]
 
 cmake ../portaudio `
-    -G "Visual Studio 16 2019" `
-    -A x64 `
-    -T host=x64 `
-    -DCMAKE_BUILD_TYPE=Release `
-    -DPA_BUILD_SHARED=Off `
+    -DBUILD_SHARED_LIBS=Off `
+    -DPA_USE_ASIO=On `
     -DPA_USE_WDMKS=Off `
+    -DPA_USE_WDMKS_DEVICE_INFO=Off `
     -DPA_DLL_LINK_WITH_STATIC_RUNTIME=Off `
-    -DCMAKE_INSTALL_PREFIX=c:\score-sdk-msvc\portaudio
-cmake --build . --config Release
-cmake --build . --config Release --target INSTALL
+    -DCMAKE_INSTALL_PREFIX=c:\ossia-sdk-msvc\portaudio
+cmake --build . --config Debug
+cmake --build . --config Debug --target INSTALL
+
+cd ..

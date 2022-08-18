@@ -2,19 +2,20 @@
 
 source ./common.sh
 
-export FFTW_VERSION=3.3.9
+export FFTW_VERSION=3.3.10
 if [[ ! -f fftw-$FFTW_VERSION.tar.gz ]]; then
   wget -nv http://fftw.org/fftw-$FFTW_VERSION.tar.gz
   tar xaf fftw-$FFTW_VERSION.tar.gz
 fi
 
-mkdir fftw-build
+mkdir -p fftw-build
 cd fftw-build
 
-CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
+CFLAGS+=" -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
 ../fftw-$FFTW_VERSION/configure   \
     --prefix=$INSTALL_PREFIX/fftw \
     --enable-threads              \
+    --with-combined-threads       \
     --enable-fma                  \
     --enable-generic-simd128      \
     --enable-generic-simd256      \
@@ -22,10 +23,8 @@ CFLAGS+=" -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
     --enable-avx                  \
     --enable-avx-128-fma          \
     --enable-avx2                 \
-    --enable-fma                  \
     --disable-fortran             \
     --with-our-malloc16           \
-    --with-gcc-arch=haswell       \
     CC="clang"                    \
     CXX="clang++"
 

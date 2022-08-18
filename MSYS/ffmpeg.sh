@@ -9,10 +9,9 @@ if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
   tar xaf ffmpeg-$VERSION.tar.bz2
 fi
 
-mkdir ffmpeg-build
-cd ffmpeg-build
+cd ffmpeg
 
- ../ffmpeg/configure \
+ ./configure \
     --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
@@ -24,5 +23,5 @@ cd ffmpeg-build
  	--enable-protocols  --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg 
 
- make -j$NPROC
+ make -j1
  make install
