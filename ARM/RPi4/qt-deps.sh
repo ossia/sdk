@@ -18,7 +18,7 @@ if [[ ! -d qt5 ]]; then
     git checkout jcelerier/kde/5.15
 
     cp -R mkspecs/linux-arm-gnueabi-g++ mkspecs/linux-arm-gnueabihf-g++
-    sed -i -e 's/arm-linux-gnueabi-/arm-linux-gnueabihf-/g' mkspecs/linux-arm-gnueabihf-g++/qmake.conf
+    sed -i -e "s/arm-linux-gnueabi-/$CROSS_TOOLS_PREFIX/g" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
 
     sed -i "14s/$/ $CFLAGS/" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
     sed -i "15s/$/ $CXXFLAGS/" mkspecs/linux-arm-gnueabihf-g++/qmake.conf

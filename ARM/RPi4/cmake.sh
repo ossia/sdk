@@ -2,7 +2,7 @@
 
 cd /image
 source /image/config.sh
-wget https://cmake.org/files/v3.19/cmake-3.19.3.tar.gz
+wget https://cmake.org/files/v3.25/cmake-3.25.1.tar.gz
 tar xaf cmake-*
 rm cmake-*.tar.gz
 cd cmake-*
