@@ -13,10 +13,10 @@ cd ffmpeg-build
 
 export PATH=$PATH:$CROSS_COMPILER_LOCATION/bin
 
-../ffmpeg-$VERSION/configure \
+../ffmpeg/configure \
     --enable-cross-compile \
     --cross-prefix=${CCPREFIX} --target-os=linux \
-    --arch=arm --cpu=cortex-a72 \
+    --arch=$FFMPEG_ARCH --cpu=cortex-a72 \
     --disable-doc --disable-ffmpeg --disable-ffplay \
     --disable-debug \
     --pkg-config-flags="--static" \

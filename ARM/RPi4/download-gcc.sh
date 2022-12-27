@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/bash -eux
 
-# https://github.com/abhiTronix/raspberry-pi-cross-compilers#-toolchain-downloads
-# wget https://sourceforge.net/projects/raspberry-pi-cross-compilers/files/Raspberry%20Pi%20GCC%20Cross-Compiler%20Toolchains/Buster/GCC%2010.3.0/Raspberry%20Pi%203A%2B%2C%203B%2B%2C%204/cross-gcc-10.3.0-pi_3%2B.tar.gz/download -O 'cross-gcc.tar.gz'
-# wget https://sourceforge.net/projects/raspberry-pi-cross-compilers/files/Raspberry%20Pi%20GCC%20Cross-Compiler%20Toolchains/Buster/GCC%2010.2.0/Raspberry%20Pi%203A%2B%2C%203B%2B%2C%204/cross-gcc-10.2.0-pi_3%2B.tar.gz/download 
+source common.sh
 
-
-wget https://github.com/tttapa/docker-arm-cross-toolchain/releases/download/0.0.9/x-tools-armv8-rpi3-linux-gnueabihf.tar.xz
-
-
+mkdir -p $SDK_INSTALL_ROOT
+cd $SDK_INSTALL_ROOT
+wget https://github.com/tttapa/docker-arm-cross-toolchain/releases/download/0.0.9/$CROSS_COMPILER_ARCHIVE
+tar xaf $CROSS_COMPILER_ARCHIVE
+mv x-tools/* .
+rm -rf x-tools *.tar.*

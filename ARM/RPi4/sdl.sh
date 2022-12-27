@@ -15,7 +15,7 @@ mkdir sdl-build
 cd sdl-build
 
 cmake \
- -DCMAKE_TOOLCHAIN_FILE=$SDK_ROOT/toolchain.cmake \
+ -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN \
  -DSDL_STATIC=1 \
  -DSDL_STATIC_PIC=1 \
  -DBUILD_SHARED_LIBS=0 \

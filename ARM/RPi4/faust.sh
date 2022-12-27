@@ -29,7 +29,7 @@ cd faustdir
 
 $CMAKE \
     -C ../backends/llvm.cmake \
-    -DCMAKE_TOOLCHAIN_FILE=$SDK_ROOT/toolchain.cmake \
+    -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN \
     -DINCLUDE_OSC=0 \
     -DINCLUDE_HTTP=0 \
     -DINCLUDE_EXECUTABLE=0 \

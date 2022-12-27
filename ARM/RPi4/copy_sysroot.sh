@@ -1,8 +1,18 @@
-#!/bin/bash
+#!/bin/bash -eux
 
-cd /opt/ossia-sdk-rpi/pi
-sudo cp /usr/lib/arm-linux-gnueabihf/*.o /usr/lib/
-sudo rsync -az /lib sysroot
-sudo rsync -az /usr/include sysroot/usr
-sudo rsync -az /usr/lib sysroot/usr
-sudo rsync -az /opt/vc sysroot/opt
+SYSROOT="$1"
+SDK_INSTALL_ROOT="$2"
+DEBIAN_MULTIARCH="$3"
+
+echo "Running on : '$1'  =>  '$2'"
+cd "$SDK_INSTALL_ROOT/pi"
+
+sudo cp "$SYSROOT/usr/lib/$DEBIAN_MULTIARCH"/*.o "$SYSROOT"/usr/lib/
+sudo rsync -az "$SYSROOT"/lib sysroot
+sudo rsync -az "$SYSROOT"/usr/include sysroot/usr
+sudo rsync -az "$SYSROOT"/usr/lib sysroot/usr
+
+# AArch64 does not have /opt/vc as the drivers don't exist...
+if [[ -d "$SYSROOT"/opt/vc ]]; then
+  sudo rsync -az "$SYSROOT"/opt/vc sysroot/opt
+fi

@@ -1,8 +1,10 @@
 #!/bin/bash
+
+source common.sh
 sudo docker build  --squash --compress --force-rm  -f Dockerfile.debian -t ossia/score-rpi .
 
-mkdir -p /opt/ossia-sdk-rpi
-cd /opt/ossia-sdk-rpi && \
+mkdir -p $SDK_INSTALL_ROOT
+cd $SDK_INSTALL_ROOT && \
     mkdir pi && \
     mkdir pi/build && \
     mkdir pi/tools && \
@@ -11,9 +13,9 @@ cd /opt/ossia-sdk-rpi && \
     mkdir pi/sysroot/opt && \
     chown -R 1000:1000 pi
 
-sudo docker run -v /opt/ossia-sdk-rpi:/opt/ossia-sdk-rpi ossia/score-rpi /bin/bash 'copy_sysroot.sh'
+sudo docker run -v $SDK_INSTALL_ROOT:$SDK_INSTALL_ROOT ossia/score-rpi /bin/bash 'copy_sysroot.sh'
 
-cd /opt/ossia-sdk-rpi/pi
+cd $SDK_INSTALL_ROOT/pi
 
 wget https://raw.githubusercontent.com/riscv/riscv-poky/master/scripts/sysroot-relativelinks.py
 sudo python sysroot-relativelinks.py sysroot

@@ -17,11 +17,11 @@ if [[ ! -d qt5 ]]; then
     git fetch jcelerier
     git checkout jcelerier/kde/5.15
 
-    cp -R mkspecs/linux-arm-gnueabi-g++ mkspecs/linux-arm-gnueabihf-g++
-    sed -i -e "s/arm-linux-gnueabi-/$CROSS_TOOLS_PREFIX/g" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
+    # cp -R mkspecs/linux-arm-gnueabi-g++ mkspecs/linux-arm-gnueabihf-g++
+    # sed -i -e "s/arm-linux-gnueabi-/$CROSS_TOOLS_PREFIX/g" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
 
-    sed -i "14s/$/ $CFLAGS/" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
-    sed -i "15s/$/ $CXXFLAGS/" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
+    # sed -i "14s/$/ $CFLAGS/" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
+    # sed -i "15s/$/ $CXXFLAGS/" mkspecs/linux-arm-gnueabihf-g++/qmake.conf
 
     sed -i "s/-O3/$CFLAGS/" mkspecs/common/gcc-base.conf
     sed -i "s/-O2/$CFLAGS/" mkspecs/common/gcc-base.conf

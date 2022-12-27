@@ -16,7 +16,7 @@ mkdir -p qt5-build-static
 
   ../qt5/configure $(cat "$SDK_ROOT/common/qtfeatures") \
                    -release -opengl es2 -eglfs \
-                   -device linux-rasp-pi4-v3d-g++ \
+                   -device $QT_CROSS_DEVICE \
                    -pkg-config \
                    -device-option CROSS_COMPILE=$CCPREFIX \
                    -sysroot $SYSROOT_LOCATION \
@@ -28,7 +28,7 @@ mkdir -p qt5-build-static
                    -no-feature-zstd \
                    -v -recheck \
                    -L$CROSS_COMPILER_LOCATION/lib/ -L$CROSS_COMPILER_LOCATION/$DEBIAN_MULTIARCH_FOLDER/lib/ \
-                   -L$SYSROOT_LOCATION/usr/lib/arm-linux-gnueabihf -I$SYSROOT_LOCATION/usr/include/arm-linux-gnueabihf
+                   -L$SYSROOT_LOCATION/usr/lib/$DEBIAN_MULTIARCH_FOLDER -I$SYSROOT_LOCATION/usr/include/$DEBIAN_MULTIARCH_FOLDER
 
   make -j$NPROC
   make install -j$NPROC

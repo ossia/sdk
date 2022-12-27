@@ -3,7 +3,7 @@
 source scl_source enable devtoolset-9
 
 cd /image
-cp ./CentOS/common-centos.sh ./common.sh
+# cp ./CentOS/common-centos.sh ./common.sh
 ./llvm-deps.sh
 ./qt-deps.sh
 ./llvm.sh
