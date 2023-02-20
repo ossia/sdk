@@ -1,17 +1,39 @@
 #!/bin/bash -eux
+
+mkdir -p qt6-build-host
+(
+  cd qt6-build-host
+  ../qt6/configure \
+     -release \
+     -nomake tests \
+     -nomake examples \
+     -cmake-generator Ninja \
+     -no-feature-zstd \
+     -prefix /opt/ossia-sdk-wasm/qt6-host
+  ninja
+  ninja install
+)
+
 source ./common.sh
 
-mkdir -p qt5-build-static
+mkdir -p qt6-build-static
 (
-  cd qt5-build-static
-
-  ../qt5/configure $(cat "$SDK_ROOT/common/qtfeatures") \
-                   -xplatform wasm-emscripten \
-                   -no-warnings-are-errors \
-                   -prefix $INSTALL_PREFIX/qt5
-
-  make -j$NPROC
-  make install -j$NPROC
+  cd qt6-build-static
+  ../qt6/configure \
+     -release \
+     -nomake tests \
+     -nomake examples \
+     -cmake-generator Ninja \
+     -prefix /opt/ossia-sdk-wasm/qt-wasm \
+     -feature-thread \
+     -sse2 \
+     -feature-opengles3 \
+     -no-feature-zstd \
+     -qt-host-path /opt/ossia-sdk-wasm/qt6-host \
+     -platform wasm-emscripten \
+     -device-option QT_EMSCRIPTEN_ASYNCIFY=1
+  ninja
+  ninja install
 )
 exit 0
 (

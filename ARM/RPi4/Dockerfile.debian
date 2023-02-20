@@ -8,6 +8,7 @@ RUN echo 'deb http://archive.raspbian.org/raspbian buster main contrib non-free 
         va-driver-all wget libxcb-randr0-dev libxcb-xtest0-dev \
         libxcb-shape0-dev libxcb-xkb-dev libegl1-mesa-dev libbluetooth-dev \
         libraspberrypi0 libraspberrypi-dev libraspberrypi-bin rsync \
+        libv4l-dev libvulkan-dev libdrm-dev
     
 RUN apt build-dep qt5-qmake libqt5gui5 libqt5qml5 libqt5websockets5 libudev-dev libinput-dev libts-dev libxcb-xinerama0-dev libxcb-xinerama0 gdbserver
 

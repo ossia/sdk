@@ -14,6 +14,7 @@ cd ffmpeg-build
 ../ffmpeg/configure \
         --arch=x86_64 --cpu=x86_64 \
         --enable-pic \
+        --enable-opencl --enable-libmfx --enable-nvenc --enable-cuda --enable-vaapi --enable-vdpau \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
  	--pkg-config-flags="--static" \

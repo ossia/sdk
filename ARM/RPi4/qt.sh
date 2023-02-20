@@ -14,8 +14,11 @@ mkdir -p qt5-build-static
 
   export LDFLAGS="-L$CROSS_COMPILER_LOCATION/lib/ -L$CROSS_COMPILER_LOCATION/$DEBIAN_MULTIARCH_FOLDER/lib/"
 
+  # FIXME needed for Qt to find things in the proper sysroot due to stupid multiarch bs
+  export PKG_CONFIG_LIBDIR=/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/lib/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/share/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/lib/aarch64-rpi3-linux-gnu/pkgconfig
+
   ../qt5/configure $(cat "$SDK_ROOT/common/qtfeatures") \
-                   -release -opengl es2 -eglfs \
+                   -release -opengl es2 -eglfs -kms \
                    -device $QT_CROSS_DEVICE \
                    -pkg-config \
                    -device-option CROSS_COMPILE=$CCPREFIX \

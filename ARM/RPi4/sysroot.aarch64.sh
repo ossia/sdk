@@ -22,9 +22,7 @@
 #     -kernel kernel8.img \
 #     -dtb bcm2710-rpi-3-b.dtb \
 #     -sd 2022-09-22-raspios-bullseye-arm64-lite.img \
-#     -append console=ttyAMA0 \
-#     root=/dev/mmcblk0p2 rw rootwait rootfstype=ext4 \
-#     -nographic \
+#     -append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rw rootwait rootfstype=ext4 modules-load=dwc2,g_ether" \
 #     -device usb-net,netdev=net0 \
 #     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
 #     -smp 4
@@ -42,6 +40,16 @@
 #
 # $ sudo systemctl enable ssh
 # $ sudo systemctl start ssh
+#
+#
+# Useful function to compress a debian package: 
+# compress_debian_package () {
+#     dpkg -L "$1" | perl -nE 'chomp; say unless -d' | tar caf "$1.tar" -T -
+# }
+compress_debian_packages () {
+    sudo apt-get -y -q install $@
+    dpkg -L $@ | perl -nE 'chomp; say unless -d' | tar caf "output.tar.gz" -T -
+}
 
 source common.sh
 export SYSROOT_SCRIPT=$PWD/copy_sysroot.sh

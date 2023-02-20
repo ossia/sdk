@@ -1,31 +1,42 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh gcc
 VERSION=snapshot
 
-if [[ ! -d ffmpeg-$VERSION ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
-  tar xaf ffmpeg-$VERSION.tar.bz2
+if [[ ! -d ffmpeg ]]; then
+  git clone -b dev/5.1.2/rpi_import_1 https://github.com/jc-kynesim/rpi-ffmpeg ffmpeg
 fi
 
-mkdir ffmpeg-build
+mkdir -p ffmpeg-build
 cd ffmpeg-build
 
 export PATH=$PATH:$CROSS_COMPILER_LOCATION/bin
 
+export PKG_CONFIG_PATH="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig"
+
+export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig:$SYSROOT/usr/lib/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/share/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/lib/aarch64-rpi3-linux-gnu/pkgconfig"
+
 ../ffmpeg/configure \
     --enable-cross-compile \
-    --cross-prefix=${CCPREFIX} --target-os=linux \
+    --cross-prefix=${CCPREFIX} \
+    --sysroot=${SYSROOT} \
+    --target-os=linux \
     --arch=$FFMPEG_ARCH --cpu=cortex-a72 \
     --disable-doc --disable-ffmpeg --disable-ffplay \
     --disable-debug \
+    --enable-sand --enable-v4l2-request --enable-libdrm --enable-libudev \
+    --enable-libv4l2 --enable-v4l2-m2m \
+    --disable-alsa \
     --pkg-config-flags="--static" \
+    --pkg-config="pkg-config" \
     --enable-gpl --enable-version3 \
     --disable-openssl --disable-securetransport \
     --disable-network --disable-iconv \
     --enable-protocols --disable-lzma \
     --prefix=$INSTALL_PREFIX/ffmpeg \
-    --extra-cflags="$CFLAGS"
+    --extra-cflags="$CFLAGS" --extra-libs=-lpthread || exit 1
+
+#     --enable-libv4l2 \
 
 make -j$NPROC
-make install
+sudo make install
