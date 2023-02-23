@@ -16,6 +16,8 @@ xcrun ../ffmpeg/configure \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
 	--disable-autodetect \
+	--enable-avfoundation \
+	--enable-indev=avfoundation \
 	--enable-videotoolbox --enable-audiotoolbox \
  	--pkg-config-flags="--static" \
  	--enable-gpl --enable-version3 \
