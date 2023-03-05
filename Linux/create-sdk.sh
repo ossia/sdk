@@ -12,6 +12,6 @@ docker run --rm -it \
            -v "/opt/ossia-sdk:/opt/ossia-sdk" \
            -w="/image" \
            ossia/score-sdk-base \
-           /bin/bash /image/build-all.sh
+           /bin/bash /image/build-all-release.sh
 
 tar caf sdk-linux.tar.xz /opt/ossia-sdk

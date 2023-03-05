@@ -1,9 +1,5 @@
 #!/bin/bash
 
-source scl_source enable gcc-toolset-11
-
-cd /image
-cp ./CentOS/common-centos.sh ./common.sh
 ./llvm-deps.sh
 ./qt-deps.sh
 ./llvm.sh

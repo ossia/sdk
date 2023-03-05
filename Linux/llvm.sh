@@ -3,8 +3,8 @@
 source ./common.sh
 
 (
-mkdir -p llvm-build-14
-cd llvm-build-14
+mkdir -p llvm-build-16
+cd llvm-build-16
 $CMAKE  -GNinja \
  -DCMAKE_BUILD_TYPE=Release \
  -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
@@ -18,8 +18,13 @@ $CMAKE  -GNinja \
  -DLIBCXX_USE_COMPILER_RT=OFF \
  -DLIBCXXABI_USE_COMPILER_RT=OFF \
  -DLIBUNWIND_USE_COMPILER_RT=OFF \
- -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;libunwind;lld;polly" \
+ -DLLVM_ENABLE_PROJECTS="clang;lld;polly" \
+ -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+ -DLLVM_ENABLE_OCAMLDOC=OFF \
+ -DLLVM_ENABLE_BINDINGS=0 \
+ -DLLVM_INCLUDE_BENCHMARKS=0 \
  -DCMAKE_INSTALL_PREFIX=$SDK_ROOT/llvm-bootstrap \
+ $LLVM_ADDITIONAL_FLAGS \
  ../llvm/llvm
 
 $CMAKE --build .
@@ -31,9 +36,10 @@ $CMAKE --build . --target install/strip
 mkdir -p llvm-build
 cd llvm-build
 export PATH=$SDK_ROOT/llvm-bootstrap/bin:$PATH
-export LD_LIBRARY_PATH=$SDK_ROOT/llvm-bootstrap/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$SDK_ROOT/llvm-bootstrap/lib:$SDK_ROOT/llvm-bootstrap/lib/x86_64-unknown-linux-gnu:$LD_LIBRARY_PATH
 
-$CMAKE \
+echo $LD_LIBRARY_PATH
+$CMAKE -GNinja \
  -DCMAKE_C_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang \
  -DCMAKE_CXX_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang++ \
  -DCMAKE_C_FLAGS="$CFLAGS" \
@@ -45,14 +51,18 @@ $CMAKE \
  -DLLVM_INCLUDE_EXAMPLES=0 \
  -DLLVM_INCLUDE_TESTS=0 \
  -DLLVM_CXX_STD="c++20" \
- -DLLVM_TARGETS_TO_BUILD="X86;WebAssembly" \
+ -DLLVM_TARGETS_TO_BUILD="X86" \
+ -DLLVM_ENABLE_OCAMLDOC=OFF \
+ -DLLVM_ENABLE_BINDINGS=0 \
+ -DLLVM_INCLUDE_BENCHMARKS=0 \
  -DLLVM_ENABLE_CURSES=0 \
  -DLLVM_ENABLE_TERMINFO=0 \
  -DLLVM_ENABLE_LIBCXX=ON \
  -DLLVM_ENABLE_LLD=ON \
  -DLLVM_ENABLE_EH=ON \
  -DLLVM_ENABLE_RTTI=ON \
- -DLLVM_ENABLE_PROJECTS="clang;libcxx;libcxxabi;lld;polly" \
+ -DLLVM_ENABLE_PROJECTS="clang;lld;polly" \
+ -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
  -DCLANG_DEFAULT_CXX_STDLIB:STRING=libc++ \
  -DCLANG_DEFAULT_RTLIB:STRING=libgcc \
  -DLIBCXX_ABI_UNSTABLE=ON \
@@ -64,6 +74,7 @@ $CMAKE \
  -DLIBUNWIND_USE_COMPILER_RT=OFF \
  -DCOMPILER_RT_USE_BUILTINS_LIBRARY=OFF \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm \
+ $LLVM_ADDITIONAL_FLAGS \
  ../llvm/llvm
 
 $CMAKE --build . --parallel

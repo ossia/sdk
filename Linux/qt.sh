@@ -6,13 +6,12 @@ mkdir -p qt5-build-static
   cd qt5-build-static
 
   export OPENSSL_LIBS="$INSTALL_PREFIX/openssl/lib/libssl.a $INSTALL_PREFIX/openssl/lib/libcrypto.a -ldl -pthread"
-  ../qt5/configure $(cat "$SDK_ROOT/common/qtfeatures") \
-                   -static \
+  ../qt5/configure \
+    $(cat "$SDK_ROOT/common/qtfeatures") \
+    $(cat "$SDK_ROOT/common/qtfeatures.$QT_MODE") \
                    -system-zlib \
-                   -openssl-linked \
                    -no-dbus -no-feature-zstd \
                    -no-feature-wayland-server \
-                   -I$INSTALL_PREFIX/openssl/include \
                    -platform linux-clang-libc++ \
                    -prefix $INSTALL_PREFIX/qt5-static
 

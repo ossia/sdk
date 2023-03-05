@@ -1,0 +1,10 @@
+-debug
+-static
+-system-freetype 
+FREETYPE_INCDIR=/opt/ossia-sdk-debug/freetype/include/freetype2
+FREETYPE_LIBS=/opt/ossia-sdk-debug/freetype/lib64/libfreetype.a
+-system-harfbuzz 
+HARFBUZZ_INCDIR=/opt/ossia-sdk-debug/harfbuzz/include
+HARFBUZZ_LIBS=/opt/ossia-sdk-debug/harfbuzz/lib64/libharfbuzz.a
+-openssl-linked
+-I/opt/ossia-sdk-debug/openssl/include
