@@ -16,6 +16,8 @@ mv cmake-3.26.0-rc5-linux-x86_64 cmake
 ./sdl.sh
 ./portaudio.sh
 ./jack.sh
+./pipewire.sh
+./lv2.sh
 ./ysfx.sh
 # ./qgnomeplatform.sh
 
