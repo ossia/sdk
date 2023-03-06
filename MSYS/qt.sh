@@ -36,6 +36,7 @@ mkdir -p qt5-build-static
                    -platform win32-clang-g++ \
                    -opengl desktop \
                    -feature-schannel \
+                   -no-feature-vnc \
                    -no-feature-zstd \
                    -system-freetype \
                    FREETYPE_INCDIR=$INSTALL_PREFIX/freetype/include/freetype2 \

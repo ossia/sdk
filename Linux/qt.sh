@@ -1,31 +1,32 @@
 #!/bin/bash -eux
+export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
 
-mkdir -p qt5-build-static
+source "$SDK_COMMON_ROOT/common/clone-qt.sh"
+
+mkdir -p qt6-build-static
 (
-  cd qt5-build-static
+  cd qt6-build-static
 
   export OPENSSL_LIBS="$INSTALL_PREFIX/openssl/lib/libssl.a $INSTALL_PREFIX/openssl/lib/libcrypto.a -ldl -pthread"
-  ../qt5/configure \
-    $(cat "$SDK_ROOT/common/qtfeatures") \
+  ../qt/configure \
+    $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
     $(cat "$SDK_ROOT/common/qtfeatures.$QT_MODE") \
+                   -feature-vnc \
                    -system-zlib \
-                   -no-dbus -no-feature-zstd \
+                   -linker lld \
                    -no-feature-wayland-server \
                    -platform linux-clang-libc++ \
-                   -prefix $INSTALL_PREFIX/qt5-static
+                   -prefix $INSTALL_PREFIX/qt6-static \
+                   -- \
+                   -DCMAKE_C_FLAGS="$CFLAGS" \
+                   -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+                   -DCMAKE_CXX_STANDARD=20 \
+                   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX \
+                   -Dharfbuzz_DIR=$INSTALL_PREFIX/harfbuzz \
+                   -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX/harfbuzz/include \
+                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a
 
-  make -j$NPROC
-  make install -j$NPROC
+  cmake --build .
+  cmake --build . --target install
 )
-
-(
-  cd qt5
-
-  $GIT clone https://github.com/jcelerier/qtshadertools.git || true
-  cd qtshadertools
-  $INSTALL_PREFIX/qt5-static/bin/qmake
-  make -j$NPROC
-  make install -j$NPROC
-)
-

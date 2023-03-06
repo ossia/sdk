@@ -1,5 +1,5 @@
--static
 -release
+-static
 -system-freetype 
 FREETYPE_INCDIR=/opt/ossia-sdk/freetype/include/freetype2
 FREETYPE_LIBS=/opt/ossia-sdk/freetype/lib64/libfreetype.a

@@ -11,20 +11,22 @@ fi
 mkdir ffmpeg-build
 cd ffmpeg-build
 
+# --enable-opencl --enable-libmfx --enable-nvenc --enable-cuda --enable-vaapi --enable-vdpau \
 ../ffmpeg/configure \
-        --arch=x86_64 --cpu=x86_64 \
-        --enable-pic \
-        --enable-opencl --enable-libmfx --enable-nvenc --enable-cuda --enable-vaapi --enable-vdpau \
+    --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
+	--disable-autodetect \
+    --enable-pic \
  	--pkg-config-flags="--static" \
  	--enable-gpl --enable-version3 \
  	--disable-openssl --disable-securetransport \
  	--disable-network --disable-iconv \
-        --disable-libxcb --disable-libxcb-shm --disable-libxcb-xfixes \
-        --disable-alsa \
+    --disable-libxcb --disable-libxcb-shm --disable-libxcb-xfixes \
+    --disable-alsa \
  	--enable-protocols --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
+	--cc="$CC" --cxx="$CXX" \
  	--extra-cflags="$CFLAGS"
 
 make -j$NPROC

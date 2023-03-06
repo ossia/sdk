@@ -5,7 +5,6 @@ source ./common.sh
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
 
-
 # disabled since we can't seem to make custom libc++ not crash...
 # echo 'QMAKE_LFLAGS+= -L/opt/score-sdk-osx/llvm/lib -lc++ -lc++abi -Wl,-rpath,/opt/score-sdk-osx/llvm/lib' >> qt5/qtbase/mkspecs/common/clang-mac.conf
 
@@ -14,12 +13,11 @@ mkdir -p qt6-build-static
   cd qt6-build-static
   ../qt/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
+                   -no-feature-vnc \
                    -system-zlib \
                    -system-freetype \
                    -system-harfbuzz \
                    -prefix $INSTALL_PREFIX/qt6-static \
-                   -c++std c++20 \
-                   -DYYDEBUG=0 \
                    -- \
                    -DCMAKE_C_FLAGS="$CFLAGS" \
                    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \

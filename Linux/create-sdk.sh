@@ -6,6 +6,7 @@ docker build --no-cache --pull --squash --compress --force-rm -t ossia/score-sdk
 mkdir -p /tmp/image
 mkdir -p /tmp/image/ossia-sdk
 cp -rf * /tmp/image/
+cp -rf ../common/* /tmp/image/common/
 
 docker run --rm -it \
            -v "/tmp/image:/image" \

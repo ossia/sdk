@@ -1,7 +1,6 @@
 #!/bin/bash
 
 ./llvm-deps.sh
-./qt-deps.sh
 ./llvm.sh
 ./faust.sh
 ./ffmpeg.sh

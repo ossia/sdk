@@ -4,6 +4,8 @@
 -release
 -confirm-license
 -feature-qml-devtools
+-c++std c++20
+-DYYDEBUG=0
 -no-cups
 -no-dbus
 -no-directfb
@@ -60,6 +62,7 @@
 -no-feature-style-fusion
 -no-feature-style-mac
 -no-feature-style-stylesheet
+-no-feature-style-windows
 -no-feature-style-windowsvista
 -no-feature-testlib
 -no-feature-textbrowser
@@ -74,7 +77,6 @@
 -no-feature-undogroup
 -no-feature-undostack
 -no-feature-undoview
--no-feature-vnc
 -no-feature-wizard
 -no-feature-zstd
 -no-gbm
@@ -92,8 +94,6 @@
 -no-sql-sqlite
 -no-syslog
 -no-tslib
--qt-freetype
--qt-harfbuzz
 -qt-libjpeg
 -qt-libpng
 -qt-pcre
