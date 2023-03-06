@@ -38,6 +38,7 @@ $CMAKE --build freetype-build --target install/strip
   cd build
   ninja
   ninja install
+  ln -s $INSTALL_PREFIX/harfbuzz/lib64 $INSTALL_PREFIX/harfbuzz/lib
 )
 
 # 3. Build freetype with harfbuzz

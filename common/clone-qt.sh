@@ -23,7 +23,7 @@ git clone https://github.com/qt/qt5 qt -b 6.5
 
   (
     cd qtshadertools
-    git fetch https://codereview.qt-project.org/a/qt/qtshadertools refs/changes/63/464663/2 && git cherry-pick FETCH_HEAD
+    git fetch https://codereview.qt-project.org/qt/qtshadertools refs/changes/63/464663/2 && git cherry-pick FETCH_HEAD
   )
 )
 fi

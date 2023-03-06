@@ -1,5 +1,5 @@
 #!/bin/bash -eux
-export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
+export SDK_COMMON_ROOT=$PWD
 source ./common.sh
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
@@ -13,19 +13,22 @@ mkdir -p qt6-build-static
     $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
     $(cat "$SDK_ROOT/common/qtfeatures.$QT_MODE") \
                    -feature-vnc \
+                   -feature-library \
                    -system-zlib \
                    -linker lld \
-                   -no-feature-wayland-server \
                    -platform linux-clang-libc++ \
                    -prefix $INSTALL_PREFIX/qt6-static \
+                   -openssl-linked \
                    -- \
                    -DCMAKE_C_FLAGS="$CFLAGS" \
                    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
                    -DCMAKE_CXX_STANDARD=20 \
                    -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX \
+                   -DFREETYPE_DIR=$INSTALL_PREFIX/freetype \
                    -Dharfbuzz_DIR=$INSTALL_PREFIX/harfbuzz \
                    -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX/harfbuzz/include \
-                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a
+                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a \
+                   -DOPENSSL_ROOT_DIR=$INSTALL_PREFIX/openssl
 
   cmake --build .
   cmake --build . --target install
