@@ -1,5 +1,5 @@
 #!/bin/bash
-export MACOS_VERSION=10.13
+export MACOS_VERSION=10.14
 export MACOS_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
 export NPROC=$(sysctl -n hw.logicalcpu)
 export INSTALL_PREFIX=/opt/ossia-sdk-x86_64

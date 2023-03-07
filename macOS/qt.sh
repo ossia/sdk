@@ -17,12 +17,15 @@ mkdir -p qt6-build-static
                    -system-zlib \
                    -system-freetype \
                    -system-harfbuzz \
+                   -no-feature-cxx17_filesystem \
                    -prefix $INSTALL_PREFIX/qt6-static \
                    -- \
                    -DCMAKE_C_FLAGS="$CFLAGS" \
                    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
                    -DCMAKE_CXX_STANDARD=20 \
                    -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX \
+                   -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
+                   -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
                    -Dharfbuzz_DIR=$INSTALL_PREFIX/harfbuzz \
                    -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX/harfbuzz/include \
                    -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a
