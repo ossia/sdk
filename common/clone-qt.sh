@@ -12,8 +12,6 @@ git clone https://github.com/qt/qt5 qt -b 6.5
     git remote add jcelerier https://github.com/jcelerier/qtbase
     git fetch jcelerier
     git checkout jcelerier/6.5-ossia
-
-    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/62/464662/1 && git cherry-pick FETCH_HEAD
   )
 
   (
