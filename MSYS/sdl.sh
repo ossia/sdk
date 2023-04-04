@@ -1,14 +1,15 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=2.0.20
+VERSION=2.26.4
 
 if [[ ! -f SDL2-$VERSION.tar.gz ]]; then
-  wget -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
+  wget --no-check-certificate -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
   tar xaf SDL2-$VERSION.tar.gz
 fi
 
 
+rm -rf sdl-build
 mkdir sdl-build
 cd sdl-build
 
@@ -28,7 +29,7 @@ cmake -GNinja \
  -DSDL_VIDEO=1 \
  -DSDL_RENDER=0 \
  -DSDL_POWER=1 \
- -DSDL_THREADS=0 \
+ -DSDL_THREADS=1 \
  -DSDL_TIMERS=0 \
  -DSDL_LOADSO=1 \
  -DSDL_CPUINFO=0 \

@@ -15,6 +15,7 @@ cd ffmpeg
     --arch=x86_64 --cpu=x86_64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
+	--enable-dxva2 --enable-d3d11va \
  	--pkg-config-flags="--static" \
  	--enable-gpl --enable-version3 \
  	--disable-openssl --disable-securetransport \
@@ -23,5 +24,5 @@ cd ffmpeg
  	--enable-protocols  --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg 
 
- make -j1
+ make V=1 -j1
  make install

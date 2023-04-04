@@ -26,17 +26,21 @@ cd faustdir
 
 export PATH=$INSTALL_PREFIX/llvm-libs/bin:$PATH
 echo $PATH
-which llvm-config
+# which llvm-config
 
 cmake -G Ninja -C ../backends/llvm.cmake ..  \
+  -DCMAKE_C_FLAGS="$CFLAGS -DFAUSTFLOAT=double" \
+  -DCMAKE_CXX_FLAGS="$CXXFLAGS -DFAUSTFLOAT=double" \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
   -DINCLUDE_HTTP=0 \
   -DINCLUDE_EXECUTABLE=0 \
   -DINCLUDE_STATIC=1 \
+  -DUSE_LLVM_CONFIG=0 \
   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX_CMAKE/llvm-libs \
-  -DLLVM_CONFIG=$INSTALL_PREFIX_CMAKE/llvm-libs/bin/llvm-config.exe \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/faust
+
+#  -DLLVM_CONFIG=$INSTALL_PREFIX_CMAKE/llvm-libs/bin/llvm-config.exe \
 
 cmake --build .
 cmake --build . --target install/strip
