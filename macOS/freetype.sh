@@ -5,6 +5,7 @@ source ./common.sh
 if [[ ! -d freetype ]]; then
 (
   git clone https://github.com/jcelerier/freetype
+  (cd freetype ; git checkout ossia-2023-04-09)
   git clone https://github.com/harfbuzz/harfbuzz
 )
 fi

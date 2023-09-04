@@ -2,10 +2,11 @@
 
 source ./common.sh
 
-export SDL_VER=2.0.20
+export SDL_VER=2.28.3
 if [[ ! -f SDL2-$SDL_VER.tar.gz ]]; then
   wget -nv https://www.libsdl.org/release/SDL2-$SDL_VER.tar.gz
   gtar xaf SDL2-$SDL_VER.tar.gz
+  gsed -i '/error Nope/d' SDL2-$SDL_VER/src/dynapi/SDL_dynapi.h
 fi
 
 mkdir sdl-build
@@ -26,13 +27,10 @@ xcrun cmake \
  -DSDL_JOYSTICK=1 \
  -DSDL_HAPTIC=1 \
  -DSDL_FILE=1 \
- -DSDL_ATOMIC=0 \
  -DSDL_AUDIO=0 \
  -DSDL_VIDEO=0 \
  -DSDL_RENDER=0 \
  -DSDL_POWER=1 \
- -DSDL_THREADS=0 \
- -DSDL_TIMERS=0 \
  -DSDL_LOADSO=0 \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
