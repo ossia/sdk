@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ ! -d qt ]]; then
-git clone https://github.com/qt/qt5 qt -b 6.5
+git clone https://github.com/qt/qt5 qt -b 6.6
 
 (
   cd qt
@@ -11,7 +11,7 @@ git clone https://github.com/qt/qt5 qt -b 6.5
     cd qtbase
     git remote add jcelerier https://github.com/jcelerier/qtbase
     git fetch jcelerier
-    git checkout jcelerier/6.5-ossia
+    git checkout jcelerier/6.6-ossia
   )
 
   (

@@ -2,6 +2,7 @@
 
 source ./common.sh
 
-pacman -S mingw-w64-x86_64-zlib mingw-w64-x86_64-cmake wget diffutils yasm tar unzip
+export TOOLCHAIN=clang-x86_64
+pacman -S mingw-w64-$TOOLCHAIN-zlib mingw-w64-$TOOLCHAIN-cmake mingw-w64-$TOOLCHAIN-git wget diffutils yasm tar unzip
 
 SDK_DIR=.
