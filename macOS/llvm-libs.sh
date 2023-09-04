@@ -17,6 +17,7 @@ xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
  -DLLVM_INCLUDE_EXAMPLES=0 \
  -DLLVM_INCLUDE_TESTS=0 \
  -DLLVM_ENABLE_CXX1Z=1 \
+ -DLLVM_ENABLE_LIBEDIT=0 \
  -DLLVM_TARGETS_TO_BUILD="X86;WebAssembly" \
  -DLLVM_ENABLE_LIBCXX=OFF \
  -DLLVM_ENABLE_LLD=OFF \
