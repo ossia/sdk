@@ -13,3 +13,8 @@ fi
 
 export CFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION -march=x86-64 -mtune=haswell"
 export CXXFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION -march=x86-64 -mtune=haswell"
+
+alias tar=gtar
+alias sed=gsed
+
+source ../common/versions.sh

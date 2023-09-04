@@ -1,16 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-
-if [[ ! -d freetype ]]; then
-(
-  git clone https://github.com/jcelerier/freetype
-  cd freetype
-  git remote add upstream https://github.com/freetype/freetype
-  
-  git clone https://github.com/harfbuzz/harfbuzz
-)
-fi
+source ../common/clone-freetype.sh
 
 (
 cmake \

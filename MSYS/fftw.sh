@@ -1,12 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-
-export FFTW_VERSION=3.3.10
-if [[ ! -f fftw-$FFTW_VERSION.tar.gz ]]; then
-  wget -nv http://fftw.org/fftw-$FFTW_VERSION.tar.gz
-  tar xaf fftw-$FFTW_VERSION.tar.gz
-fi
+../common/clone-fftw.sh
 
 mkdir -p fftw-build
 cd fftw-build

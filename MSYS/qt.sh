@@ -15,17 +15,17 @@ mkdir -p qt6-build-static
                    -no-feature-vnc \
                    -system-freetype \
                    -system-harfbuzz \
-                   -prefix $INSTALL_PREFIX/qt6-static \
+                   -prefix $INSTALL_PREFIX_CMAKE/qt6-static \
                    -- \
                    -DCMAKE_C_FLAGS="$CFLAGS" \
                    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
                    -DCMAKE_CXX_STANDARD=20 \
-                   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX \
-                   -DFREETYPE_DIR=$INSTALL_PREFIX/freetype \
-                   -DZLIB_ROOT=$INSTALL_PREFIX/zlib \
-                   -Dharfbuzz_DIR=$INSTALL_PREFIX/harfbuzz \
-                   -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX/harfbuzz/include \
-                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a
+                   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX_CMAKE \
+                   -DFREETYPE_DIR=$INSTALL_PREFIX_CMAKE/freetype \
+                   -DZLIB_ROOT=$INSTALL_PREFIX_CMAKE/zlib \
+                   -Dharfbuzz_DIR=$INSTALL_PREFIX_CMAKE/harfbuzz \
+                   -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX_CMAKE/harfbuzz/include \
+                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX_CMAKE/harfbuzz/lib/libharfbuzz.a
 
   cmake --build . -- -j1 -k 0
   cmake --build . --target install

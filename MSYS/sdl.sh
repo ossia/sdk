@@ -1,13 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=2.26.4
-
-if [[ ! -f SDL2-$VERSION.tar.gz ]]; then
-  wget --no-check-certificate -nv https://www.libsdl.org/release/SDL2-$VERSION.tar.gz
-  tar xaf SDL2-$VERSION.tar.gz
-fi
-
+source ../common/clone-sdl.sh
 
 rm -rf sdl-build
 mkdir sdl-build
@@ -24,19 +18,17 @@ cmake -GNinja \
  -DSDL_JOYSTICK=1 \
  -DSDL_HAPTIC=1 \
  -DSDL_FILE=1 \
- -DSDL_ATOMIC=0 \
  -DSDL_AUDIO=0 \
  -DSDL_VIDEO=1 \
  -DSDL_RENDER=0 \
  -DSDL_POWER=1 \
- -DSDL_THREADS=1 \
  -DSDL_TIMERS=0 \
  -DSDL_LOADSO=1 \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
  -DSDL_SYSTEM=1 \
- ../SDL2-$VERSION
+ ../SDL2-$SDL_VERSION
 
 cmake --build .
 cmake --build . --target install/strip

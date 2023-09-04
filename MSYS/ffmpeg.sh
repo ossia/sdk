@@ -1,13 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-
-export VERSION=snapshot
-
-if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
-  wget -nv --no-check-certificate https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
-  tar xaf ffmpeg-$VERSION.tar.bz2
-fi
+source ../common/clone-ffmpeg.sh
 
 cd ffmpeg
 
@@ -24,5 +18,5 @@ cd ffmpeg
  	--enable-protocols  --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg 
 
- make V=1 -j1
- make install
+$MAKE V=1 -j1
+$MAKE install

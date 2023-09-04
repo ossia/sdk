@@ -1,14 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-
-if [[ ! -d portaudio ]]; then
-(
-  git clone https://github.com/jcelerier/portaudio
-  cd portaudio
-  git checkout patch-2
-)
-fi
+source ../common/clone-portaudio.sh
 
 rm -rf portaudio/build
 mkdir -p portaudio/build

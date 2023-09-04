@@ -1,7 +1,9 @@
 #!/bin/bash
 
+source ./versions.sh
+
 if [[ ! -d qt ]]; then
-git clone https://github.com/qt/qt5 qt -b 6.6
+git clone https://github.com/qt/qt5 qt -b $QT_VERSION
 
 (
   cd qt
@@ -11,7 +13,7 @@ git clone https://github.com/qt/qt5 qt -b 6.6
     cd qtbase
     git remote add jcelerier https://github.com/jcelerier/qtbase
     git fetch jcelerier
-    git checkout jcelerier/6.6-ossia
+    git checkout jcelerier/$QT_VERSION-ossia
   )
 
   (
