@@ -26,7 +26,7 @@ export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig:$SYSROOT/
     --disable-debug \
     --enable-sand --enable-v4l2-request --enable-libdrm --enable-libudev \
     --enable-libv4l2 --enable-v4l2-m2m \
-    --disable-alsa \
+    --disable-alsa --disable-libxcb \
     --pkg-config-flags="--static" \
     --pkg-config="pkg-config" \
     --enable-gpl --enable-version3 \
@@ -34,7 +34,7 @@ export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig:$SYSROOT/
     --disable-network --disable-iconv \
     --enable-protocols --disable-lzma \
     --prefix=$INSTALL_PREFIX/ffmpeg \
-    --extra-cflags="$CFLAGS" --extra-libs=-lpthread || exit 1
+    --extra-cflags="$CFLAGS -fPIC" --extra-libs=-lpthread || exit 1
 
 #     --enable-libv4l2 \
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh clang
 
 if [[ ! -d faust ]] ;
 then
@@ -27,7 +27,7 @@ sed -i 's/no-rtti/rtti/g' CMakeLists.txt
 mkdir -p faustdir
 cd faustdir
 
-$CMAKE \
+$CMAKE -GNinja \
     -C ../backends/llvm.cmake \
     -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN \
     -DINCLUDE_OSC=0 \
@@ -35,10 +35,11 @@ $CMAKE \
     -DINCLUDE_EXECUTABLE=0 \
     -DINCLUDE_STATIC=1 \
     -DUSE_LLVM_CONFIG=0 \
-    -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX/llvm \
+    -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX/llvm-libs \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust \
+    -DLLVM_STATIC_LINK_CXX_STDLIB=1 \
     ..
 
-make -j$NPROC
-make install/strip
+$CMAKE --build .
+sudo $CMAKE --build . --target install/strip

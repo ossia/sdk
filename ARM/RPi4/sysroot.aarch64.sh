@@ -46,6 +46,7 @@
 # compress_debian_package () {
 #     dpkg -L "$1" | perl -nE 'chomp; say unless -d' | tar caf "$1.tar" -T -
 # }
+# dpkg --get-selections 'libxcb-*' | cut -f 1 | grep dev | tr '\n' ' ' | xargs compress_debian_packages
 compress_debian_packages () {
     sudo apt-get -y -q install $@
     dpkg -L $@ | perl -nE 'chomp; say unless -d' | tar caf "output.tar.gz" -T -

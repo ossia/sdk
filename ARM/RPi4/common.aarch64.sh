@@ -33,11 +33,10 @@ if [[ "$TOOLCHAIN" == "gcc" ]]; then
   export CC=$CROSS_COMPILER_LOCATION/bin/aarch64-rpi3-linux-gnu-gcc
   export CXX=$CROSS_COMPILER_LOCATION/bin/aarch64-rpi3-linux-gnu-g++
 elif [[ "$TOOLCHAIN" == "clang" ]]; then
-  export CMAKE_TOOLCHAIN=$PWD/toolchain.aarch64.llvm.cmake
-  export CROSS_COMPILER_LOCATION=$SDK_INSTALL_ROOT/llvm
+  export CMAKE_TOOLCHAIN=$PWD/toolchain.aarch64.llvm-host.cmake
+  export CROSS_COMPILER_LOCATION=/usr
   export CC=$CROSS_COMPILER_LOCATION/bin/clang
   export CXX=$CROSS_COMPILER_LOCATION/bin/clang++
-  export PATH=/opt/ossia-sdk-rpi-aarch64/llvm/bin:$PATH
 fi
 
 

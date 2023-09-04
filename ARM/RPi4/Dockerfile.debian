@@ -2,6 +2,7 @@ FROM  yummygooey/raspbian-buster
 
 RUN echo 'deb http://archive.raspbian.org/raspbian buster main contrib non-free rpi firmware' > /etc/apt/sources.list && \
     echo 'deb-src http://archive.raspbian.org/raspbian buster main contrib non-free rpi firmware' >> /etc/apt/sources.list && \
+    
     apt-get update && \
     apt-get dist-upgrade && \
     apt-get install build-essential cmake unzip pkg-config gfortran \
@@ -9,6 +10,8 @@ RUN echo 'deb http://archive.raspbian.org/raspbian buster main contrib non-free 
         libxcb-shape0-dev libxcb-xkb-dev libegl1-mesa-dev libbluetooth-dev \
         libraspberrypi0 libraspberrypi-dev libraspberrypi-bin rsync \
         libv4l-dev libvulkan-dev libdrm-dev
+    bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+    apt-get install libc++-15-dev libc++abi-15-dev
     
 RUN apt build-dep qt5-qmake libqt5gui5 libqt5qml5 libqt5websockets5 libudev-dev libinput-dev libts-dev libxcb-xinerama0-dev libxcb-xinerama0 gdbserver
 

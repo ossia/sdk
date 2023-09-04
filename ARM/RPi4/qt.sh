@@ -1,5 +1,5 @@
 #!/bin/bash -eux
-source ./common.sh
+source ./common.sh llvm
 
 mkdir -p qt5-build-static
 (
