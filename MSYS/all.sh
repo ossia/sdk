@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # ./deps.sh
+./cmake.sh
 ./zlib.sh
+./freetype.sh
 ./llvm-deps.sh
 ./llvm.sh
-./freetype.sh
 ./qt.sh
 ./ffmpeg.sh
 ./fftw.sh

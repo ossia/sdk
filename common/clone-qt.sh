@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./versions.sh
+source ../common/versions.sh
 
 if [[ ! -d qt ]]; then
 git clone https://github.com/qt/qt5 qt -b $QT_VERSION

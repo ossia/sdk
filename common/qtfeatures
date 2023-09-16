@@ -28,7 +28,6 @@
 -no-feature-linuxfb
 -no-feature-lttng
 -no-feature-mdiarea
--no-feature-mimetype
 -no-feature-movie
 -no-feature-pdf
 -no-feature-picture
@@ -66,7 +65,6 @@
 -no-feature-undostack
 -no-feature-undoview
 -no-feature-wizard
--no-feature-zstd
 -no-glib
 -no-icu
 -no-journald

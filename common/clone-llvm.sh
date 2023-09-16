@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./versions.sh
+source ../common/versions.sh
 
 if [[ ! -d llvm]]; then
 (

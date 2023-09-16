@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./versions.sh
+source ../common/versions.sh
 
 if [[ ! -d SDL2-$SDL_VERSION ]]; then
   wget --no-check-certificate -nv https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz

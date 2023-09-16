@@ -23,5 +23,5 @@ CFLAGS+=" -g -O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math"
     CC="clang"                    \
     CXX="clang++"
 
-make -j$NPROC
-make install
+$MAKE -j$NPROC
+$MAKE install
