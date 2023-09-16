@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 # export DOCKER_BUILDKIT=1
 docker rmi ossia/score-sdk-base
 docker build --no-cache --pull --squash --compress --force-rm -t ossia/score-sdk-base -f Dockerfile.centos .

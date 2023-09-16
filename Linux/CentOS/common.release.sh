@@ -3,7 +3,7 @@
 export NPROC=$(nproc)
 export INSTALL_PREFIX=/opt/ossia-sdk
 export SDK_ROOT=$PWD
-export CFLAGS="-DNDEBUG -O3 -march=x86-64 -mtune=generic -fno-plt -fno-semantic-interposition -fno-stack-protector -fno-ident -pthread " # -march=ivybridge -mtune=haswell"
+export CFLAGS="-DNDEBUG -O3 -march=x86-64 -mtune=generic -fno-plt -fno-semantic-interposition -fno-stack-protector -pthread -fPIC " # -march=ivybridge -mtune=haswell"
 export CXXFLAGS="$CFLAGS" # -march=ivybridge -mtune=haswell"
 
 export LD_LIBRARY_PATH=

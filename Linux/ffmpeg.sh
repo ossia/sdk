@@ -3,13 +3,15 @@
 source ./common.sh
 VERSION=snapshot
 
-if [[ ! -d ffmpeg-$VERSION ]]; then
+if [[ ! -d ffmpeg ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
   gtar xaf ffmpeg-$VERSION.tar.bz2
 fi
 
-mkdir ffmpeg-build
+mkdir -p ffmpeg-build
 cd ffmpeg-build
+
+# FIXME need to remove the check for linux_videoio_h for some reason in configure
 
 # --enable-opencl --enable-libmfx --enable-nvenc --enable-cuda --enable-vaapi --enable-vdpau \
 ../ffmpeg/configure \
@@ -18,16 +20,16 @@ cd ffmpeg-build
  	--disable-debug \
 	--disable-autodetect \
     --enable-pic \
- 	--pkg-config-flags="--static" \
  	--enable-gpl --enable-version3 \
+	--disable-libv4l2 \
  	--disable-openssl --disable-securetransport \
  	--disable-network --disable-iconv \
     --disable-libxcb --disable-libxcb-shm --disable-libxcb-xfixes \
     --disable-alsa \
+	--enable-indev=v4l2 \
  	--enable-protocols --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
 	--cc="$CC" --cxx="$CXX" \
- 	--extra-cflags="$CFLAGS"
-
-make -j$NPROC
+ 	--extra-cflags="$CFLAGS -fPIC" && \
+make -j$NPROC && \
 make install

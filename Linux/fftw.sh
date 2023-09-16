@@ -11,7 +11,7 @@ fi
 mkdir -p fftw-build
 cd fftw-build
 
-CFLAGS+=" -O3 -fstrict-aliasing -ffast-math"
+CFLAGS+=" -O3 -fstrict-aliasing -ffast-math -fno-finite-math-only "
 ../fftw-$FFTW_VERSION/configure   \
     --enable-threads              \
     --prefix=$INSTALL_PREFIX/fftw \
