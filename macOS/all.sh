@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # ./deps.sh
-./llvm-deps.sh
+# ./llvm-deps.sh
+
+./freetype.sh
 ./qt.sh
 ./fftw.sh
 ./ffmpeg.sh
-./sndfile.sh
+# ./sndfile.sh
 ./portaudio.sh
 ./sdl.sh
 ./jack.sh
