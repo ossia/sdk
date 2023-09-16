@@ -2,7 +2,7 @@
 
 cd /image
 source /image/config.sh
-wget https://cmake.org/files/v3.26/cmake-3.26.2.tar.gz
+wget https://cmake.org/files/v3.27.5/cmake-3.27.5.tar.gz
 tar xaf cmake-*
 rm cmake-*.tar.gz
 cd cmake-*
