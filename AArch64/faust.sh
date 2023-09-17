@@ -42,4 +42,4 @@ $CMAKE -GNinja \
     ..
 
 $CMAKE --build .
-sudo $CMAKE --build . --target install/strip
+$CMAKE --build . --target install/strip

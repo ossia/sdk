@@ -4,6 +4,7 @@ source scl_source enable devtoolset-9
 
 cd /image
 # cp ./CentOS/common-centos.sh ./common.sh
+../MSYS/zlib.sh
 ./llvm-deps.sh
 ./qt-deps.sh
 ./llvm.sh
@@ -15,3 +16,4 @@ cd /image
 ./sdl.sh
 ./portaudio.sh
 ./jack.sh
+../Linux/ysfx.sh

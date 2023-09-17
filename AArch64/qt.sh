@@ -9,14 +9,24 @@ if [[ ! -d "$SDK_INSTALL_ROOT/qt6-host" ]]; then
   unset CXX
   unset CFLAGS
   unset CXXFLAGS
+  unset PKG_CONFIG_LIBDIR
+  unset PKG_CONFIG_PATH
   export PATH=$ORIGPATH
 
-  cmake -S qt6 -B qt6-build-host \
+  CC=$CROSS_COMPILER_LOCATION/bin/clang 
+  CXX="$CROSS_COMPILER_LOCATION/bin/clang++ -stdlib=libc++ "
+  cmake -S qt -B qt6-build-host \
      -GNinja \
-     -DFEATURE_eglfs=0 \
-     -DQT_BUILD_EXAMPLES=OFF -DQT_BUILD_TESTS=OFF \
+     -DFEATURE_eglfs=OFF \
+     -DQT_BUILD_EXAMPLES=OFF \
+     -DQT_BUILD_TESTS=OFF \
+     -DBUILD_SHARED_LIBS=ON \
      -DCMAKE_BUILD_TYPE=Release \
-     -DCMAKE_INSTALL_PREFIX=$SDK_INSTALL_ROOT/qt6-host
+     -DQT_DISABLE_DEPRECATED_UP_TO=0x060600 \
+     -DCMAKE_INSTALL_PREFIX=$SDK_INSTALL_ROOT/qt6-host \
+     -DBUILD_qtwayland=ON \
+     -DFEATURE_wayland_client=OFF \
+     -DFEATURE_wayland_server=OFF
 
   cmake --build qt6-build-host
   cmake --build qt6-build-host --target install/strip
@@ -43,11 +53,24 @@ export PKG_CONFIG_PATH=/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/lib/aarch64-lin
       -prefix $INSTALL_PREFIX/qt6-static
       -extprefix $INSTALL_PREFIX/qt6-static
       --
-      -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN
+      -DQT_BUILD_EXAMPLES=OFF 
+      -DQT_BUILD_TESTS=OFF 
+      -DFEATURE_gtk3=OFF
+      -DFEATURE_glib=OFF
+      
+      # we're not there yet: error: use of undeclared identifier 'wl_proxy_marshal_flags'
+      -DBUILD_qtwayland=OFF
+      -DFEATURE_wayland_client=OFF
+      -DFEATURE_wayland_server=OFF
+
+      -DQT_DISABLE_DEPRECATED_UP_TO=0x060600
       -DQT_HOST_PATH=$SDK_INSTALL_ROOT/qt6-host
+      -DZLIB_ROOT="$INSTALL_PREFIX_CMAKE/sysroot"
+      -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX_CMAKE;$INSTALL_PREFIX_CMAKE/sysroot;$INSTALL_PREFIX_CMAKE/sysroot/lib/cmake"
+      # Fixme custom ft & harfbuzz                
   )
   
-  ../qt6/configure $(cat "$SDK_ROOT/../../common/qtfeatures") "${QT_OPTIONS[@]}"
+  ../qt/configure $(cat "$SDK_ROOT/../../common/qtfeatures") "${QT_OPTIONS[@]}" "${CMAKE_COMMON_FLAGS[@]}"
 
   cmake --build . --parallel
   cmake --build . --target install/strip

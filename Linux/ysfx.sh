@@ -1,18 +1,14 @@
 #!/bin/bash
 
-source ./common.sh
-
-if [[ ! -d ysfx ]]; then
-(
-  $GIT clone --recursive https://github.com/jpcima/ysfx
-)
-fi
+source ./common.sh clang
+source ../common/clone-ysfx.sh
 
 export FREETYPE_DIR=$INSTALL_PREFIX/freetype
 
 $CMAKE \
   -S ysfx \
   -B ysfx-build \
+  "${CMAKE_COMMON_FLAGS[@]}" \
   -DYSFX_PLUGIN=OFF \
   -DYSFX_DEEP_STRIP=OFF \
   -DCMAKE_BUILD_TYPE=Release \
