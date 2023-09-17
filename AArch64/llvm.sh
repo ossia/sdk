@@ -1,16 +1,25 @@
 #!/bin/bash -eux
 
 source ./common.sh gcc
+source ../common/clone-llvm.sh
 
-if [[ ! -f ./llvm-build-host/bin/clang-tblgen ]]; then
+curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.4/clang+llvm-16.0.4-x86_64-linux-gnu-ubuntu-22.04.tar.xz -o llvm.txz
+tar xaf llvm.txz
+mv 'clang+llvm-16.0.4-x86_64-linux-gnu-ubuntu-22.04' $SDK_INSTALL_ROOT/pi/llvm-16
+
+curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.4/clang+llvm-16.0.4-aarch64-linux-gnu.tar.xz -o llvm-aarch.txz
+tar xaf llvm-aarch.txz
+mv 'clang+llvm-16.0.4-aarch64-linux-gnu' $SDK_INSTALL_ROOT/pi/llvm-16-aarch64
+
+if [[ ! -f ./llvm-build-host/bin/clang-tblgen ]]
+then
 (
   unset CC
   unset CXX
   unset CFLAGS
   unset CXXFLAGS
-  mkdir -p llvm-build-host
-  cd llvm-build-host
-  $CMAKE  -GNinja \
+  $CMAKE -S llvm -B llvm-build-host \
+   -GNinja \
    -DCMAKE_C_COMPILER=/usr/bin/clang \
    -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
    -DCMAKE_BUILD_TYPE=Release \
@@ -43,11 +52,10 @@ if [[ ! -f ./llvm-build-host/bin/clang-tblgen ]]; then
    -DCLANG_DEFAULT_LINKER:STRING=lld \
    -DLLVM_ENABLE_PROJECTS="clang;lld;polly;openmp" \
    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-   -DCMAKE_INSTALL_PREFIX=$SDK_INSTALL_ROOT/llvm \
-   ../llvm/llvm
+   -DCMAKE_INSTALL_PREFIX=$SDK_INSTALL_ROOT/llvm
   
-  $CMAKE --build .
-  $CMAKE --build . --target install/strip
+  $CMAKE --build llvm-build-host
+  $CMAKE --build llvm-build-host --target install/strip
 )
 fi
 

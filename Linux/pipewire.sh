@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh clang
 
 PIPEWIRE_VERSION=0.3.59
 MESON_VERSION=0.61.1

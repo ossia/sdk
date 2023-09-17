@@ -5,7 +5,6 @@ source ./common.sh clang
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
-rm -rf llvm-build
 mkdir -p llvm-build
 cd llvm-build
 #export PATH=$SDK_ROOT/llvm-bootstrap/bin:$PATH
@@ -39,7 +38,7 @@ $CMAKE -GNinja \
  ../llvm/llvm
 
 $CMAKE --build .
-suro $CMAKE --build . --target install/strip
+$CMAKE --build . --target install/strip
 )
 
 

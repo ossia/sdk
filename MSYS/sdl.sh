@@ -7,7 +7,8 @@ rm -rf sdl-build
 mkdir sdl-build
 cd sdl-build
 
-cmake -GNinja \
+cmake  -S SDL2-$SDL_VERSION -B sdl-build \
+-GNinja \
  -DSDL_STATIC_PIC=1 \
  -DBUILD_SHARED_LIBS=0 \
  -DCMAKE_BUILD_TYPE=Release \
@@ -27,8 +28,7 @@ cmake -GNinja \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
- -DSDL_SYSTEM=1 \
- ../SDL2-$SDL_VERSION
+ -DSDL_SYSTEM=1 
 
-cmake --build .
-cmake --build . --target install/strip
+cmake --build sdl-build
+cmake --build sdl-build --target install/strip

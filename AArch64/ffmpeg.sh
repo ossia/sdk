@@ -1,21 +1,17 @@
 #!/bin/bash
 
 source ./common.sh gcc
-VERSION=snapshot
-
-if [[ ! -d ffmpeg ]]; then
-  git clone -b dev/5.1.2/rpi_import_1 https://github.com/jc-kynesim/rpi-ffmpeg ffmpeg
-fi
+source ../common/clone-ffmpeg.sh raspi
 
 mkdir -p ffmpeg-build
 cd ffmpeg-build
 
 export PATH=$PATH:$CROSS_COMPILER_LOCATION/bin
-
 export PKG_CONFIG_PATH="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig"
-
 export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig:$SYSROOT/usr/lib/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/share/pkgconfig:/opt/ossia-sdk-rpi-aarch64/pi/sysroot/usr/lib/aarch64-rpi3-linux-gnu/pkgconfig"
 
+export CLFAGS="-isystem $INSTALL_PREFIX/sysroot/include $CFLAGS"
+export LDFLAGS="-L$INSTALL_PREFIX/sysroot/lib $LDFLAGS"
 ../ffmpeg/configure \
     --enable-cross-compile \
     --cross-prefix=${CCPREFIX} \
@@ -39,4 +35,4 @@ export PKG_CONFIG_LIBDIR="$SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig:$SYSROOT/
 #     --enable-libv4l2 \
 
 make -j$NPROC
-sudo make install
+make install

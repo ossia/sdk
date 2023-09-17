@@ -20,8 +20,26 @@ export GIT=/usr/bin/git
 export CMAKE=$SDK_ROOT/cmake/bin/cmake
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rh/rh-git218/root/usr/lib:/opt/rh/httpd24/root/usr/lib64
 
-
 export CMAKE_BUILD_TYPE=Release
 export MESON_BUILD_TYPE=release
 export QT_MODE="release"
 export LLVM_ADDITIONAL_FLAGS=" "
+
+export MESON_COMMON_FLAGS=(
+    -Dbuildtype=$MESON_BUILD_TYPE
+    -Ddefault_library=static
+    -Dglib=disabled
+    -Dgobject=disabled
+    -Dicu=disabled
+    -Ddocs=disabled
+    -Dtests=disabled
+)
+export CMAKE_COMMON_FLAGS=(
+  -GNinja
+  -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE
+  -DBUILD_SHARED_LIBS=OFF
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+)
+
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"

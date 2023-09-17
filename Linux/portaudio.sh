@@ -1,23 +1,13 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh clang
+source ../common/clone-portaudio.sh
 
-if [[ ! -d portaudio ]]; then
-(
-  $GIT clone https://github.com/portaudio/portaudio
-)
-fi
-
-mkdir -p portaudio/build
-cd portaudio/build
-
-$CMAKE .. \
- -DCMAKE_BUILD_TYPE=Release \
- -DCMAKE_POSITION_INDEPENDENT_CODE=1 \
- -DBUILD_SHARED_LIBS=OFF \
+cmake -S portaudio -B portaudio-build \
+  "${CMAKE_COMMON_FLAGS[@]}" \
  -DPA_ALSA_DYNAMIC=ON \
  -DPA_USE_JACK=OFF \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/portaudio
 
-make -j$NPROC
-make install/strip
+cmake --build portaudio-build
+cmake --build portaudio-build --target install/strip

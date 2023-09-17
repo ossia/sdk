@@ -1,4 +1,6 @@
 #!/bin/bash
+
+export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 export NPROC=12
 export INSTALL_PREFIX=/c/ossia-sdk
 export INSTALL_PREFIX_CMAKE=c:/ossia-sdk
@@ -26,3 +28,27 @@ if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export CFLAGS="-O3"
   export CXXFLAGS="-O3"
 fi
+
+export CMAKE_BUILD_TYPE=Release
+export MESON_BUILD_TYPE=release
+export QT_MODE="release"
+export LLVM_ADDITIONAL_FLAGS=" "
+
+export MESON_COMMON_FLAGS=(
+    -Dbuildtype=$MESON_BUILD_TYPE
+    -Ddefault_library=static
+    -Dglib=disabled
+    -Dgobject=disabled
+    -Dicu=disabled
+    -Ddocs=disabled
+    -Dtests=disabled
+)
+export CMAKE_COMMON_FLAGS=(
+  -GNinja
+  -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE
+  -DBUILD_SHARED_LIBS=OFF
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+)
+
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"

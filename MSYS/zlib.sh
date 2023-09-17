@@ -1,12 +1,11 @@
 #!/bin/bash -eux
 
-source ./common.sh
+source ./common.sh clang
 source ../common/clone-zlib.sh
 
 (
 cmake -S zlib-ng -B zlib-build \
- -DCMAKE_BUILD_TYPE=Release \
- -G"Ninja" \
+ "${CMAKE_COMMON_FLAGS[@]}" \
  -DZLIB_COMPAT=1 \
  -DBUILD_SHARED_LIBS=0 \
  -DZLIB_ENABLE_TESTS=0 \
@@ -20,8 +19,7 @@ cmake --build zlib-build --config Release --target install/strip
 
 (
 cmake -S bzip2 -B bzip2-build \
- -DCMAKE_BUILD_TYPE=Release \
- -G"Ninja" \
+ "${CMAKE_COMMON_FLAGS[@]}" \
  -DENABLE_EXAMPLES=0 \
  -DENABLE_TESTS=0 \
  -DENABLE_DOCS=0 \
@@ -39,8 +37,7 @@ mv "$INSTALL_PREFIX/sysroot/lib/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib/l
 
 (
 cmake -S zstd/build/cmake -B zstd-build \
- -DCMAKE_BUILD_TYPE=Release \
- -G"Ninja" \
+ "${CMAKE_COMMON_FLAGS[@]}" \
  -DZSTD_BUILD_PROGRAMS=0 \
  -DBUILD_SHARED_LIBS=0 \
  -DBUILD_TESTING=0 \
@@ -55,11 +52,11 @@ cmake --build zstd-build --config Release --target install/strip
 
 (
 cmake -S brotli -B brotli-build \
- -DCMAKE_BUILD_TYPE=Release \
- -G"Ninja" \
+ "${CMAKE_COMMON_FLAGS[@]}" \
  -DBROTLI_DISABLE_TESTS=1 \
  -DBUILD_SHARED_LIBS=0 \
- -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
+ -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot" \
+ -DSHARE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
 
 cmake --build brotli-build --config Release
 cmake --build brotli-build --config Release --target install/strip
@@ -68,21 +65,21 @@ cmake --build brotli-build --config Release --target install/strip
 
 (
 cmake -S xz -B xz-build \
- -DCMAKE_BUILD_TYPE=Release \
- -G"Ninja" \
+ "${CMAKE_COMMON_FLAGS[@]}" \
  -DBUILD_SHARED_LIBS=0 \
  -DBUILD_TESTING=0 \
+ -DCREATE_XZ_SYMLINKS=0 \
+ -DCREATE_LZMA_SYMLINKS=0 \
  -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
 
-cmake --build xz-build --config Release
+cmake --build xz-build --config Release 
 cmake --build xz-build --config Release --target install/strip
 
 )
 
 (
 cmake -S snappy -B snappy-build \
- -DCMAKE_BUILD_TYPE=Release \
- -G"Ninja" \
+ "${CMAKE_COMMON_FLAGS[@]}" \
  -DBUILD_SHARED_LIBS=0 \
  -DSNAPPY_BUILD_TESTS=0 \
  -DSNAPPY_BUILD_BENCHMARKS=0 \

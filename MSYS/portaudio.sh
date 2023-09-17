@@ -1,20 +1,15 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh clang
 source ../common/clone-portaudio.sh
 
-rm -rf portaudio/build
-mkdir -p portaudio/build
-cd portaudio/build
-
-cmake .. \
- -GNinja \
- -DCMAKE_BUILD_TYPE=Release \
- -DBUILD_SHARED_LIBS=Off \
+cmake -S portaudio -B portaudio-build \
+  "${CMAKE_COMMON_FLAGS[@]}" \
  -DPA_USE_ASIO=ON \
+ -DPA_USE_JACK=OFF \
  -DPA_DLL_LINK_WITH_STATIC_RUNTIME=Off \
  -DASIOSDK_PATH_HINT=$PWD/ASIOSDK2.3.2 \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/portaudio
 
-cmake --build .
-cmake --build . --target install/strip
+cmake --build portaudio-build
+cmake --build portaudio-build --target install/strip

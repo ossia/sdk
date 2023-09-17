@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh gcc
 
 export FFTW_VERSION=3.3.10
 if [[ ! -f fftw-$FFTW_VERSION.tar.gz ]]; then

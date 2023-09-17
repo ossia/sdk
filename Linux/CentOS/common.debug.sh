@@ -29,3 +29,22 @@ export CMAKE_BUILD_TYPE=Debug
 export MESON_BUILD_TYPE=debug
 export QT_MODE="debug"
 export LLVM_ADDITIONAL_FLAGS=" -DLIBCXX_ENABLE_ASSERTIONS=1 -DLIBCXX_ENABLE_DEBUG_MODE=1 "
+
+export MESON_COMMON_FLAGS=(
+    -Dbuildtype=$MESON_BUILD_TYPE
+    -Ddefault_library=static
+    -Dglib=disabled
+    -Dgobject=disabled
+    -Dicu=disabled
+    -Ddocs=disabled
+    -Dtests=disabled
+)
+export CMAKE_COMMON_FLAGS=(
+  -GNinja
+  -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE
+  -DBUILD_SHARED_LIBS=OFF
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+)
+
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
+export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"

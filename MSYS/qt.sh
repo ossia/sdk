@@ -1,5 +1,4 @@
 #!/bin/bash -eux
-export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
@@ -36,5 +35,5 @@ mkdir -p qt6-build-static
   cmake .
   cmake --build . -- -k 0
   cmake --build . -- -j1 -k 0
-  cmake --build . --target install
+  cmake --build . --target install/strip
 )
