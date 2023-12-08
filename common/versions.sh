@@ -1,9 +1,9 @@
 export SDL_VERSION=2.28.3
 export FFMPEG_VERSION=snapshot
 export FFTW_VERSION=3.3.10
-export LLVM_VERSION=release/16.x
+export LLVM_VERSION=release/17.x
 export OPENSSL_VERSION=1_1_1v
 export QT_VERSION=6.6
-export CMAKE_VERSION_SHORT=3.27
-export CMAKE_VERSION=3.27.5
+export CMAKE_VERSION_SHORT=3.28
+export CMAKE_VERSION=3.28.0
 export PYTHON_VERSION=3.11.5

@@ -11,8 +11,17 @@ fi
 mkdir ffmpeg-build
 cd ffmpeg-build
 
+if [[ "$MACOS_ARCH" == "arm64" ]]; then
+  export FFMPEG_CPU_OPTIONS=(
+  )
+else
+  export FFMPEG_CPU_OPTIONS=(
+    --arch=x86_64 --cpu=x86_64
+  )
+fi
+
 xcrun ../ffmpeg/configure \
-    --arch=x86_64 --cpu=x86_64 \
+    "${FFMPEG_CPU_OPTIONS[@]}" \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
 	--disable-autodetect \
