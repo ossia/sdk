@@ -35,6 +35,7 @@ xcrun cmake \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
+  $CMAKE_ADDITIONAL_FLAGS \
  ../SDL2-$SDL_VER
 
 xcrun cmake --build . --parallel

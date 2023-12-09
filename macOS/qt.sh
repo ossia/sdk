@@ -29,7 +29,8 @@ mkdir -p qt6-build-static
                    -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
                    -Dharfbuzz_DIR=$INSTALL_PREFIX/harfbuzz \
                    -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX/harfbuzz/include \
-                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a
+                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a \
+                    $CMAKE_ADDITIONAL_FLAGS
 
   
   cmake --build .

@@ -19,6 +19,7 @@ if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export PATH=$INSTALL_PREFIX/llvm/bin:$PATH
 fi
 
+export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_ARCHITECTURES=$MACOS_ARCH -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT"
 export CFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -Ofast -fno-finite-math-only "
 export CXXFLAGS="-O3 -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -Ofast -fno-finite-math-only "
 

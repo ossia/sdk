@@ -44,7 +44,8 @@ xcrun cmake \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust \
   -DCMAKE_C_VISIBLITY_PRESET=hidden \
   -DCMAKE_CXX_VISIBLITY_PRESET=hidden \
-  -DCMAKE_VISIBLITY_INLINES_HIDDEN=1
+  -DCMAKE_VISIBLITY_INLINES_HIDDEN=1 \
+  $CMAKE_ADDITIONAL_FLAGS
   
 xcrun cmake --build . --parallel
 xcrun cmake --build . --parallel --target install/strip

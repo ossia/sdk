@@ -22,6 +22,7 @@ xcrun cmake \
  -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/sndfile \
+  $CMAKE_ADDITIONAL_FLAGS \
  ../libsndfile
 
 xcrun cmake --build . --parallel

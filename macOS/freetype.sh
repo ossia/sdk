@@ -25,7 +25,8 @@ cmake \
   -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_SHARED_LIBS=OFF \
   -DCMAKE_POSITION_INDEPENDENT_CODE=1 \
-  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/freetype
+  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/freetype \
+  $CMAKE_ADDITIONAL_FLAGS
 
 cmake --build freetype-build --parallel
 cmake --build freetype-build --target install/strip
@@ -62,7 +63,8 @@ cmake \
   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX/harfbuzz \
   -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
-  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/freetype
+  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/freetype \
+  $CMAKE_ADDITIONAL_FLAGS
 
 cmake --build freetype-build-final --parallel
 cmake --build freetype-build-final --target install/strip

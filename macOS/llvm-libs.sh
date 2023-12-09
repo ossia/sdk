@@ -33,6 +33,7 @@ xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
  -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm-libs \
+  $CMAKE_ADDITIONAL_FLAGS \
  ../llvm/llvm
 # -DCMAKE_SHARED_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
 # -DCMAKE_EXE_LINKER_FLAGS="-L$INSTALL_PREFIX/llvm/lib -lc++ -lc++abi -Wl,-rpath,$INSTALL_PREFIX/llvm/lib" \
