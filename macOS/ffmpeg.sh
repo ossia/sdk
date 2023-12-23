@@ -16,10 +16,9 @@ if [[ "$MACOS_ARCH" == "arm64" ]]; then
   )
 else
   export FFMPEG_CPU_OPTIONS=(
-    --arch=x86_64 --cpu=x86_64
+    --arch=x86_64 --cpu=$CPU_TARGET
   )
 fi
-
 xcrun ../ffmpeg/configure \
     "${FFMPEG_CPU_OPTIONS[@]}" \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
@@ -37,5 +36,5 @@ xcrun ../ffmpeg/configure \
     --cc="$CC" --cxx="$CXX" \
  	--extra-cflags="$CFLAGS"
 
-xcrun make -j$NPROC
+xcrun make -j$NPROC V=1 VERBOSE=1
 xcrun make install
