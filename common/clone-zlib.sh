@@ -19,7 +19,7 @@ if [[ ! -d brotli ]]; then
 fi
 
 if [[ ! -d xz ]]; then
-  git clone https://git.tukaani.org/xz.git
+  git clone https://github.com/tukaani-project/xz
 fi
 
 if [[ ! -d snappy ]]; then

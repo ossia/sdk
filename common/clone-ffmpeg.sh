@@ -2,7 +2,9 @@
 
 source ../common/versions.sh
 
-if [[ "$1" -eq "raspi" ]]; then
+TARGET=${1:-}
+
+if [[ "$TARGET" = "raspi" ]]; then
   if [[ ! -d ffmpeg ]]; then
     git clone -b dev/5.1.2/rpi_import_1 https://github.com/jc-kynesim/rpi-ffmpeg ffmpeg
   fi

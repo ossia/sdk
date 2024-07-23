@@ -44,7 +44,6 @@
 -no-feature-signaling_nan
 -no-feature-sql
 -no-feature-sqlmodel
--no-feature-stack-protector-strong
 -no-feature-style-android
 -no-feature-style-fusion
 -no-feature-style-mac

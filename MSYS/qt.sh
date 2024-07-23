@@ -18,12 +18,13 @@ mkdir -p qt6-build-static
                    -system-freetype \
                    -system-harfbuzz \
                    -unity-build \
-                   -prefix $INSTALL_PREFIX_CMAKE/qt6-static \
+                   -prefix "$INSTALL_PREFIX_CMAKE/qt6-static" \
+                   -disable-deprecated-up-to 0x060800 \
                    -- \
                    -DCMAKE_C_FLAGS="$CFLAGS" \
                    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
                    -DCMAKE_CXX_STANDARD=20 \
-                   -DQT_DISABLE_DEPRECATED_UP_TO=0x060600 \
+                   -DCMAKE_EXE_LINKER_FLAGS="$INSTALL_PREFIX_CMAKE/sysroot/lib/libbrotlidec.a $INSTALL_PREFIX_CMAKE/sysroot/lib/libbrotlicommon.a " \
                    -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX_CMAKE;$INSTALL_PREFIX_CMAKE/sysroot;$INSTALL_PREFIX_CMAKE/sysroot/lib/cmake" \
                    -DFREETYPE_DIR="$INSTALL_PREFIX_CMAKE/sysroot" \
                    -DZLIB_ROOT="$INSTALL_PREFIX_CMAKE/sysroot" \
@@ -34,6 +35,6 @@ mkdir -p qt6-build-static
   # For qtcore to pick up cmake_cxx_standard
   cmake .
   cmake --build . -- -k 0
-  cmake --build . -- -j1 -k 0
+  # cmake --build . -- -j1 -k 0
   cmake --build . --target install/strip
 )

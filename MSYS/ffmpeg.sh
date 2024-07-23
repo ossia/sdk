@@ -11,7 +11,7 @@ export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 export CLFAGS="-isystem $INSTALL_PREFIX/sysroot/include $CFLAGS"
 export LDFLAGS="-L$INSTALL_PREFIX/sysroot/lib $LDFLAGS"
 ./configure \
-    --arch=x86_64 --cpu=x86_64 \
+    --arch=x86_64 --cpu=x86-64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
 	--enable-dxva2 --enable-d3d11va \

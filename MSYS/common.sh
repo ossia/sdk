@@ -13,7 +13,7 @@ export CXX=clang++
 export CFLAGS="-O3"
 export CXXFLAGS="-O3"
 
-export PATH="$INSTALL_PREFIX/cmake/bin:$INSTALL_PREFIX/python:$INSTALL_PREFIX/python/Scripts:$TOOLS_ROOT:$PATH"
+export PATH="$INSTALL_PREFIX/cmake/bin:$INSTALL_PREFIX/python:$INSTALL_PREFIX/python/Scripts:$TOOLS_ROOT:$PATH:/c/Program Files/Meson"
 if ! command -v mingw32-make &> /dev/null; then
   export MAKE=make
 else
