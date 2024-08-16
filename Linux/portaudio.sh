@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh clang
-source ../common/clone-portaudio.sh
+source ./common/clone-portaudio.sh
 
 cmake -S portaudio -B portaudio-build \
   "${CMAKE_COMMON_FLAGS[@]}" \

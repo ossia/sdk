@@ -2,7 +2,7 @@
 
 source ../common/versions.sh
 
-if [[ ! -f OpenSSL_$OPENSSL_VERSION.tar.gz ]]; then
-  wget -nv https://github.com/openssl/openssl/archive/OpenSSL_$OPENSSL_VERSION.tar.gz
-  tar xaf OpenSSL_$OPENSSL_VERSION.tar.gz
+if [[ ! -f openssl-$OPENSSL_VERSION.tar.gz ]]; then
+  wget -nv https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz
+  tar xaf openssl-$OPENSSL_VERSION.tar.gz
 fi

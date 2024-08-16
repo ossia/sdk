@@ -1,6 +1,8 @@
 #!/bin/bash
 
 source ./common.sh
+source ../common/clone-llvm.sh
+
 CMAKE=cmake
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version

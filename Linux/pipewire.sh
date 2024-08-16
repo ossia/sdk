@@ -3,7 +3,6 @@
 source ./common.sh clang
 
 PIPEWIRE_VERSION=0.3.59
-MESON_VERSION=0.61.1
 rm -rf pipewire
 if [[ ! -d pipewire ]]; then
 (
@@ -14,22 +13,14 @@ if [[ ! -d pipewire ]]; then
 )
 fi
 
-if [[ ! -d meson-$MESON_VERSION ]]; then
-  wget https://github.com/mesonbuild/meson/releases/download/$MESON_VERSION/meson-$MESON_VERSION.tar.gz
-  tar xaf meson-$MESON_VERSION.tar.gz
-  rm -rf meson-$MESON_VERSION.tar.gz
-
-  yum install system-devel systemd-udev
-fi
-
-export PATH=$PWD/meson-$MESON_VERSION:$PATH
+yum install systemd-devel systemd-udev
 
 (
 cd pipewire-$PIPEWIRE_VERSION
 rm -rf build
 
-meson.py setup build  --prefix=$INSTALL_PREFIX/pipewire "-Dsession-managers=[]" -Dexamples=disabled -Dtests=disabled -Dsystemd=disabled 
-meson.py configure build --prefix=$INSTALL_PREFIX/pipewire "-Dsession-managers=[]" -Dexamples=disabled -Dtests=disabled -Dsystemd=disabled 
-meson.py compile -C build
-meson.py install -C build
+meson setup build  --prefix=$INSTALL_PREFIX/pipewire "-Dsession-managers=[]" -Dexamples=disabled -Dtests=disabled -Dsystemd=disabled  -Ddbus=disabled -Dflatpak=disabled
+meson configure build --prefix=$INSTALL_PREFIX/pipewire "-Dsession-managers=[]" -Dexamples=disabled -Dtests=disabled -Dsystemd=disabled -Ddbus=disabled -Dflatpak=disabled
+meson compile -C build
+meson install -C build
 )

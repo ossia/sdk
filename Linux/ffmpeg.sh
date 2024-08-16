@@ -1,12 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=snapshot
-
-if [[ ! -d ffmpeg ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
-  gtar xaf ffmpeg-$VERSION.tar.bz2
-fi
+source ./common/clone-ffmpeg.sh
 
 mkdir -p ffmpeg-build
 cd ffmpeg-build
@@ -15,7 +10,7 @@ cd ffmpeg-build
 
 # --enable-opencl --enable-libmfx --enable-nvenc --enable-cuda --enable-vaapi --enable-vdpau \
 ../ffmpeg/configure \
-    --arch=x86_64 --cpu=x86_64 \
+    --arch=x86_64 --cpu=x86-64 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
 	--disable-autodetect \

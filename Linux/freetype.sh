@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh clang
-source ../common/clone-freetype.sh
+source ./common/clone-freetype.sh
 
 # 1. Build freetype without harfbuzz
 (
@@ -12,9 +12,6 @@ cmake \
   -DFT_DISABLE_PNG=TRUE \
   -DFT_DISABLE_HARFBUZZ=TRUE \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX/sysroot" \
-  -DZLIB_ROOT="$INSTALL_PREFIX_CMAKE/sysroot" \
-  -DBZIP2_INCLUDE_DIR="$INSTALL_PREFIX_CMAKE/sysroot/include" \
-  -DBZIP2_LIBRARIES="$INSTALL_PREFIX_CMAKE/sysroot/lib/libbz2.a" \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
 
 cmake --build freetype-build --parallel
@@ -25,8 +22,8 @@ cmake --build freetype-build --target install/strip
 
 (
   cd harfbuzz
-  export LIBRARY_PATH=$INSTALL_PREFIX/freetype
-  export PKG_CONFIG_PATH=$INSTALL_PREFIX/freetype/lib64/pkgconfig
+  export LIBRARY_PATH=$INSTALL_PREFIX/sysroot
+  export PKG_CONFIG_PATH=$INSTALL_PREFIX/sysroot/lib64/pkgconfig
   meson build \
     "${MESON_COMMON_FLAGS[@]}" \
     -Dglib=disabled \
@@ -34,11 +31,11 @@ cmake --build freetype-build --target install/strip
     -Dicu=disabled \
     -Ddocs=disabled \
     -Dtests=disabled \
-    -Dprefix=$INSTALL_PREFIX/sysroot 
+    -Dprefix=$INSTALL_PREFIX/sysroot
   cd build
   ninja
   ninja install
-  ln -s $INSTALL_PREFIX/harfbuzz/lib64 $INSTALL_PREFIX/harfbuzz/lib
+  ln -s $INSTALL_PREFIX/sysroot/lib64 $INSTALL_PREFIX/sysroot/lib
 )
 
 # 3. Build freetype with harfbuzz
@@ -50,9 +47,6 @@ cmake \
   -DFT_DISABLE_PNG=TRUE \
   -DFT_DISABLE_HARFBUZZ=FALSE \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX/sysroot" \
-  -DZLIB_ROOT="$INSTALL_PREFIX_CMAKE/sysroot" \
-  -DBZIP2_INCLUDE_DIR="$INSTALL_PREFIX_CMAKE/sysroot/include" \
-  -DBZIP2_LIBRARIES="$INSTALL_PREFIX_CMAKE/sysroot/lib/libbz2.a" \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
 
 cmake --build freetype-build-final --parallel

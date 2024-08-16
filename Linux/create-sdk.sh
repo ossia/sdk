@@ -9,6 +9,7 @@ cp -rf * /tmp/image/
 cp -rf ../common/* /tmp/image/common/
 
 docker run --rm -it \
+           -v "/tmp/image/common:/common" \
            -v "/tmp/image:/image" \
            -v "/opt/ossia-sdk:/opt/ossia-sdk" \
            -w="/image" \

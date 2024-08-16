@@ -2,6 +2,7 @@
 
 export NPROC=$(nproc)
 export INSTALL_PREFIX=/opt/ossia-sdk-debug
+export INSTALL_PREFIX_CMAKE=/opt/ossia-sdk-debug
 export SDK_ROOT=$PWD
 export CFLAGS="-D_DEBUG -O3 -march=x86-64 -mtune=generic -D_FORTIFY_SOURCE=2 -fstack-protector-strong -fstack-clash-protection -pthread " # -march=ivybridge -mtune=haswell"
 export CXXFLAGS="$CFLAGS" # -march=ivybridge -mtune=haswell"
@@ -46,5 +47,5 @@ export CMAKE_COMMON_FLAGS=(
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON
 )
 
-export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
-export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib64/pkgconfig"
+export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH:/usr/lib64/pkgconfig"

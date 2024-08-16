@@ -1,13 +1,9 @@
 #!/bin/bash
 
 source ./common.sh
+source ../common/clone-openssl.sh
 
-OPENSSL_VERSION="1_1_1m"
-
-wget -nv https://github.com/openssl/openssl/archive/OpenSSL_$OPENSSL_VERSION.tar.gz
-tar xaf OpenSSL_$OPENSSL_VERSION.tar.gz
-
-cd "openssl-OpenSSL_$OPENSSL_VERSION"
+cd "openssl-$OPENSSL_VERSION"
 ./Configure linux-x86_64-clang -no-shared --prefix=$INSTALL_PREFIX/openssl
 make
 make install_sw install_ssldirs

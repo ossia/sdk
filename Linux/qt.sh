@@ -14,6 +14,7 @@ mkdir -p qt6-build-static
     $(cat "$SDK_ROOT/common/qtfeatures.$QT_MODE") \
                    -feature-vnc \
                    -feature-library \
+                   -no-feature-libudev \
                    -system-zlib \
                    -linker lld \
                    -platform linux-clang-libc++ \
@@ -23,12 +24,12 @@ mkdir -p qt6-build-static
                    -DCMAKE_C_FLAGS="$CFLAGS" \
                    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
                    -DCMAKE_CXX_STANDARD=20 \
-                   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX \
-                   -DFREETYPE_DIR=$INSTALL_PREFIX/freetype \
-                   -Dharfbuzz_DIR=$INSTALL_PREFIX/harfbuzz \
-                   -DHARFBUZZ_INCLUDE_DIRS=$INSTALL_PREFIX/harfbuzz/include \
-                   -DHARFBUZZ_LIBRARIES=$INSTALL_PREFIX/harfbuzz/lib/libharfbuzz.a \
-                   -DOPENSSL_ROOT_DIR=$INSTALL_PREFIX/openssl
+                   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX;$INSTALL_PREFIX/sysroot" \
+                   -DFREETYPE_DIR="$INSTALL_PREFIX/sysroot" \
+                   -Dharfbuzz_DIR="$INSTALL_PREFIX/sysroot" \
+                   -DHARFBUZZ_INCLUDE_DIRS="$INSTALL_PREFIX/sysroot/include" \
+                   -DHARFBUZZ_LIBRARIES="$INSTALL_PREFIX/sysroot/lib/libharfbuzz.a" \
+                   -DOPENSSL_ROOT_DIR="$INSTALL_PREFIX/openssl"
 
   cmake --build .
   cmake --build . --target install

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh clang
-source ../common/clone-ysfx.sh
+source ./common/clone-ysfx.sh
 
 export FREETYPE_DIR=$INSTALL_PREFIX/freetype
 
