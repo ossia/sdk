@@ -18,19 +18,18 @@ $CMAKE  -S SDL2-$SDL_VERSION -B sdl-build \
  -DSDL_JOYSTICK=1 \
  -DSDL_HAPTIC=1 \
  -DSDL_FILE=1 \
- -DSDL_ATOMIC=0 \
+ -DSDL_ATOMIC=1 \
  -DSDL_AUDIO=0 \
  -DSDL_VIDEO=0 \
  -DSDL_RENDER=0 \
  -DSDL_POWER=1 \
- -DSDL_SENSORS=1 \
+ -DSDL_SENSOR=1 \
  -DSDL_THREADS=1 \
- -DSDL_TIMERS=0 \
- -DSDL_LOADSO=0 \
+ -DSDL_TIMERS=1 \
+ -DSDL_LOADSO=1 \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
- -DSDL_DLOPEN=0 \
- -DSDL_SYSTEM=1
+ -DSDL_DBUS=0
 
 cmake --build sdl-build
 cmake --build sdl-build --target install/strip
