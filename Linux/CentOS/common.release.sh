@@ -4,18 +4,16 @@ export NPROC=$(nproc)
 export INSTALL_PREFIX=/opt/ossia-sdk
 export INSTALL_PREFIX_CMAKE=/opt/ossia-sdk
 export SDK_ROOT=$PWD
-export CFLAGS="-DNDEBUG -O3 -march=x86-64 -mtune=generic -fno-plt -fno-semantic-interposition -fno-stack-protector -pthread -fPIC " # -march=ivybridge -mtune=haswell"
-export CXXFLAGS="$CFLAGS" # -march=ivybridge -mtune=haswell"
+export CFLAGS="-DNDEBUG -O3 -march=x86-64-v3 -fno-plt -fno-semantic-interposition -fno-stack-protector -pthread -fPIC " # -march=ivybridge -mtune=haswell"
+export CXXFLAGS="$CFLAGS  -fnew-infallible" # -march=ivybridge -mtune=haswell"
 
 export LD_LIBRARY_PATH=
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
-  export CXXFLAGS="$CXXFLAGS -fnew-infallible"
   export CC=$INSTALL_PREFIX/llvm/bin/clang
   export CXX=$INSTALL_PREFIX/llvm/bin/clang++
   export PATH=$INSTALL_PREFIX/llvm/bin:$PATH
   export LD_LIBRARY_PATH=$INSTALL_PREFIX/llvm/lib
 else
-  export CXXFLAGS="$CXXFLAGS -fnew-infallible"
   export CC=clang
   export CXX=clang++
 fi
