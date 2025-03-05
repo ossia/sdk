@@ -1,20 +1,14 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 source ./common.sh
-
-if [[ ! -d freetype ]]; then
-(
-  git clone https://github.com/jcelerier/freetype
-  (cd freetype ; git checkout ossia-2023-04-09)
-  git clone https://github.com/harfbuzz/harfbuzz
-)
-fi
+source ../common/clone-freetype.sh
 
 # 1. Build freetype without harfbuzz
 (
 cmake \
   -S freetype \
   -B freetype-build \
+  -GNinja \
   -DFT_DISABLE_ZLIB=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
   -DFT_DISABLE_PNG=TRUE \
@@ -52,6 +46,7 @@ cmake --build freetype-build --target install/strip
 cmake \
   -S freetype \
   -B freetype-build-final \
+  -GNinja \
   -DFT_DISABLE_ZLIB=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
   -DFT_DISABLE_PNG=TRUE \

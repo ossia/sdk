@@ -2,8 +2,7 @@
 
 export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
-
-source "$SDK_COMMON_ROOT/common/clone-qt.sh"
+source ../common/clone-qt.sh
 
 # disabled since we can't seem to make custom libc++ not crash...
 # echo 'QMAKE_LFLAGS+= -L/opt/score-sdk-osx/llvm/lib -lc++ -lc++abi -Wl,-rpath,/opt/score-sdk-osx/llvm/lib' >> qt5/qtbase/mkspecs/common/clang-mac.conf

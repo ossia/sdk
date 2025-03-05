@@ -1,13 +1,7 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 source ./common.sh
-
-export SDL_VER=2.28.3
-if [[ ! -f SDL2-$SDL_VER.tar.gz ]]; then
-  wget -nv https://www.libsdl.org/release/SDL2-$SDL_VER.tar.gz
-  gtar xaf SDL2-$SDL_VER.tar.gz
-  gsed -i '/error Nope/d' SDL2-$SDL_VER/src/dynapi/SDL_dynapi.h
-fi
+source ../common/clone-sdl.sh
 
 mkdir sdl-build
 cd sdl-build

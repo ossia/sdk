@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 source ../common/versions.sh
 (
@@ -22,3 +22,5 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 ' > backends/llvm.cmake
 
 )
+
+exit 1

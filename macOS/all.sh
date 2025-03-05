@@ -5,10 +5,10 @@
 
 ./freetype.sh
 ./qt.sh
-./fftw.sh
+# ./fftw.sh
 ./ffmpeg.sh
 # ./sndfile.sh
-./portaudio.sh
+# ./portaudio.sh
 ./sdl.sh
 ./jack.sh
 ./llvm-libs.sh

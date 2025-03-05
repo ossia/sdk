@@ -1,12 +1,7 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 source ./common.sh
-
-if [[ ! -d ysfx ]]; then
-(
-  git clone --recursive https://github.com/jpcima/ysfx
-)
-fi
+source ../common/clone-ysfx.sh
 
 export FREETYPE_DIR=$INSTALL_PREFIX/freetype
 

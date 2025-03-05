@@ -1,12 +1,7 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 source ./common.sh
-VERSION=snapshot
-
-if [[ ! -d ffmpeg ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
-  gtar xaf ffmpeg-$VERSION.tar.bz2
-fi
+source ../common/clone-ffmpeg.sh
 
 mkdir ffmpeg-build
 cd ffmpeg-build
