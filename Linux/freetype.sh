@@ -3,6 +3,9 @@
 source ./common.sh clang
 source ./common/clone-freetype.sh
 
+# FIXME
+# Freetype links against libz.so and libbz2.so instead of .a
+# Freetype adds libbrotlidec.a but not libbrotlicommon.a 
 # 1. Build freetype without harfbuzz
 (
 cmake \

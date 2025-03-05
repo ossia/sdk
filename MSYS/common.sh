@@ -10,8 +10,8 @@ export TOOLS_ROOT=/d/gnu/bin
 
 export CC=clang
 export CXX=clang++
-export CFLAGS="-O3"
-export CXXFLAGS="-O3"
+export CFLAGS="-O3 -march=x86-64-v3"
+export CXXFLAGS="-O3 -march=x86-64-v3"
 
 export PATH="$INSTALL_PREFIX/cmake/bin:$INSTALL_PREFIX/python:$INSTALL_PREFIX/python/Scripts:$TOOLS_ROOT:$PATH:/c/Program Files/Meson"
 if ! command -v mingw32-make &> /dev/null; then

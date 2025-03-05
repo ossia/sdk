@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ./common.sh
+source ./common.sh clang
 source ./common/clone-sdl.sh
 
 rm -rf sdl-build

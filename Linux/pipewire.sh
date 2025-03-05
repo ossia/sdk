@@ -1,19 +1,7 @@
 #!/bin/bash
 
 source ./common.sh clang
-
-PIPEWIRE_VERSION=0.3.59
-rm -rf pipewire
-if [[ ! -d pipewire ]]; then
-(
-  wget -nv https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/$PIPEWIRE_VERSION/pipewire-$PIPEWIRE_VERSION.tar.gz
-  tar xaf pipewire-$PIPEWIRE_VERSION.tar.gz
-  rm -rf pipewire-$PIPEWIRE_VERSION.tar.gz
-  #$GIT clone https://github.com/PipeWire/pipewire
-)
-fi
-
-yum install systemd-devel systemd-udev
+source ../common/clone-pipewire.sh
 
 (
 cd pipewire-$PIPEWIRE_VERSION

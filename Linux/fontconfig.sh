@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-source ./common.sh
+source ./common.sh clang
 
 if [[ ! -d fontconfig-2.14.2 ]]; then
 (

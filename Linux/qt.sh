@@ -1,6 +1,6 @@
 #!/bin/bash -eux
 export SDK_COMMON_ROOT=$PWD
-source ./common.sh
+source ./common.sh clang
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
 

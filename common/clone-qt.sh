@@ -16,8 +16,6 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git checkout jcelerier/$QT_VERSION-ossia
   )
 
-
-
   (
     cd qtdeclarative
     git config user.email "you@example.com"

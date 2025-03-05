@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-source ./common.sh
-source ./common/clone-ffmpeg.sh
+source ./common.sh clang
+source ../common/clone-ffmpeg.sh
 
 mkdir -p ffmpeg-build
 cd ffmpeg-build
@@ -9,8 +9,8 @@ cd ffmpeg-build
 # FIXME need to remove the check for linux_videoio_h for some reason in configure
 
 # --enable-opencl --enable-libmfx --enable-nvenc --enable-cuda --enable-vaapi --enable-vdpau \
-../ffmpeg/configure \
-    --arch=x86_64 --cpu=x86-64 \
+../ffmpeg-$FFMPEG_VERSION/configure \
+    --arch=x86-64-v3 --cpu=x86-64-v3 \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
 	--disable-autodetect \
@@ -25,6 +25,8 @@ cd ffmpeg-build
  	--enable-protocols --disable-lzma \
  	--prefix=$INSTALL_PREFIX/ffmpeg \
 	--cc="$CC" --cxx="$CXX" \
- 	--extra-cflags="$CFLAGS -fPIC" && \
-make -j$NPROC && \
+ 	--extra-cflags="$CFLAGS -fPIC"
+
+make -j$NPROC
+
 make install

@@ -1,7 +1,11 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-source ./common.sh clang
+source ./common.sh 
 source ./common/clone-llvm.sh
+
+if [[ -f /opt/ossia-sdk/llvm/bin/clang ]]; then
+  exit 0
+fi
 
 (
 mkdir -p llvm-build-bootstrap
@@ -116,5 +120,5 @@ $CMAKE --build . --target install/strip
 
 (
   cd $INSTALL_PREFIX/llvm
-  ln -s lib lib64
+  ln -s lib lib64 || true
 )

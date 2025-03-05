@@ -6,7 +6,7 @@ RUN yum -y install epel-release dnf-plugins-core
 RUN dnf config-manager --set-enabled crb
 RUN yum -y update
 RUN yum -y install \
-    llvm-toolset \
+    llvm-toolset gcc-toolset-14 \
     libxcb-devel glibc-devel \
     git svn perl-Data-Dump perl-Data-Dumper \
     ncurses-devel zlib-devel cmake3 scl-utils \
@@ -23,5 +23,6 @@ RUN yum -y install \
     xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel xcb-util-renderutil-devel xcb-util-wm-devel xcb-util-cursor-devel \
     libv4l-devel \
     xcb-util-cursor-devel  \
-    wayland-devel mesa-libEGL-devel wayland-protocols-devel libwayland-egl libwayland-cursor libwayland-client python39
+    wayland-devel mesa-libEGL-devel wayland-protocols-devel libwayland-egl libwayland-cursor libwayland-client python39 \
+    systemd-devel systemd-udev
 
