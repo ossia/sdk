@@ -3,10 +3,9 @@
 source ./common.sh
 source ../common/clone-sdl.sh
 
-mkdir sdl-build
-cd sdl-build
-
 xcrun cmake \
+ -S SDL2-$SDL_VERSION \
+ -B sdl-build \
  -GNinja \
  -DSDL_STATIC=1 \
  -DSDL_STATIC_PIC=1 \
@@ -29,10 +28,9 @@ xcrun cmake \
  -DSDL_CPUINFO=0 \
  -DSDL_FILESYSTEM=0 \
  -DSDL_DLOPEN=0 \
-  $CMAKE_ADDITIONAL_FLAGS \
- ../SDL2-$SDL_VER
+  $CMAKE_ADDITIONAL_FLAGS
 
-xcrun cmake --build . --parallel
-xcrun cmake --build . --parallel --target install/strip
+xcrun cmake --build sdl-build
+xcrun cmake --build sdl-build --target install/strip
 
 ln -s $INSTALL_PREFIX/SDL2/SDL2.framework/Resources $INSTALL_PREFIX/SDL2/cmake

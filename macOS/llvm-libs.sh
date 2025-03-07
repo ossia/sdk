@@ -1,7 +1,7 @@
 #!/bin/bash -eu
 
 source ./common.sh
-
+source ../common/clone-llvm.sh
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
 mkdir -p llvm-build-3
@@ -19,7 +19,7 @@ xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
  -DLLVM_ENABLE_CXX1Z=1 \
  -DLLVM_ENABLE_LIBEDIT=0 \
  -DLLVM_ENABLE_TERMINFO=0 \
- -DLLVM_TARGETS_TO_BUILD="X86;AArch64;WebAssembly" \
+ -DLLVM_TARGETS_TO_BUILD="$LLVM_ARCH" \
  -DLLVM_ENABLE_LIBCXX=OFF \
  -DLLVM_ENABLE_LLD=OFF \
  -DLLVM_ENABLE_RTTI=ON \

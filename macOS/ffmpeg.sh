@@ -3,18 +3,20 @@
 source ./common.sh
 source ../common/clone-ffmpeg.sh
 
-mkdir ffmpeg-build
+mkdir -p ffmpeg-build
 cd ffmpeg-build
 
 if [[ "$MACOS_ARCH" == "arm64" ]]; then
   export FFMPEG_CPU_OPTIONS=(
+    --cpu=$CPU_TARGET
   )
 else
   export FFMPEG_CPU_OPTIONS=(
     --arch=x86_64 --cpu=$CPU_TARGET
   )
 fi
-xcrun ../ffmpeg/configure \
+
+xcrun ../ffmpeg-$FFMPEG_VERSION/configure \
     "${FFMPEG_CPU_OPTIONS[@]}" \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \

@@ -23,4 +23,3 @@ set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 
 )
 
-exit 1

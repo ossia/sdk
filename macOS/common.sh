@@ -9,11 +9,13 @@ if [[ "$MACOS_ARCH" == "arm64" ]]; then
   export CPU_TARGET="apple-m1"
   export CPUFLAGS=" -mcpu=$CPU_TARGET "
   export INSTALL_PREFIX=/opt/ossia-sdk-aarch64
+  export LLVM_ARCH=AArch64
 else
   export MACOS_VERSION=10.15
   export CPU_TARGET="ivybridge"
   export CPUFLAGS=" -march=$CPU_TARGET -mtune=cannonlake "
   export INSTALL_PREFIX=/opt/ossia-sdk-x86_64
+  export LLVM_ARCH=X86
 fi
 
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
