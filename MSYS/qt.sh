@@ -1,5 +1,6 @@
 #!/bin/bash -eux
 source ./common.sh
+export PATH=/c/Perl64/bin:$HOMEPATH/AppData/Local/Programs/Python/Python37:$PATH
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
 
@@ -13,6 +14,8 @@ mkdir -p qt6-build-static
   ../qt/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
                    -opengl desktop \
+                   -feature-cpp-winrt \
+                   -feature-vulkan \
                    -feature-schannel \
                    -no-feature-vnc \
                    -system-freetype \

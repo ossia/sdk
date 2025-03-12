@@ -10,7 +10,7 @@ if [[ "$TARGET" = "raspi" ]]; then
   fi
 else
   if [[ ! -d ffmpeg ]]; then
-    wget -nv --no-check-certificate https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.bz2
+    curl -ksSLOJ https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.bz2
     tar xjf ffmpeg-$FFMPEG_VERSION.tar.bz2
   fi
 fi

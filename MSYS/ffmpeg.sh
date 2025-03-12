@@ -4,7 +4,7 @@ source ./common.sh
 source ../common/clone-ffmpeg.sh
 
 (
-cd ffmpeg
+cd ffmpeg-$FFMPEG_VERSION
 
 export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"

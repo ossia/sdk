@@ -10,7 +10,7 @@ mingw-w64-$TOOLCHAIN-toolchain
 mingw-w64-$TOOLCHAIN-cppwinrt
 mingw-w64-$TOOLCHAIN-meson
 mingw-w64-$TOOLCHAIN-vulkan-headers
-mingw-w64-$TOOLCHAIN-git
+git
 wget
 diffutils
 yasm
@@ -19,6 +19,7 @@ unzip
 git
 )
 
-pacman -S  "${PACKAGES[@]}"
+pacman -S --needed "${PACKAGES[@]}"
 
+mkdir -p $INSTALL_PREFIX/sysroot/include
 SDK_DIR=.

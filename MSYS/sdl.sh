@@ -5,7 +5,6 @@ source ../common/clone-sdl.sh
 
 rm -rf sdl-build
 mkdir sdl-build
-cd sdl-build
 
 cmake  -S SDL2-$SDL_VERSION -B sdl-build \
 -GNinja \

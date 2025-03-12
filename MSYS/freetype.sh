@@ -36,7 +36,6 @@ cmake --build freetype-build --target install/strip
   ninja install
 
   sed -i 's/ SHARED / STATIC /g' "$INSTALL_PREFIX/sysroot//lib/cmake/harfbuzz/harfbuzz-config.cmake"
-"
 )
 
 # 3. Rebuild freetype with harfbuzz

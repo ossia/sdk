@@ -12,8 +12,8 @@ mkdir -p llvm-build
 cd llvm-build
 
 $CMAKE -GNinja \
- -DCMAKE_C_FLAGS="-O3" \
- -DCMAKE_CXX_FLAGS="-O3" \
+ -DCMAKE_C_FLAGS="$CFLAGS" \
+ -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
  -DCMAKE_BUILD_TYPE=Release \
  -DBUILD_SHARED_LIBS=0 \
  -DLLVM_INCLUDE_TOOLS=1 \

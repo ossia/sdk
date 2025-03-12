@@ -2,6 +2,9 @@
 
 # ./deps.sh
 
+# TODO install git bash in c:\git
+# Otherwise fftw build fails due to c:\program files\git\usr\bin\sh.exe path with spaces
+
 # TODO install python in SDK needed for qt
 
 # TODO install meson from MSI 
@@ -9,7 +12,11 @@
 
 # TODO install mingw-w64-clang-x86_64-cppwinrt 
 # and 
-# cp -rf /clang64/include/winrt/ /d/ossia-sdk/sysroot/include/
+# cp -rf /clang64/include/winrt/ /c/ossia-sdk/llvm/include/
+# cp /clang64/lib/libruntimeobject.a /c/ossia-sdk/llvm/x86_64-w64-mingw32/lib/
+
+
+# TODO install vulkan sdk from https://vulkan.lunarg.com/sdk/home#windows and reopen a shell
 
 
 ./cmake.sh
