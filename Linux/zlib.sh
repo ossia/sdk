@@ -32,7 +32,10 @@ cmake -S bzip2 -B bzip2-build \
 cmake --build bzip2-build --config Release
 cmake --build bzip2-build --config Release --target install/strip
 
-cp "$INSTALL_PREFIX/sysroot/lib/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib/libbz2.a" 
+cd $INSTALL_PREFIX/sysroot
+ln -s lib64 lib || true
+
+cp "$INSTALL_PREFIX/sysroot/lib64/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib/libbz2.a" 
 )
 
 (
