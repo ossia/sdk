@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 # ./deps.sh
 # ./llvm-deps.sh
