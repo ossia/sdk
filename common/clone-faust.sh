@@ -3,11 +3,13 @@
 source ../common/versions.sh
 (
 if [[ ! -d faust ]]; then
-  git clone --recursive -j4 https://github.com/grame-cncm/faust
+  git clone --recursive -j4 https://github.com/jcelerier/faust
+  (cd faust; git checkout feature/allow_disable_archive_combination)
 fi
 
 cd faust/build
 echo '
+set ( INCLUDE_LLVM_STATIC_IN_ARCHIVE OFF )
 set ( ASMJS_BACKEND  OFF CACHE STRING  "Include ASMJS backend" FORCE )
 set ( C_BACKEND      COMPILER STATIC DYNAMIC        CACHE STRING  "Include C backend"         FORCE )
 set ( CPP_BACKEND    COMPILER STATIC DYNAMIC        CACHE STRING  "Include CPP backend"       FORCE )
