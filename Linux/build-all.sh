@@ -1,5 +1,6 @@
 #!/bin/bash -eu
-
+./ffmpeg.sh
+exit 1
 ./cmake.sh
 ./llvm.sh
 ./zlib.sh

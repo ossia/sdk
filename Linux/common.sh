@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export NPROC=$(nproc)
-export INSTALL_PREFIX=/opt/ossia-sdk
+export INSTALL_PREFIX=/opt/ossia-sdk-$CPU_ARCH
 export SDK_ROOT=$PWD
 export CFLAGS="-O3 -march=x86-64 -mtune=generic -fno-plt -fno-semantic-interposition -fno-stack-protector -fno-ident -fPIC" # -march=ivybridge -mtune=haswell"
 export CXXFLAGS="-O3 -march=x86-64 -mtune=generic -fno-plt -fno-semantic-interposition -fno-stack-protector -fno-ident -fPIC" # -march=ivybridge -mtune=haswell"
