@@ -6,7 +6,9 @@ source "$SDK_COMMON_ROOT/common/clone-qt.sh"
 
 declare -a QT_AARCH64_FLAGS=(
   -opengl es2
-  -opengles3
+  -feature-opengles3
+  -feature-opengles31
+  -feature-opengles32
 )
 
 declare -a QT_X86_64_FLAGS=(
