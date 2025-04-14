@@ -28,6 +28,9 @@ mkdir -p qt6-build-static
   -feature-vnc \
   -feature-library \
   -feature-wayland-client \
+  -feature-eglfs_gbm \
+  -feature-eglfs_x11 \
+  -feature-eglfs_egldevice \
   -no-feature-wayland-server \
   -no-feature-libudev \
   -no-feature-glib \

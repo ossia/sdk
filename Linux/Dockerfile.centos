@@ -24,5 +24,6 @@ RUN yum -y install \
     libv4l-devel \
     xcb-util-cursor-devel  \
     wayland-devel mesa-libEGL-devel wayland-protocols-devel libwayland-egl libwayland-cursor libwayland-client python39 \
-    systemd-devel systemd-udev
+    systemd-devel systemd-udev \
+    mesa-libgbm-devel
 
