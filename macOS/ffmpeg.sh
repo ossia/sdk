@@ -28,6 +28,11 @@ export FFMPEG_COMMON_FLAGS=(
 
 export FFMPEG_ARM64_FLAGS=(
  --cpu=$CPU_TARGET
+ --prefix=$INSTALL_PREFIX/ffmpeg
+ --cc="$CC  -arch arm64 " 
+ --cxx="$CXX"
+ --extra-cflags="$CFLAGS_NOARCH"
+ --extra-ldflags="$CFLAGS_NOARCH"
 )
 export FFMPEG_X86_64_FLAGS=(
  --arch="x86_64"
