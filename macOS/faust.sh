@@ -3,22 +3,24 @@
 source ./common.sh
 source ../common/clone-faust.sh
 
-cd faust/build
-mkdir -p faustdir
 export PATH=$PATH:$INSTALL_PREFIX/llvm-libs/bin
-xcrun cmake \
-  -S . \
-  -B faustdir \
-  -GNinja \
-  -C ./backends/llvm.cmake \
+xcrun cmake -G Ninja \
+  -C faust/build/backends/llvm.cmake \
+  -S faust/build \
+  -B faust-build \
+  -DCMAKE_C_FLAGS="$CFLAGS -DFAUSTFLOAT=double" \
+  -DCMAKE_CXX_FLAGS="$CXXFLAGS -DFAUSTFLOAT=double" \
   -DCMAKE_PREFIX_PATH=$INSTALL_PREFIX/llvm-libs \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_CXX_STANDARD=20 \
   -DCMAKE_BUILD_TYPE=Release \
   -DINCLUDE_OSC=0 \
   -DINCLUDE_HTTP=0 \
+  -DINCLUDE_EMCC=0 \
   -DINCLUDE_EXECUTABLE=0 \
   -DINCLUDE_STATIC=1 \
-  -DLINK_LLVM_STATIC=0 \
-  -DINCLUDE_LLVM=0 \
+  -DUSE_LLVM_CONFIG=0 \
+  -DINCLUDE_LLVM_STATIC_IN_ARCHIVE=0 \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
   -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust \
@@ -26,6 +28,6 @@ xcrun cmake \
   -DCMAKE_CXX_VISIBLITY_PRESET=hidden \
   -DCMAKE_VISIBLITY_INLINES_HIDDEN=1 \
   $CMAKE_ADDITIONAL_FLAGS
-  
-xcrun cmake --build faustdir
-xcrun cmake --build faustdir --target install/strip
+
+xcrun cmake --build faust-build
+xcrun cmake --build faust-build --target install/strip

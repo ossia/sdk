@@ -3,10 +3,10 @@
 source ../common/versions.sh
 (
 if [[ ! -d faust ]]; then
-  git clone --recursive -j4 https://github.com/jcelerier/faust
-  (cd faust; git checkout feature/allow_disable_archive_combination)
+  git clone --recursive -j4 https://github.com/grame-cncm/faust
 fi
 
+(
 cd faust/build
 echo '
 set ( INCLUDE_LLVM_STATIC_IN_ARCHIVE OFF )
@@ -22,6 +22,6 @@ set ( OLDCPP_BACKEND OFF        CACHE STRING  "Include old CPP backend"   FORCE 
 set ( RUST_BACKEND   OFF        CACHE STRING  "Include RUST backend"      FORCE )
 set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
 ' > backends/llvm.cmake
-
+)
 )
 
