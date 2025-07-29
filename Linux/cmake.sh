@@ -11,10 +11,10 @@ if [[ ! -d cmake ]]; then
     mv cmake-$CMAKE_VERSION-linux-$ARCH cmake
     
     if [[ "$ARCH" == "x86_64" ]]; then
-      curl -ksSLOJ https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip
+      curl -ksSLOJ https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-linux.zip
       unzip ninja-linux.zip
     else
-      curl -ksSLOJ https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux-aarch64.zip
+      curl -ksSLOJ https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-linux-aarch64.zip
       unzip ninja-linux-aarch64.zip
     fi
     mv -f ninja /usr/bin

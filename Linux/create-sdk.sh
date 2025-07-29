@@ -1,7 +1,7 @@
 #!/bin/bash -eux
 #export DOCKER_BUILDKIT=1
-# docker rmi ossia/score-sdk-base
-# docker build --no-cache --pull --squash --compress --force-rm -t ossia/score-sdk-base -f Dockerfile.centos .
+#docker rmi ossia/score-sdk-base || true
+#docker build --no-cache --pull --squash --compress --force-rm -t ossia/score-sdk-base -f Dockerfile.centos .
 
 mkdir -p /tmp/image
 mkdir -p /opt/ossia-sdk-$CPU_ARCH
