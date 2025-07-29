@@ -12,8 +12,8 @@
 
 # TODO install mingw-w64-clang-x86_64-cppwinrt 
 # and 
-# cp -rf /clang64/include/winrt/ /c/ossia-sdk/llvm/include/
-# cp /clang64/lib/libruntimeobject.a /c/ossia-sdk/llvm/x86_64-w64-mingw32/lib/
+# cp -rf /clang64/include/winrt/ /c/ossia-sdk-x86_64/llvm/include/
+# cp /clang64/lib/libruntimeobject.a /c/ossia-sdk-x86_64/llvm/x86_64-w64-mingw32/lib/
 
 
 # TODO install vulkan sdk from https://vulkan.lunarg.com/sdk/home#windows and reopen a shell

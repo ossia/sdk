@@ -8,13 +8,6 @@ if [[ ! -d "$INSTALL_PREFIX/cmake" ]]; then
   unzip cmake.zip
   mv "cmake-$CMAKE_VERSION-windows-x86_64" "$INSTALL_PREFIX/cmake"
 
-  #In macro(_pkgconfig_invoke (line 156 for cmake-3.31)
-  sed -ri '156i \
-    string(REGEX REPLACE "\\\\\\\\\\\\\\\\" "/" _pkgconfig_invoke_result "${_pkgconfig_invoke_result}") \
-    string(REGEX REPLACE "\\\\\\\\" "/" _pkgconfig_invoke_result "${_pkgconfig_invoke_result}") \
-    string(REGEX REPLACE "\\\\" "/" _pkgconfig_invoke_result "${_pkgconfig_invoke_result}") \
-    string(REGEX REPLACE "//" "/" _pkgconfig_invoke_result "${_pkgconfig_invoke_result}") \
-' "$INSTALL_PREFIX/cmake/share/cmake-$CMAKE_VERSION_SHORT/Modules/FindPkgConfig.cmake"
   rm -rf "$INSTALL_PREFIX/cmake/doc"
   rm -rf "$INSTALL_PREFIX/cmake/man"
 fi

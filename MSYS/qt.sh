@@ -1,6 +1,6 @@
 #!/bin/bash -eux
 source ./common.sh
-export PATH=/c/Perl64/bin:$HOMEPATH/AppData/Local/Programs/Python/Python37:$PATH
+export PATH=/c/Perl64/perl/bin:/c/ossia-sdk-x86_64/python:$PATH
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
 

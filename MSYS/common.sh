@@ -2,9 +2,9 @@
 
 export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 export NPROC=12
-export INSTALL_PREFIX=/c/ossia-sdk
-export INSTALL_PREFIX_CMAKE=c:/ossia-sdk
-export INSTALL_PREFIX_WIN32=c:\\ossia-sdk
+export INSTALL_PREFIX=/c/ossia-sdk-x86_64
+export INSTALL_PREFIX_CMAKE=c:/ossia-sdk-x86_64
+export INSTALL_PREFIX_WIN32=c:\\ossia-sdk-x86_64
 export SDK_ROOT=$PWD
 export TOOLS_ROOT=/c/gnu/bin
 
