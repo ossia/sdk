@@ -33,3 +33,7 @@
 ./jack.sh
 ./dnssd.sh
 ./ysfx.sh
+
+cd $INSTALL_PREFIX
+7z a sdk-mingw-x86_64.7z *
+
