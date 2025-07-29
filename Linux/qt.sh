@@ -12,6 +12,7 @@ declare -a QT_AARCH64_FLAGS=(
 )
 
 declare -a QT_X86_64_FLAGS=(
+  -opengl desktop
 )
 
 declare -n QT_ARCH_FLAGS=QT_${ARCH_VARNAME}_FLAGS
@@ -19,7 +20,7 @@ declare -n QT_ARCH_FLAGS=QT_${ARCH_VARNAME}_FLAGS
 mkdir -p qt6-build-static
 (
   cd qt6-build-static
-  
+
   export OPENSSL_LIBS="$INSTALL_PREFIX/openssl/lib/libssl.a $INSTALL_PREFIX/openssl/lib/libcrypto.a -ldl -pthread"
   ../qt/configure \
   $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
@@ -48,7 +49,7 @@ mkdir -p qt6-build-static
   -- \
   -DCMAKE_C_FLAGS="$CFLAGS" \
   -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
-  -DCMAKE_CXX_STANDARD=20 \
+  -DCMAKE_CXX_STANDARD=23 \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX;$INSTALL_PREFIX/sysroot" \
   -DFREETYPE_DIR="$INSTALL_PREFIX/sysroot" \
   -Dharfbuzz_DIR="$INSTALL_PREFIX/sysroot" \
@@ -56,7 +57,7 @@ mkdir -p qt6-build-static
   -DHARFBUZZ_LIBRARIES="$INSTALL_PREFIX/sysroot/lib/libharfbuzz.a" \
   -DOPENSSL_ROOT_DIR="$INSTALL_PREFIX/openssl" \
   -DQT_DISABLE_DEPRECATED_UP_TO=0x060900
-  
+
   cmake --build .
   cmake --build . --target install
 )

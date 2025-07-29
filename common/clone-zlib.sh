@@ -24,5 +24,5 @@ fi
 
 if [[ ! -d snappy ]]; then
   git clone https://github.com/jcelerier/snappy
-  (cd snappy ; git checkout ossia)
+  (cd snappy ; git checkout ossia-2025-03-31)
 fi

@@ -8,6 +8,7 @@
 -no-directfb
 -no-feature-accessibility
 -no-feature-calendarwidget
+-no-feature-commandlinkbutton
 -no-feature-concurrent
 -no-feature-cups
 -no-feature-dbus
@@ -45,7 +46,6 @@
 -no-feature-sql
 -no-feature-sqlmodel
 -no-feature-style-android
--no-feature-style-fusion
 -no-feature-style-mac
 -no-feature-style-stylesheet
 -no-feature-style-windows
