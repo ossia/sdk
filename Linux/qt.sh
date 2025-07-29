@@ -25,7 +25,6 @@ mkdir -p qt6-build-static
   ../qt/configure \
   $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
   $(cat "$SDK_ROOT/common/qtfeatures.$QT_MODE") \
-  -submodules qtwayland \
   -feature-vnc \
   -feature-library \
   -feature-wayland-client \

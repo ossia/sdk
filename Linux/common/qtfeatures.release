@@ -1,10 +1,10 @@
 -release
 -static
 -system-freetype 
-FREETYPE_INCDIR=/opt/ossia-sdk/freetype/include/freetype2
-FREETYPE_LIBS=/opt/ossia-sdk/freetype/lib64/libfreetype.a
+FREETYPE_INCDIR=/opt/ossia-sdk-$CPU_ARCH/freetype/include/freetype2
+FREETYPE_LIBS=/opt/ossia-sdk-$CPU_ARCH/freetype/lib64/libfreetype.a
 -system-harfbuzz 
-HARFBUZZ_INCDIR=/opt/ossia-sdk/harfbuzz/include
-HARFBUZZ_LIBS=/opt/ossia-sdk/harfbuzz/lib64/libharfbuzz.a
+HARFBUZZ_INCDIR=/opt/ossia-sdk-$CPU_ARCH/harfbuzz/include
+HARFBUZZ_LIBS=/opt/ossia-sdk-$CPU_ARCH/harfbuzz/lib64/libharfbuzz.a
 -openssl-linked
--I/opt/ossia-sdk/openssl/include
+-I/opt/ossia-sdk-$CPU_ARCH/openssl/include
