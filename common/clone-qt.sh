@@ -28,10 +28,15 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/69/658069/1 && git cherry-pick FETCH_HEAD
      # qfsm disable sorting
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/75/658075/1 && git cherry-pick FETCH_HEAD
+    # qxcbatom.cpp: add missing cstdlib include for free
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/68/686468/1 && git cherry-pick FETCH_HEAD
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
     # # syncqt build error
     # git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/49/662349/1 && git cherry-pick FETCH_HEAD
+    
+    # missing cstdlib in qalloc.h
+    git cherry-pick 2200b5c098b3ec301ac1b41a9f65f6a4d71eec73
   )
 
   (
