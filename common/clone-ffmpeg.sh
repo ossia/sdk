@@ -4,7 +4,9 @@ source ../common/versions.sh
 
 
 if [[ ! -d ffmpeg-$FFMPEG_VERSION ]]; then
-  curl -ksSLOJ https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.bz2
+  # Here as the ffmpeg webserver is too unreliable
+  curl -ksSLOJ  https://github.com/ossia/sdk/releases/download/sdk33/ffmpeg-$FFMPEG_VERSION.tar.bz2
+
   tar xjf ffmpeg-$FFMPEG_VERSION.tar.bz2
 
   case "$OSTYPE" in
@@ -17,7 +19,7 @@ if [[ ! -d ffmpeg-$FFMPEG_VERSION ]]; then
      ( 
       yum -y install patch
       cd ffmpeg-$FFMPEG_VERSION
-      curl -ksSLOJ https://raw.githubusercontent.com/LibreELEC/LibreELEC.tv/9c99ad0f0bdad077176be4250e64e9deda70c062/packages/multimedia/ffmpeg/patches/rpi/ffmpeg-001-rpi.patch
+      curl -ksSLOJ https://raw.githubusercontent.com/HiassofT/LibreELEC.tv/refs/heads/le13-ffmpeg-8.0/packages/multimedia/ffmpeg/patches/rpi/ffmpeg-001-rpi.patch
       ls 
       patch -p1 < ffmpeg-001-rpi.patch
 

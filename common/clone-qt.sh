@@ -14,7 +14,8 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git config user.email "you@example.com"
     git config user.name "Your Name"
 
-    git checkout 6.10
+    # between 6.10.0 and 6.10.1
+    git checkout 136d9aa2807619dd9602a97651278296b0690277 
     # qarraydata: prevent a -fsanitize=integer warning
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/65/658065/1 && git cherry-pick FETCH_HEAD
      # Enable exports on static builds
@@ -35,6 +36,8 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
 
   (
     cd qtdeclarative
+    # Between 6.10.0: 
+    git checkout 6caacc07a3270b862652e8aa5f4f0cb73a801633 
     git config user.email "you@example.com"
     git config user.name "Your Name"
     git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/68/464668/1 && git cherry-pick FETCH_HEAD
