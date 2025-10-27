@@ -43,7 +43,7 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/68/464668/1 && git cherry-pick FETCH_HEAD
 
     # ci: fix missing include for std::terminate
-    git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/54/662354/1 && git cherry-pick FETCH_HEAD
+    # git fetch https://codereview.qt-project.org/qt/qtdeclarative refs/changes/54/662354/1 && git cherry-pick FETCH_HEAD
   )
 
   (

@@ -29,6 +29,8 @@ cmake --build freetype-build --target install/strip
 # 2. Build harfbuzz
 
 ( 
+  export PKG_CONFIG_PATH=$INSTALL_PREFIX/freetype
+  export CMAKE_PREFIX_PATH=$INSTALL_PREFIX/freetype
   export MIN_SUPPORTED_MACOSX_DEPLOYMENT_TARGET=$MACOS_VERSION
   unset MACOSX_DEPLOYMENT_TARGET
 
