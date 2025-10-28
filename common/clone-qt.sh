@@ -32,6 +32,10 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/68/686468/1 && git cherry-pick FETCH_HEAD
     # qsimd.cpp: add missing stdlib.h for getenv
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/75/686475/1 && git cherry-pick FETCH_HEAD
+    # win32 fontdatabase unity build fix
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/04/686804/1 && git cherry-pick FETCH_HEAD
+    # win32 Font api clash
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/05/686805/1 && git cherry-pick FETCH_HEAD
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
     # # syncqt build error
@@ -58,6 +62,17 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git config user.email "you@example.com"
     git config user.name "Your Name"
     git fetch https://codereview.qt-project.org/qt/qtshadertools refs/changes/63/464663/2 && git cherry-pick FETCH_HEAD
+  )
+
+  (
+    cd qtquick3d
+    git config user.email "you@example.com"
+    git config user.name "Your Name"
+    # openxr missing iterator
+    git fetch https://codereview.qt-project.org/qt/qtquick3d refs/changes/06/686806/1 && git cherry-pick FETCH_HEAD
+    # QSSGLightmapBaker: add missing QGuiApplication include
+    git fetch https://codereview.qt-project.org/qt/qtquick3d refs/changes/07/686807/1 && git cherry-pick FETCH_HEAD
+
   )
 )
 fi
