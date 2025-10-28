@@ -72,6 +72,14 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git fetch https://codereview.qt-project.org/qt/qtquick3d refs/changes/06/686806/1 && git cherry-pick FETCH_HEAD
     # QSSGLightmapBaker: add missing QGuiApplication include
     git fetch https://codereview.qt-project.org/qt/qtquick3d refs/changes/07/686807/1 && git cherry-pick FETCH_HEAD
+  )
+
+  (
+    cd qtquick3d/src/3rdparty/assimp/src
+    git config user.email "you@example.com"
+    git config user.name "Your Name"
+    # assimp missing ostream
+    git fetch https://codereview.qt-project.org/qt/qtquick3d-assimp refs/changes/32/687132/1 && git cherry-pick FETCH_HEAD
 
   )
 )
