@@ -1,4 +1,4 @@
--submodules qtbase,qtdeclarative,qtserialport,qtimageformats,qtwebsockets,qtscxml,qtshadertools
+-submodules qtbase,qtdeclarative,qtserialport,qtimageformats,qtwebsockets,qtscxml,qtshadertools,qtsvg,qtquick3d,qtconnectivity
 -confirm-license
 -c++std c++20
 -DYYDEBUG=0
@@ -9,14 +9,14 @@
 -no-feature-accessibility
 -no-feature-calendarwidget
 -no-feature-commandlinkbutton
--no-feature-concurrent
+-feature-concurrent
 -no-feature-cups
 -no-feature-dbus
 -no-feature-dockwidget
 -no-feature-effects
 -no-feature-fontcombobox
 -no-feature-fontdialog
--no-feature-future
+-feature-future
 -no-feature-gc_binaries
 -no-feature-gestures
 -no-feature-glib
