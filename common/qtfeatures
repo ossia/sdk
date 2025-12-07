@@ -6,7 +6,6 @@
 -no-dbus
 -no-gtk
 -no-directfb
--no-feature-accessibility
 -no-feature-calendarwidget
 -no-feature-commandlinkbutton
 -feature-concurrent
