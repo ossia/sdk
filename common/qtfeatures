@@ -37,7 +37,6 @@
 -no-feature-printpreviewwidget
 -no-feature-printsupport
 -no-feature-qml-debug
--no-feature-qml-locale
 -no-feature-qml-preview
 -no-feature-qml-profiler
 -no-feature-reduce_exports
@@ -58,10 +57,6 @@
 -no-feature-topleveldomain
 -no-feature-transposeproxymodel
 -no-feature-tuiotouch
--no-feature-undocommand
--no-feature-undogroup
--no-feature-undostack
--no-feature-undoview
 -no-feature-wizard
 -no-glib
 -no-icu
