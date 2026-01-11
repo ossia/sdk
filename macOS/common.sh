@@ -47,7 +47,7 @@ else
   export CXX=clang++
 fi
 
-export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_ARCHITECTURES=$TARGET_ARCH -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT"
+export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_ARCHITECTURES=$TARGET_ARCH -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew"
 export CFLAGS=" -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -O3 -ffast-math -fno-finite-math-only "
 export CFLAGS_NOARCH=" -mmacosx-version-min=$MACOS_VERSION -O3 -ffast-math -fno-finite-math-only "
 export CXXFLAGS=" -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -O3 -ffast-math -fno-finite-math-only "

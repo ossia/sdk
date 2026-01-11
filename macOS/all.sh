@@ -17,5 +17,5 @@
 
 
 
-tar caf sdk-macOS.tar.gz $INSTALL_PREFIX
+tar caf sdk-macOS-$TARGET_ARCH.tar.gz $INSTALL_PREFIX
 

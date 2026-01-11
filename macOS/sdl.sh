@@ -33,4 +33,4 @@ xcrun cmake \
 xcrun cmake --build sdl-build
 xcrun cmake --build sdl-build --target install/strip
 
-ln -s $INSTALL_PREFIX/SDL2/SDL2.framework/Resources $INSTALL_PREFIX/SDL2/cmake
+ln -s $INSTALL_PREFIX/SDL2/SDL2.framework/Resources $INSTALL_PREFIX/SDL2/cmake || true
