@@ -90,7 +90,7 @@ else
   cp -rf $INSTALL_PREFIX/ffmpeg/lib lib_n
   cp -rf $INSTALL_PREFIX/ffmpeg_h/lib lib_h
   
-  for file in libavcodec.a libavdevice.a libavfilter.a libavformat.a libavutil.a libpostproc.a libswresample.a libswscale.a; do
+  for file in libavcodec.a libavdevice.a libavfilter.a libavformat.a libavutil.a libswresample.a libswscale.a; do
     lipo lib_n/$file lib_h/$file -create -output $INSTALL_PREFIX/ffmpeg/lib/$file
   done
   
