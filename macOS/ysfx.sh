@@ -20,3 +20,6 @@ cmake \
 
 cmake --build ysfx-build --parallel
 cmake --build ysfx-build --target install/strip
+
+mv $INSTALL_PREFIX/ysfx/include/ysfx.h $INSTALL_PREFIX/ysfx/include/ysfx-s.h
+mv $INSTALL_PREFIX/ysfx/lib/libysfx.a $INSTALL_PREFIX/ysfx/lib/libysfx-s.a

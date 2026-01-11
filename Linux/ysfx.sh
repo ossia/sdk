@@ -18,3 +18,6 @@ $CMAKE \
 
 $CMAKE --build ysfx-build --parallel
 $CMAKE --build ysfx-build --target install/strip
+
+mv $INSTALL_PREFIX/ysfx/include/ysfx.h $INSTALL_PREFIX/ysfx/include/ysfx-s.h
+mv $INSTALL_PREFIX/ysfx/lib64/libysfx.a $INSTALL_PREFIX/ysfx/lib64/libysfx-s.a
