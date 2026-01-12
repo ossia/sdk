@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash -eux
 
 source ./common.sh
 source ../common/clone-llvm.sh
@@ -29,7 +29,6 @@ xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
  -DLLVM_ENABLE_PROJECTS="clang;polly" \
  -DCMAKE_CXX_STANDARD=20 \
  -DCOMPILER_RT_ENABLE_IOS=OFF \
- -DCMAKE_OSX_ARCHITECTURES=$MACOS_ARCH \
  -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT \
  -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm-libs \

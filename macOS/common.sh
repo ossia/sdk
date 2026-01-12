@@ -30,12 +30,14 @@ if [[ "$TARGET_ARCH" == "arm64" ]]; then
   export CPUFLAGS=" -mcpu=$CPU_TARGET -arch arm64 "
   export INSTALL_PREFIX=/opt/ossia-sdk-aarch64
   export LLVM_ARCH=AArch64
+  export CMAKE_OSX_ARCHITECTURES=arm64
 else
-  # 2025-03: apple silicon still does not support x86_64h and some instruction sets such as f16c and rdrand
+  #??2025-03: apple silicon still does not support x86_64h and some instruction sets such as f16c and rdrand
   export CPU_TARGET="x86-64-v2"
-  export CPUFLAGS=" -mtune=cannonlake -arch x86_64 -arch x86_64h "
+  export CPUFLAGS=" -mtune=cascadelake -arch x86_64 -arch x86_64h "
   export INSTALL_PREFIX=/opt/ossia-sdk-x86_64
   export LLVM_ARCH=X86
+  export CMAKE_OSX_ARCHITECTURES="x86_64;x86_64h"
 fi
 
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
@@ -47,7 +49,7 @@ else
   export CXX=clang++
 fi
 
-export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_ARCHITECTURES=$TARGET_ARCH -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew"
+export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew"
 export CFLAGS=" -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -O3 -ffast-math -fno-finite-math-only "
 export CFLAGS_NOARCH=" -mmacosx-version-min=$MACOS_VERSION -O3 -ffast-math -fno-finite-math-only "
 export CXXFLAGS=" -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -O3 -ffast-math -fno-finite-math-only "
