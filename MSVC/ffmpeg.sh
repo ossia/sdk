@@ -1,35 +1,39 @@
 #!/bin/bash
 
-export VERSION=4.3.1
-if [[ ! -f ffmpeg-$VERSION.tar.bz2 ]]; then
-  wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
-  tar xaf ffmpeg-$VERSION.tar.bz2
-fi
-
+source ../common/clone-ffmpeg.sh
 
 shopt -s nullglob
 
-msvc_version=$(ls "/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/")
-msvc_path="/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/$msvc_version/bin/Hostx64/x64"
+# https://github.com/nathan818fr/vcvars-bash
+#msvc_version=$(ls "/c/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/")
+#msvc_path="/c/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/$msvc_version/bin/Hostx64/x64"
 
-export PATH="$msvc_path:$PATH"
+#export PATH="$msvc_path:$PATH"
+#:/d/msys64/clang64/bin"
 
-rm -rf ffmpeg-build
-mkdir -p ffmpeg-build
-cd ffmpeg-build
+# ffmpeg detects the compiler by parsing the output of cl.exe which changes with LANG
+# https://zhuanlan.zhihu.com/p/1937091185752674763 
+# export VSLANG=1033
+# ^ actually does not work, need to make sure that ONLY the english language pack for visual studio is installed
 
- ../ffmpeg-$VERSION/configure \
-    --arch=x86_64 --cpu=x86_64 --toolchain=msvc --target-os=win64 \
-    --enable-asm --enable-yasm \
+# put nasm here:
+# export PATH="/c/ossia-sdk-msvc/bin:$PATH"
+
+# out of tree build does not work
+cd ffmpeg-$FFMPEG_VERSION
+
+./configure \
+    --toolchain=msvc --target-os=win64 \
+    --enable-asm  \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
  	--pkg-config-flags="--static" \
  	--enable-gpl --enable-version3 \
  	--disable-openssl --disable-securetransport \
  	--disable-videotoolbox \
- 	--disable-network --disable-iconv \
+ 	--disable-network --disable-iconv  --disable-response-files \
  	--enable-protocols  --disable-lzma \
- 	--prefix=/c/score-sdk-msvc-release/ffmpeg 
+ 	--prefix=/c/ossia-sdk-msvc/ffmpeg 
 
- make -j$NPROC
- make install
+/d/msys64/clang64/bin/mingw32-make.exe -j1
+/d/msys64/clang64/bin/mingw32-make.exe install
