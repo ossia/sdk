@@ -5,7 +5,7 @@ source ../common/versions.sh
 
 if [[ ! -d ffmpeg-$FFMPEG_VERSION ]]; then
   # Here as the ffmpeg webserver is too unreliable
-  curl -ksSLOJ  https://github.com/ossia/sdk/releases/download/sdk33/ffmpeg-$FFMPEG_VERSION.tar.bz2
+  curl -ksSLOJ  https://github.com/ossia/sdk/releases/download/sdk36/ffmpeg-$FFMPEG_VERSION.tar.bz2
 
   tar xjf ffmpeg-$FFMPEG_VERSION.tar.bz2
 
