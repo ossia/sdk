@@ -57,6 +57,8 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/10/723510/3 && git cherry-pick FETCH_HEAD
     # macos crash when screen goes off and on
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/89/729289/1 && git cherry-pick FETCH_HEAD
+    # qyieldcpu: Fix compilation with macOS 26.4 SDK (QTBUG-145239)
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/70/725070/3 && git cherry-pick FETCH_HEAD
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
     # # syncqt build error

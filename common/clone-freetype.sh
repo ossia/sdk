@@ -7,14 +7,15 @@ if [[ ! -d freetype ]]; then
   (
     git clone $SDK_CLONE_DEPTH ${SDK_CLONE_DEPTH:+-b ossia-2024-07} https://github.com/jcelerier/freetype
     cd freetype
-    git checkout ossia-2024-07
+    git checkout ossia-2026-05
     git remote add upstream https://github.com/freetype/freetype
   )
-  
+
   (
     git clone $SDK_CLONE_DEPTH ${SDK_CLONE_DEPTH:+-b ossia} https://github.com/jcelerier/harfbuzz
     cd harfbuzz
-    git checkout ossia
+    git checkout ossia-2026-05
+    git remote add upstream https://github.com/harfbuzz/harfbuzz
   )
   
 )
