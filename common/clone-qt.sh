@@ -52,6 +52,11 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     # qversiontagging.h; honour it in the .cpp so the symbols aren't emitted.
     perl -0pi -e 's/#if QT_VERSION_MINOR > 0/#ifndef QT_NO_VERSION_TAGGING\n#if QT_VERSION_MINOR > 0/; s/make_versioned_symbol\(SYM, QT_VERSION_MAJOR, QT_VERSION_MINOR, "\@\@"\);/make_versioned_symbol(SYM, QT_VERSION_MAJOR, QT_VERSION_MINOR, "\@\@");\n#endif/' src/corelib/global/qversiontagging.cpp
 
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/05/686805/1 && git cherry-pick FETCH_HEAD
+    # macos iconengine protection
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/10/723510/3 && git cherry-pick FETCH_HEAD
+    # macos crash when screen goes off and on
+    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/89/729289/1 && git cherry-pick FETCH_HEAD
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
     # # syncqt build error
