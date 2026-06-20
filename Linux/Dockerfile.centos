@@ -9,7 +9,7 @@ RUN yum -y install \
     llvm-toolset gcc-toolset-14 \
     libxcb-devel glibc-devel \
     git svn perl-Data-Dump perl-Data-Dumper \
-    ncurses-devel zlib-devel cmake3 scl-utils \
+    ncurses-devel zlib-devel cmake3 scl-utils ccache \
     ninja-build wget flex bison rsync bzip2 make xz file \
     perl which perl-version libxcb \
     meson \

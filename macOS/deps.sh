@@ -5,7 +5,7 @@ source ./common.sh
 brew update
 brew upgrade
 
-brew install cmake ninja boost gnu-tar gnu-sed yasm subversion
+brew install cmake ninja boost gnu-tar gnu-sed yasm subversion meson pkg-config ccache
 
 SDK_DIR=.
 

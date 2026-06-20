@@ -20,6 +20,11 @@ name: Build SDK
 #     llvm-mingw download arch. Both legs go through the same scripts.
 # Kept continue-on-error until a first real CI run confirms both legs are green
 # (windows-on-arm runner + some MSYS2 aarch64 packages are still unproven).
+#
+# Caching: the concurrency block above cancels superseded runs on a new push.
+# ccache (persisted via actions/cache) fronts the cmake-based steps (LLVM, Qt,
+# ...) on Linux and macOS for fast re-runs; Windows ccache is deferred until that
+# leg builds green.
 
 on:
   push:
@@ -47,6 +52,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-linux-${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: ccache-linux-${{ matrix.arch }}-
+
       - name: Prepare install prefix
         run: |
           sudo mkdir -p /opt/ossia-sdk-${{ matrix.arch }}
@@ -56,6 +68,9 @@ jobs:
         working-directory: Linux
         env:
           CPU_ARCH: ${{ matrix.arch }}
+          # create-sdk.sh mounts this into the container and turns on the cmake
+          # compiler launcher; ccache itself is installed in the Docker image.
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: ./create-sdk.sh
 
       - uses: actions/upload-artifact@v4
@@ -81,6 +96,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-macos-${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: ccache-macos-${{ matrix.arch }}-
+
       - name: Prepare install prefix
         run: |
           sudo mkdir -p /opt/ossia-sdk-${{ matrix.prefix_arch }}
@@ -90,6 +112,12 @@ jobs:
         working-directory: macOS
         env:
           TARGET_ARCH: ${{ matrix.arch }}
+          # ccache (installed via deps.sh) fronts every cmake-based step
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 3G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           ./deps.sh
           source ./common.sh
