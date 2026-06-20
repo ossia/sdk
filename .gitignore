@@ -8,5 +8,9 @@
 !*.ps1
 !*.cmd
 !*.bat
+!*.yml
+!*.yaml
+!.github/
+!.github/**
 
 

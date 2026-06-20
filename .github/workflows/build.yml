@@ -1,0 +1,141 @@
+name: Build SDK
+
+# Builds the ossia SDK for every supported platform/arch and uploads each
+# result as a CI artifact. amd64 + arm64 for Linux, macOS and Windows.
+#
+# Status of each leg (validated locally where possible; CI legs still need a
+# first real run to shake out runner-specific issues):
+#   - linux/x86_64   : Linux/create-sdk.sh   (Docker, CPU_ARCH=x86_64)  -- exercised locally
+#   - linux/aarch64  : Linux/create-sdk.sh   (Docker, CPU_ARCH=aarch64) on native arm64 runner
+#   - macos/arm64    : macOS/all.sh          (TARGET_ARCH=arm64)
+#   - macos/x86_64   : macOS/all.sh          (TARGET_ARCH=x86_64)
+#   - windows/x86_64 : MSYS/all.sh           (MSYS2 CLANG64)            -- see TODOs below
+#   - windows/arm64  : MSYS/all.sh           (MSYS2 CLANGARM64)         -- new, scripts need arch work
+#
+# Known follow-ups before the Windows legs go green (tracked, not yet done):
+#   * MSYS/cmake.sh aborts on an interactive Python install (`exit 1`); CI needs
+#     a non-interactive Python provisioning path.
+#   * The MSYS tree hardcodes x86_64 (deps.sh TOOLCHAIN=clang-x86_64,
+#     cmake.sh cmake/python download arch, x86_64-w64-mingw32 triple,
+#     INSTALL_PREFIX=ossia-sdk-x86_64). arm64 needs these parametrized.
+# Until then the whole Windows job is continue-on-error so it does not gate CI.
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare install prefix
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-${{ matrix.arch }}
+          sudo chmod 0777 /opt/ossia-sdk-${{ matrix.arch }}
+
+      - name: Build SDK (Docker)
+        working-directory: Linux
+        env:
+          CPU_ARCH: ${{ matrix.arch }}
+        run: ./create-sdk.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-linux-${{ matrix.arch }}
+          path: Linux/sdk-linux-${{ matrix.arch }}.tar.xz
+          if-no-files-found: error
+
+  macos:
+    name: macos-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            prefix_arch: aarch64
+            runner: macos-15
+          - arch: x86_64
+            prefix_arch: x86_64
+            runner: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare install prefix
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-${{ matrix.prefix_arch }}
+          sudo chown "$(whoami)" /opt/ossia-sdk-${{ matrix.prefix_arch }}
+
+      - name: Build SDK
+        working-directory: macOS
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          ./deps.sh
+          source ./common.sh
+          ./all.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-macos-${{ matrix.arch }}
+          path: macOS/sdk-macOS-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: windows-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    # TODO: drop once the MSYS Python provisioning + arm64 parametrization land.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: windows-2022
+            msystem: CLANG64
+          - arch: arm64
+            runner: windows-11-arm
+            msystem: CLANGARM64
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git wget tar unzip diffutils yasm
+
+      - name: Build SDK
+        working-directory: MSYS
+        run: |
+          ./deps.sh
+          ./all.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-windows-${{ matrix.arch }}
+          path: MSYS/sdk-mingw-*.7z
+          if-no-files-found: warn
