@@ -13,6 +13,7 @@ mkdir -p qt6-build-static
   ../qt/configure $(cat "$SDK_COMMON_ROOT/common/qtfeatures") \
                    -static \
                    -feature-optimize_full \
+                   -unity-build \
                    -no-feature-vnc \
                    -system-zlib \
                    -system-freetype \

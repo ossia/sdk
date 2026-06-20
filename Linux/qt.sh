@@ -42,6 +42,7 @@ mkdir -p qt6-build-static
   -vulkan \
   -linker lld \
   -platform linux-clang-libc++ \
+  -unity-build \
   -prefix $INSTALL_PREFIX/qt6-static \
   -openssl-linked \
   "${QT_ARCH_FLAGS[@]}" \
