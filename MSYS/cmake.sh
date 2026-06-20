@@ -12,22 +12,23 @@ if [[ ! -d "$INSTALL_PREFIX/cmake" ]]; then
   rm -rf "$INSTALL_PREFIX/cmake/man"
 fi
 
-# Python is only needed by the Qt build. CI runners (and MSYS2) already provide
-# one, so reuse whatever is on PATH instead of installing our own. The python.org
-# installer is interactive (-quiet is broken, bpo-42192) and cannot run headless.
-# meson is provided by pacman (see deps.sh), so no pip step is needed here.
+# Python is only needed by the Qt build and is provided by MSYS2 (deps.sh installs
+# mingw-w64-<toolchain>-python). Reuse whatever 'python' is on PATH instead of
+# installing our own -- the python.org installer is interactive (-quiet is broken,
+# bpo-42192) and cannot run headless. meson likewise comes from pacman.
 if ! command -v python >/dev/null 2>&1 && [[ ! -f "$INSTALL_PREFIX/python/python.exe" ]]; then
-  echo "No 'python' found on PATH. Install one (e.g. 'pacman -S python', or use"
-  echo "the GitHub runner's pre-installed Python via setup-msys2 path-type: inherit),"
-  echo "then re-run: Qt's build requires it."
+  echo "No 'python' found on PATH. Install the MSYS2 mingw python"
+  echo "(pacman -S mingw-w64-\${TOOLCHAIN}-python, see deps.sh), then re-run:"
+  echo "Qt's build requires it."
   exit 1
 fi
 
 if [[ ! -f "$TOOLS_ROOT/pkg-config.exe" ]]; then
 (
-  git clone https://github.com/skeeto/u-config || true
+  git clone $SDK_CLONE_DEPTH https://github.com/skeeto/u-config || true
 
   cd u-config
-  $CC -O2 -nostartfiles -o "$TOOLS_ROOT/pkg-config.exe" win32_main.c
+  # upstream renamed the entry point: win32_main.c -> main_windows.c
+  $CC -O2 -nostartfiles -o "$TOOLS_ROOT/pkg-config.exe" main_windows.c
 )
 fi

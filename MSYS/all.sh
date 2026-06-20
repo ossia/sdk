@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
+# -e: stop on the first failing step instead of silently packaging an incomplete
+# SDK (this build has no other error checking between steps).
 
 # Drives the full Windows/MSYS2 build. Honours TARGET_ARCH (x86_64 | arm64),
 # which common.sh maps to the install prefix, toolchain and triple.

@@ -9,6 +9,7 @@ mingw-w64-$TOOLCHAIN-cmake
 mingw-w64-$TOOLCHAIN-toolchain
 mingw-w64-$TOOLCHAIN-cppwinrt
 mingw-w64-$TOOLCHAIN-meson
+mingw-w64-$TOOLCHAIN-python
 mingw-w64-$TOOLCHAIN-vulkan-headers
 git
 wget

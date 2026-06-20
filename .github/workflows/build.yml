@@ -13,8 +13,9 @@ name: Build SDK
 #   - windows/arm64  : MSYS/all.sh           (MSYS2 CLANGARM64)         -- new, scripts need arch work
 #
 # Windows notes:
-#   * Python: reuses the runner's pre-installed Python (path-type: inherit below;
-#     MSYS/cmake.sh skips its own install when a python is already on PATH).
+#   * Python + meson come from MSYS2 (deps.sh: mingw-w64-<toolchain>-python/-meson).
+#     Do NOT inherit the runner PATH (see setup-msys2 step): the runner's MSVC
+#     clang would shadow the mingw toolchain and deps would build as .lib not .a.
 #   * arm64: the MSYS tree is now parametrized on TARGET_ARCH (x86_64 | arm64) via
 #     MSYS/common.sh -> install prefix, MSYS2 toolchain, mingw triple, cmake +
 #     llvm-mingw download arch. Both legs go through the same scripts.
@@ -92,7 +93,9 @@ jobs:
             runner: macos-15
           - arch: x86_64
             prefix_arch: x86_64
-            runner: macos-13
+            # Cross-build x86_64 on an Apple Silicon runner (TARGET_ARCH=x86_64 ->
+            # -arch x86_64;x86_64h) instead of the scarce/deprecated macos-13 Intel runner.
+            runner: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -155,9 +158,10 @@ jobs:
         with:
           msystem: ${{ matrix.msystem }}
           update: true
-          # inherit the runner PATH so the pre-installed Python is visible to the
-          # Qt build (MSYS/cmake.sh reuses any python on PATH instead of installing one)
-          path-type: inherit
+          # NB: do NOT use path-type: inherit -- it puts the runner's
+          # C:/Program Files/LLVM (MSVC-target clang) ahead of /clang64/bin, so
+          # early deps build as MSVC .lib instead of mingw .a and Qt can't link
+          # them. Python+meson come from MSYS2 (deps.sh) instead.
           install: git wget tar unzip diffutils yasm
 
       - name: Build SDK
