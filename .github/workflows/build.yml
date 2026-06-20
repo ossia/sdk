@@ -13,12 +13,13 @@ name: Build SDK
 #   - windows/arm64  : MSYS/all.sh           (MSYS2 CLANGARM64)         -- new, scripts need arch work
 #
 # Known follow-ups before the Windows legs go green (tracked, not yet done):
-#   * MSYS/cmake.sh aborts on an interactive Python install (`exit 1`); CI needs
-#     a non-interactive Python provisioning path.
-#   * The MSYS tree hardcodes x86_64 (deps.sh TOOLCHAIN=clang-x86_64,
-#     cmake.sh cmake/python download arch, x86_64-w64-mingw32 triple,
+#   * Python: solved for CI by reusing the runner's pre-installed Python
+#     (path-type: inherit below; MSYS/cmake.sh now skips its own install when a
+#     python is already on PATH).
+#   * arm64: the MSYS tree still hardcodes x86_64 (deps.sh TOOLCHAIN=clang-x86_64,
+#     cmake.sh cmake download arch, x86_64-w64-mingw32 triple,
 #     INSTALL_PREFIX=ossia-sdk-x86_64). arm64 needs these parametrized.
-# Until then the whole Windows job is continue-on-error so it does not gate CI.
+# Until arm64 is parametrized the Windows job stays continue-on-error.
 
 on:
   push:
@@ -126,6 +127,9 @@ jobs:
         with:
           msystem: ${{ matrix.msystem }}
           update: true
+          # inherit the runner PATH so the pre-installed Python is visible to the
+          # Qt build (MSYS/cmake.sh reuses any python on PATH instead of installing one)
+          path-type: inherit
           install: git wget tar unzip diffutils yasm
 
       - name: Build SDK

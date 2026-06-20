@@ -12,17 +12,15 @@ if [[ ! -d "$INSTALL_PREFIX/cmake" ]]; then
   rm -rf "$INSTALL_PREFIX/cmake/man"
 fi
 
-if [[ ! -f "$INSTALL_PREFIX/python/python.exe" ]]; then
-  curl -ksSL https://www.python.org/ftp/python/$PYTHON_VERSION/python-$PYTHON_VERSION-amd64.exe -o python.exe
-  # https://bugs.python.org/issue42192
-  ./python.exe -uninstall -quiet
-  echo "Install python from GUI as -quiet does not work"
+# Python is only needed by the Qt build. CI runners (and MSYS2) already provide
+# one, so reuse whatever is on PATH instead of installing our own. The python.org
+# installer is interactive (-quiet is broken, bpo-42192) and cannot run headless.
+# meson is provided by pacman (see deps.sh), so no pip step is needed here.
+if ! command -v python >/dev/null 2>&1 && [[ ! -f "$INSTALL_PREFIX/python/python.exe" ]]; then
+  echo "No 'python' found on PATH. Install one (e.g. 'pacman -S python', or use"
+  echo "the GitHub runner's pre-installed Python via setup-msys2 path-type: inherit),"
+  echo "then re-run: Qt's build requires it."
   exit 1
-  # ./python.exe -quiet InstallAllUsers=1 PrependPath=1 -TargetDir="$INSTALL_PREFIX_WIN32\\python"
-  rm python.exe
-
-  $INSTALL_PREFIX/python/python -m ensurepip --upgrade
-  $INSTALL_PREFIX/python/python -m pip install meson
 fi
 
 if [[ ! -f "$TOOLS_ROOT/pkg-config.exe" ]]; then
