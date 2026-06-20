@@ -2,16 +2,36 @@
 
 export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 export NPROC=12
-export INSTALL_PREFIX=/c/ossia-sdk-x86_64
-export INSTALL_PREFIX_CMAKE=c:/ossia-sdk-x86_64
-export INSTALL_PREFIX_WIN32=c:\\ossia-sdk-x86_64
+
+# Target arch: x86_64 (default) or arm64. Drives the install prefix, the MSYS2
+# toolchain, the mingw triple and the cmake/llvm-mingw download arches.
+export TARGET_ARCH=${TARGET_ARCH:-x86_64}
+if [[ "$TARGET_ARCH" == "arm64" ]]; then
+  export SDK_ARCH=aarch64
+  export MINGW_TRIPLE=aarch64-w64-mingw32
+  export MSYS2_TOOLCHAIN=clang-aarch64
+  export CMAKE_WIN_ARCH=arm64
+  export LLVM_ARCH=AArch64
+  export ARCHFLAGS=""            # Windows-on-ARM baseline is ARMv8-A
+else
+  export SDK_ARCH=x86_64
+  export MINGW_TRIPLE=x86_64-w64-mingw32
+  export MSYS2_TOOLCHAIN=clang-x86_64
+  export CMAKE_WIN_ARCH=x86_64
+  export LLVM_ARCH=X86
+  export ARCHFLAGS="-march=x86-64-v3"
+fi
+
+export INSTALL_PREFIX=/c/ossia-sdk-$SDK_ARCH
+export INSTALL_PREFIX_CMAKE=c:/ossia-sdk-$SDK_ARCH
+export INSTALL_PREFIX_WIN32=c:\\ossia-sdk-$SDK_ARCH
 export SDK_ROOT=$PWD
 export TOOLS_ROOT=/c/gnu/bin
 
 export CC=clang
 export CXX=clang++
-export CFLAGS="-O3 -march=x86-64-v3"
-export CXXFLAGS="-O3 -march=x86-64-v3"
+export CFLAGS="-O3 $ARCHFLAGS"
+export CXXFLAGS="-O3 $ARCHFLAGS"
 export LDFLAGS=""
 
 export PATH="$INSTALL_PREFIX/cmake/bin:$INSTALL_PREFIX/python:$INSTALL_PREFIX/python/Scripts:$TOOLS_ROOT:$PATH:/c/Program Files/Meson"

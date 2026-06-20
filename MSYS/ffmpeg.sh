@@ -8,7 +8,7 @@ cd ffmpeg-$FFMPEG_VERSION
 rm -f VERSION
 export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
 export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
-export CFLAGS="-isystem $INSTALL_PREFIX_CMAKE/sysroot/include $CFLAGS -march=x86-64-v3"
+export CFLAGS="-isystem $INSTALL_PREFIX_CMAKE/sysroot/include $CFLAGS $ARCHFLAGS"
 export LDFLAGS="-L$INSTALL_PREFIX_CMAKE/sysroot/lib $LDFLAGS"
 ./configure \
  	--disable-doc --disable-ffmpeg --disable-ffplay \

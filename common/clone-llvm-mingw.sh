@@ -6,13 +6,21 @@
 
 source ../common/versions.sh
 
-if [[ -x "$INSTALL_PREFIX/llvm/bin/clang" && -d "$INSTALL_PREFIX/llvm/x86_64-w64-mingw32" ]]; then
+# llvm-mingw toolchains are multi-target (every host ships all target subdirs),
+# so the host arch only matters for which prebuilt to run natively. Match the
+# build target (TARGET_ARCH, default x86_64).
+case "${TARGET_ARCH:-x86_64}" in
+  arm64|aarch64) LLVM_MINGW_HOST_ARCH=aarch64 ;;
+  *)             LLVM_MINGW_HOST_ARCH=x86_64  ;;
+esac
+
+if [[ -x "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   echo "llvm-mingw already installed at $INSTALL_PREFIX/llvm"
 else
   case "$OSTYPE" in
-    linux*)   LLVM_MINGW_PKG="llvm-mingw-$LLVM_MINGW_VERSION-ucrt-ubuntu-22.04-x86_64"; LLVM_MINGW_EXT="tar.xz" ;;
-    darwin*)  LLVM_MINGW_PKG="llvm-mingw-$LLVM_MINGW_VERSION-ucrt-macos-universal";     LLVM_MINGW_EXT="tar.xz" ;;
-    *)        LLVM_MINGW_PKG="llvm-mingw-$LLVM_MINGW_VERSION-ucrt-x86_64";              LLVM_MINGW_EXT="zip"    ;; # msys/mingw/cygwin -> windows
+    linux*)   LLVM_MINGW_PKG="llvm-mingw-$LLVM_MINGW_VERSION-ucrt-ubuntu-22.04-$LLVM_MINGW_HOST_ARCH"; LLVM_MINGW_EXT="tar.xz" ;;
+    darwin*)  LLVM_MINGW_PKG="llvm-mingw-$LLVM_MINGW_VERSION-ucrt-macos-universal";                   LLVM_MINGW_EXT="tar.xz" ;;
+    *)        LLVM_MINGW_PKG="llvm-mingw-$LLVM_MINGW_VERSION-ucrt-$LLVM_MINGW_HOST_ARCH";             LLVM_MINGW_EXT="zip"    ;; # msys/mingw/cygwin -> windows
   esac
 
   (

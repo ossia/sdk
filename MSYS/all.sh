@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Drives the full Windows/MSYS2 build. Honours TARGET_ARCH (x86_64 | arm64),
+# which common.sh maps to the install prefix, toolchain and triple.
+source ./common.sh
+
 # ./deps.sh
 
 # TODO install git bash in c:\git
@@ -35,5 +39,5 @@
 ./ysfx.sh
 
 cd $INSTALL_PREFIX
-7z a sdk-mingw-x86_64.7z *
+7z a "$SDK_ROOT/sdk-mingw-$SDK_ARCH.7z" *
 

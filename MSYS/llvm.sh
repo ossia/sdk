@@ -7,7 +7,7 @@ CMAKE=cmake
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
-export PATH=$INSTALL_PREFIX/llvm/x86_64-w64-mingw32/bin:$PATH
+export PATH=$INSTALL_PREFIX/llvm/$MINGW_TRIPLE/bin:$PATH
 mkdir -p llvm-build
 cd llvm-build
 
@@ -22,7 +22,7 @@ $CMAKE -GNinja \
  -DLLVM_INCLUDE_BENCHMARKS=0 \
  -DLLVM_INCLUDE_TESTS=0 \
  -DCMAKE_CXX_STANDARD=20 \
- -DLLVM_TARGETS_TO_BUILD="X86" \
+ -DLLVM_TARGETS_TO_BUILD="$LLVM_ARCH" \
  -DLLVM_ENABLE_LIBCXX=OFF \
  -DLLVM_ENABLE_LLD=OFF \
  -DLLVM_ENABLE_EH=ON \

@@ -12,14 +12,14 @@ name: Build SDK
 #   - windows/x86_64 : MSYS/all.sh           (MSYS2 CLANG64)            -- see TODOs below
 #   - windows/arm64  : MSYS/all.sh           (MSYS2 CLANGARM64)         -- new, scripts need arch work
 #
-# Known follow-ups before the Windows legs go green (tracked, not yet done):
-#   * Python: solved for CI by reusing the runner's pre-installed Python
-#     (path-type: inherit below; MSYS/cmake.sh now skips its own install when a
-#     python is already on PATH).
-#   * arm64: the MSYS tree still hardcodes x86_64 (deps.sh TOOLCHAIN=clang-x86_64,
-#     cmake.sh cmake download arch, x86_64-w64-mingw32 triple,
-#     INSTALL_PREFIX=ossia-sdk-x86_64). arm64 needs these parametrized.
-# Until arm64 is parametrized the Windows job stays continue-on-error.
+# Windows notes:
+#   * Python: reuses the runner's pre-installed Python (path-type: inherit below;
+#     MSYS/cmake.sh skips its own install when a python is already on PATH).
+#   * arm64: the MSYS tree is now parametrized on TARGET_ARCH (x86_64 | arm64) via
+#     MSYS/common.sh -> install prefix, MSYS2 toolchain, mingw triple, cmake +
+#     llvm-mingw download arch. Both legs go through the same scripts.
+# Kept continue-on-error until a first real CI run confirms both legs are green
+# (windows-on-arm runner + some MSYS2 aarch64 packages are still unproven).
 
 on:
   push:
@@ -134,6 +134,8 @@ jobs:
 
       - name: Build SDK
         working-directory: MSYS
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
         run: |
           ./deps.sh
           ./all.sh

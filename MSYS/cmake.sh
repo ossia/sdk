@@ -4,9 +4,9 @@ source ./common.sh
 source ../common/clone-cmake.sh
 
 if [[ ! -d "$INSTALL_PREFIX/cmake" ]]; then
-  curl -ksSL "https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-windows-x86_64.zip" -o cmake.zip
+  curl -ksSL "https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-windows-$CMAKE_WIN_ARCH.zip" -o cmake.zip
   unzip cmake.zip
-  mv "cmake-$CMAKE_VERSION-windows-x86_64" "$INSTALL_PREFIX/cmake"
+  mv "cmake-$CMAKE_VERSION-windows-$CMAKE_WIN_ARCH" "$INSTALL_PREFIX/cmake"
 
   rm -rf "$INSTALL_PREFIX/cmake/doc"
   rm -rf "$INSTALL_PREFIX/cmake/man"

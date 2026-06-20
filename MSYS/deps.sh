@@ -2,7 +2,7 @@
 
 source ./common.sh
 
-export TOOLCHAIN=clang-x86_64
+export TOOLCHAIN=$MSYS2_TOOLCHAIN
 PACKAGES=(
 mingw-w64-$TOOLCHAIN-zlib
 mingw-w64-$TOOLCHAIN-cmake
