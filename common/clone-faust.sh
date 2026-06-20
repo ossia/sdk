@@ -3,7 +3,7 @@
 source ../common/versions.sh
 (
 if [[ ! -d faust ]]; then
-  git clone --recursive -j4 https://github.com/grame-cncm/faust
+  git clone --recursive -j4 $SDK_CLONE_DEPTH $SDK_SHALLOW_SUBMODULES https://github.com/grame-cncm/faust
 fi
 
 (

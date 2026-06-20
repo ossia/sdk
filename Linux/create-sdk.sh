@@ -30,6 +30,7 @@ fi
 # No -it: must stay non-interactive so it works under CI.
 docker run --rm \
 -e CPU_ARCH="$CPU_ARCH" \
+-e CI="${CI:-}" \
 "${CCACHE_ARGS[@]}" \
 -v "/tmp/image/common:/common" \
 -v "/tmp/image:/image" \
