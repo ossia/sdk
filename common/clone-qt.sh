@@ -26,12 +26,16 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/69/658069/1 && git cherry-pick FETCH_HEAD
      # qfsm disable sorting
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/75/658075/1 && git cherry-pick FETCH_HEAD
-    # qsimd.cpp: add missing stdlib.h for getenv
-    git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/75/686475/1 && git cherry-pick FETCH_HEAD
+    # qsimd.cpp: add missing stdlib.h for getenv -- merged upstream (6.11/dev), now in 6.12.0
     # win32 fontdatabase unity build fix
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/04/686804/1 && git cherry-pick FETCH_HEAD
     # win32 Font api clash
     git fetch https://codereview.qt-project.org/qt/qtbase refs/changes/05/686805/1 && git cherry-pick FETCH_HEAD
+
+    # 6.12: QTipLabel::styleSheetParentDestroyed() definition is not guarded by
+    # QT_CONFIG(style_stylesheet) while its declaration/members are, so the build
+    # breaks with -no-feature-style-stylesheet. Guard the out-of-line definition.
+    perl -0pi -e 's/\nvoid QTipLabel::styleSheetParentDestroyed\(\)\n\{\n    setProperty\("_q_stylesheet_parent", QVariant\(\)\);\n    styleSheetParent = nullptr;\n\}\n/\n#if QT_CONFIG(style_stylesheet)\nvoid QTipLabel::styleSheetParentDestroyed()\n{\n    setProperty("_q_stylesheet_parent", QVariant());\n    styleSheetParent = nullptr;\n}\n#endif\n/' src/widgets/kernel/qtooltip.cpp
 
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
@@ -60,8 +64,7 @@ git clone https://github.com/qt/qt5 qt -b $QT_VERSION
     cd qtquick3d
     git config user.email "you@example.com"
     git config user.name "Your Name"
-    # openxr missing iterator
-    git fetch https://codereview.qt-project.org/qt/qtquick3d refs/changes/06/686806/1 && git cherry-pick FETCH_HEAD
+    # openxr missing iterator -- already present in 6.12.0-beta1 (vendored OpenXR updated upstream)
     # QSSGLightmapBaker: add missing QGuiApplication include
     git fetch https://codereview.qt-project.org/qt/qtquick3d refs/changes/07/686807/1 && git cherry-pick FETCH_HEAD
   )
