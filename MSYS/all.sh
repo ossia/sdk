@@ -6,24 +6,13 @@
 # which common.sh maps to the install prefix, toolchain and triple.
 source ./common.sh
 
-# ./deps.sh
-
-# TODO install git bash in c:\git
-# Otherwise fftw build fails due to c:\program files\git\usr\bin\sh.exe path with spaces
-
-# TODO install python in SDK needed for qt
-
-# TODO install meson from MSI 
-# e.g. https://github.com/mesonbuild/meson/releases/download/1.5.0/meson-1.5.0-64.msi
-
-# TODO install mingw-w64-clang-x86_64-cppwinrt 
-# and 
-# cp -rf /clang64/include/winrt/ /c/ossia-sdk-x86_64/llvm/include/
-# cp /clang64/lib/libruntimeobject.a /c/ossia-sdk-x86_64/llvm/x86_64-w64-mingw32/lib/
-
-
-# TODO install vulkan sdk from https://vulkan.lunarg.com/sdk/home#windows and reopen a shell
-
+# Prerequisites are now automated (run ./deps.sh first):
+#  - toolchain/python/meson/perl/nasm/cppwinrt/vulkan-headers : deps.sh (pacman)
+#  - cppwinrt + vulkan headers copied into the toolchain        : llvm-deps.sh
+#  - pkg-config (u-config) and /c/gnu/bin                       : cmake.sh / common.sh
+# Note: fftw's configure must use the MSYS2 /usr/bin/sh, not Git-for-Windows'
+# "C:/Program Files/Git/.../sh.exe" (spaces break autotools); the default MSYS2
+# PATH ordering handles this as long as we do not inherit the runner PATH.
 
 ./cmake.sh
 ./zlib.sh

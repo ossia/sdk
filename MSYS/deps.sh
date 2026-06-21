@@ -11,13 +11,14 @@ mingw-w64-$TOOLCHAIN-cppwinrt
 mingw-w64-$TOOLCHAIN-meson
 mingw-w64-$TOOLCHAIN-python
 mingw-w64-$TOOLCHAIN-vulkan-headers
+mingw-w64-$TOOLCHAIN-nasm
 git
 wget
 diffutils
 yasm
+perl
 tar
 unzip
-git
 )
 
 # --noconfirm is required in CI: without it pacman blocks on the [Y/n] prompt,
