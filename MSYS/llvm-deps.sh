@@ -20,3 +20,11 @@ for d in vulkan vk_video; do
     cp -rf "$MSYSTEM_PREFIX/include/$d" "$INSTALL_PREFIX/llvm/include/"
   fi
 done
+
+# Qt's Windows platform/direct2d plugins need the WinRT interop ABI headers
+# (windows.<area>.interop.h etc.); MSYS2's mingw-w64-headers ship them but this
+# llvm-mingw build can lack some. Copy the windows.*.h set (the glob excludes the
+# core windows.h) without clobbering the toolchain's own headers. Needed because
+# Qt is told to ignore $MSYSTEM_PREFIX (CMAKE_IGNORE_PREFIX_PATH), so it can no
+# longer pick these up from /clang64 directly.
+cp -n "$MSYSTEM_PREFIX"/include/windows.*.h "$INSTALL_PREFIX/llvm/include/" 2>/dev/null || true
