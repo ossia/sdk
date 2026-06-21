@@ -13,6 +13,7 @@ mingw-w64-$TOOLCHAIN-python
 mingw-w64-$TOOLCHAIN-vulkan-headers
 mingw-w64-$TOOLCHAIN-nasm
 mingw-w64-$TOOLCHAIN-ccache
+mingw-w64-$TOOLCHAIN-7zip
 git
 wget
 diffutils
