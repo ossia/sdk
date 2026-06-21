@@ -29,7 +29,7 @@ export FFMPEG_COMMON_FLAGS=(
 export FFMPEG_ARM64_FLAGS=(
  --cpu=$CPU_TARGET
  --prefix=$INSTALL_PREFIX/ffmpeg
- --cc="$CC  -arch arm64 " 
+ --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC  -arch arm64 " 
  --cxx="$CXX"
  --extra-cflags="$CFLAGS_NOARCH"
  --extra-ldflags="$CFLAGS_NOARCH"
@@ -37,7 +37,7 @@ export FFMPEG_ARM64_FLAGS=(
 export FFMPEG_X86_64_FLAGS=(
  --arch="x86_64"
  --prefix=$INSTALL_PREFIX/ffmpeg
- --cc="$CC  -arch x86_64 " 
+ --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC  -arch x86_64 " 
  --cxx="$CXX"
  --extra-cflags="$CFLAGS_NOARCH -march=$CPU_TARGET"
  --extra-ldflags="$CFLAGS_NOARCH"
@@ -45,7 +45,7 @@ export FFMPEG_X86_64_FLAGS=(
 export FFMPEG_X86_64H_FLAGS=(
  --arch="x86_64h"
  --prefix=$INSTALL_PREFIX/ffmpeg_h
- --cc="$CC  -arch x86_64h " 
+ --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC  -arch x86_64h " 
  --cxx="$CXX"
  --extra-cflags="$CFLAGS_NOARCH -mtune=cannonlake"
  --extra-ldflags="$CFLAGS_NOARCH"

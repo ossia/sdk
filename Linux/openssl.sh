@@ -8,6 +8,6 @@ if [[ -f $INSTALL_PREFIX/openssl/bin/openssl ]]; then
 fi
 
 cd "openssl-$OPENSSL_VERSION"
-./Configure linux-$ARCH -no-shared --prefix=$INSTALL_PREFIX/openssl
+CC="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC" ./Configure linux-$ARCH -no-shared --prefix=$INSTALL_PREFIX/openssl
 make
 make install_sw install_ssldirs

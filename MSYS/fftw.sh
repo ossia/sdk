@@ -23,7 +23,7 @@ fi
     "${FFTW_SIMD[@]}"             \
     --disable-fortran             \
     --with-our-malloc16           \
-    CC="$CC"                      \
+    CC="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC" \
     CXX="$CXX"
 
 $MAKE -j$NPROC

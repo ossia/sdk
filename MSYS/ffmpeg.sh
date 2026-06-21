@@ -11,6 +11,7 @@ export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 export CFLAGS="-isystem $INSTALL_PREFIX_CMAKE/sysroot/include $CFLAGS $ARCHFLAGS"
 export LDFLAGS="-L$INSTALL_PREFIX_CMAKE/sysroot/lib $LDFLAGS"
 ./configure \
+ 	--cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC" \
  	--disable-doc --disable-ffmpeg --disable-ffplay \
  	--disable-debug \
 	--enable-dxva2 \

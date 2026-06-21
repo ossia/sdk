@@ -51,6 +51,10 @@ if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export CXXFLAGS="-O3 -fno-stack-protector -fnew-infallible "
 fi
 
+# ccache launcher for autotools/configure steps (ffmpeg, fftw); cmake steps use
+# CMAKE_<LANG>_COMPILER_LAUNCHER (set in the workflow).
+command -v ccache >/dev/null 2>&1 && export CCACHE_LAUNCHER="ccache" || export CCACHE_LAUNCHER=""
+
 export CMAKE_BUILD_TYPE=Release
 export MESON_BUILD_TYPE=release
 export QT_MODE="release"

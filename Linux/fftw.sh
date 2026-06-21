@@ -40,7 +40,7 @@ declare -n FFTW_ARCH_FLAGS=FFTW_${ARCH_VARNAME}_FLAGS
 
 CFLAGS+=" -O3 -fstrict-aliasing -ffast-math -fno-finite-math-only "
 
-../fftw-$FFTW_VERSION/configure "${FFTW_ARCH_FLAGS[@]}"
+../fftw-$FFTW_VERSION/configure "${FFTW_ARCH_FLAGS[@]}" CC="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC"
 
 make -j$NPROC
 make install

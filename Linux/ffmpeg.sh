@@ -31,8 +31,8 @@ declare -a FFMPEG_COMMON_FLAGS=(
   --enable-protocols
   --disable-lzma
   --extra-cflags="$CFLAGS -fPIC"
-  --cc="$CC"
-  --cxx="$CXX"
+  --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC"
+  --cxx="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CXX"
   --prefix=$INSTALL_PREFIX/ffmpeg
 )
 

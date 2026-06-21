@@ -38,6 +38,10 @@ export GIT=/usr/bin/git
 export CMAKE=$SDK_ROOT/cmake/bin/cmake
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rh/rh-git218/root/usr/lib:/opt/rh/httpd24/root/usr/lib64
 
+# ccache launcher for autotools/configure steps (ffmpeg, fftw, openssl); cmake
+# steps are covered separately by CMAKE_<LANG>_COMPILER_LAUNCHER.
+command -v ccache >/dev/null 2>&1 && export CCACHE_LAUNCHER="ccache" || export CCACHE_LAUNCHER=""
+
 export CMAKE_BUILD_TYPE=Release
 export MESON_BUILD_TYPE=release
 export QT_MODE="release"
