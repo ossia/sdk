@@ -41,7 +41,7 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     # windows.graphics.display.interop.h (HDR per-monitor), a Windows-SDK-only
     # header that mingw-w64 does not ship. Gate those blocks on the header being
     # available so the build degrades gracefully on mingw (no-op off Windows).
-    sed -i 's|#if QT_CONFIG(cpp_winrt)|#if QT_CONFIG(cpp_winrt) \&\& __has_include(<windows.graphics.display.interop.h>)|g' src/plugins/platforms/windows/qwindowsscreen.cpp
+    perl -pi -e 's/#if QT_CONFIG\(cpp_winrt\)/#if QT_CONFIG(cpp_winrt) && __has_include(<windows.graphics.display.interop.h>)/g' src/plugins/platforms/windows/qwindowsscreen.cpp
 
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD

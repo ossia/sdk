@@ -27,10 +27,11 @@ done
 # nor MSYS2 ships it. Generate it from a minimal IDL with the toolchain's widl
 # (modelled on mingw-w64's windows.graphics.capture.interop.idl; IID + signatures
 # match the Windows SDK). Methods return opaque void**, so no Display import is
-# needed. Write into the REAL generic-w64-mingw32/include (where the sibling
-# windows.*.interop.h live); <triple>/include is a symlink to it and is not
-# writable on the Windows runner.
-_wgdi_h="$INSTALL_PREFIX/llvm/generic-w64-mingw32/include/windows.graphics.display.interop.h"
+# needed. Write into $INSTALL_PREFIX/llvm/include (where the cppwinrt winrt/ and
+# vulkan headers are copied, and which the toolchain searches for <...> includes);
+# the Windows zip's per-triple/generic include dirs are read-only symlinks there.
+_wgdi_inc="$INSTALL_PREFIX/llvm/include"
+_wgdi_h="$_wgdi_inc/windows.graphics.display.interop.h"
 if [[ ! -f "$_wgdi_h" ]]; then
   _wgdi_idl="$(mktemp -d)/windows.graphics.display.interop.idl"
   cat > "$_wgdi_idl" <<'IDL'
@@ -48,7 +49,7 @@ interface IDisplayInformationStaticsInterop : IInspectable
 }
 IDL
   "$INSTALL_PREFIX/llvm/bin/$MINGW_TRIPLE-widl" -h \
-    -I"$INSTALL_PREFIX/llvm/generic-w64-mingw32/include" \
+    -I"$INSTALL_PREFIX/llvm/include" \
     -I"$INSTALL_PREFIX/llvm/$MINGW_TRIPLE/include" \
     -o "$_wgdi_h" "$_wgdi_idl"
 fi
