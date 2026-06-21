@@ -37,6 +37,12 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     # breaks with -no-feature-style-stylesheet. Guard the out-of-line definition.
     perl -0pi -e 's/\nvoid QTipLabel::styleSheetParentDestroyed\(\)\n\{\n    setProperty\("_q_stylesheet_parent", QVariant\(\)\);\n    styleSheetParent = nullptr;\n\}\n/\n#if QT_CONFIG(style_stylesheet)\nvoid QTipLabel::styleSheetParentDestroyed()\n{\n    setProperty("_q_stylesheet_parent", QVariant());\n    styleSheetParent = nullptr;\n}\n#endif\n/' src/widgets/kernel/qtooltip.cpp
 
+    # 6.12: the windows platform plugin's cpp_winrt path needs
+    # windows.graphics.display.interop.h (HDR per-monitor), a Windows-SDK-only
+    # header that mingw-w64 does not ship. Gate those blocks on the header being
+    # available so the build degrades gracefully on mingw (no-op off Windows).
+    sed -i 's|#if QT_CONFIG(cpp_winrt)|#if QT_CONFIG(cpp_winrt) \&\& __has_include(<windows.graphics.display.interop.h>)|g' src/plugins/platforms/windows/qwindowsscreen.cpp
+
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
     # # syncqt build error
