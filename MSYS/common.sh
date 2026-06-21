@@ -27,6 +27,7 @@ export INSTALL_PREFIX_CMAKE=c:/ossia-sdk-$SDK_ARCH
 export INSTALL_PREFIX_WIN32=c:\\ossia-sdk-$SDK_ARCH
 export SDK_ROOT=$PWD
 export TOOLS_ROOT=/c/gnu/bin
+mkdir -p "$TOOLS_ROOT"   # pkg-config.exe is built here; the dir must exist in CI
 
 export CC=clang
 export CXX=clang++
