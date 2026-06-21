@@ -12,6 +12,7 @@ mingw-w64-$TOOLCHAIN-meson
 mingw-w64-$TOOLCHAIN-python
 mingw-w64-$TOOLCHAIN-vulkan-headers
 mingw-w64-$TOOLCHAIN-nasm
+mingw-w64-$TOOLCHAIN-ccache
 git
 wget
 diffutils

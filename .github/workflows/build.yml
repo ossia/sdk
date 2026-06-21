@@ -53,11 +53,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: ccache cache
-        uses: actions/cache@v4
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ccache-linux-${{ matrix.arch }}-${{ github.sha }}
+          key: ccache-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: ccache-linux-${{ matrix.arch }}-
 
       - name: Prepare install prefix
@@ -80,6 +80,14 @@ jobs:
           path: Linux/sdk-linux-${{ matrix.arch }}.tar.xz
           if-no-files-found: error
 
+      # Save even on build failure so a partial compile still warms the cache.
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+
   macos:
     name: macos-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
@@ -99,11 +107,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: ccache cache
-        uses: actions/cache@v4
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ccache-macos-${{ matrix.arch }}-${{ github.sha }}
+          key: ccache-macos-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: ccache-macos-${{ matrix.arch }}-
 
       - name: Prepare install prefix
@@ -132,6 +140,13 @@ jobs:
           path: macOS/sdk-macOS-${{ matrix.arch }}.tar.gz
           if-no-files-found: error
 
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-macos-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+
   windows:
     name: windows-${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
@@ -154,6 +169,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}\.ccache
+          key: ccache-windows-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-windows-${{ matrix.arch }}-
+
       - uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.msystem }}
@@ -168,7 +190,12 @@ jobs:
         working-directory: MSYS
         env:
           TARGET_ARCH: ${{ matrix.arch }}
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 2G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
+          export CCACHE_DIR="$(cygpath -u "$GITHUB_WORKSPACE")/.ccache"
           ./deps.sh
           ./all.sh
 
@@ -177,3 +204,10 @@ jobs:
           name: sdk-windows-${{ matrix.arch }}
           path: MSYS/sdk-mingw-*.7z
           if-no-files-found: warn
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}\.ccache
+          key: ccache-windows-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
