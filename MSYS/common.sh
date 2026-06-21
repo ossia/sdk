@@ -44,10 +44,11 @@ fi
 
 source ../common/versions.sh
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang.exe" ]]; then
-  # Use the explicit .exe so ccache (which execs the path literally, unlike cmake
-  # or the MSYS2 shell) can find the compiler in the autotools steps.
-  export CC=$INSTALL_PREFIX/llvm/bin/clang.exe
-  export CXX=$INSTALL_PREFIX/llvm/bin/clang++.exe
+  # Use a Windows-style path WITH .exe: the autotools steps pass $CC straight to
+  # ccache, and the native (mingw) ccache execs the path literally -- it does not
+  # understand MSYS /c/... paths and needs the .exe. cmake normalises paths itself.
+  export CC=$INSTALL_PREFIX_CMAKE/llvm/bin/clang.exe
+  export CXX=$INSTALL_PREFIX_CMAKE/llvm/bin/clang++.exe
   export PATH=$INSTALL_PREFIX/llvm/bin:$PATH
   export CFLAGS="-O3 -fno-stack-protector -fnew-infallible "
   export CXXFLAGS="-O3 -fno-stack-protector -fnew-infallible "
