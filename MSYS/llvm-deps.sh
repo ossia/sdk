@@ -21,10 +21,32 @@ for d in vulkan vk_video; do
   fi
 done
 
-# Qt's Windows platform/direct2d plugins need the WinRT interop ABI headers
-# (windows.<area>.interop.h etc.); MSYS2's mingw-w64-headers ship them but this
-# llvm-mingw build can lack some. Copy the windows.*.h set (the glob excludes the
-# core windows.h) without clobbering the toolchain's own headers. Needed because
-# Qt is told to ignore $MSYSTEM_PREFIX (CMAKE_IGNORE_PREFIX_PATH), so it can no
-# longer pick these up from /clang64 directly.
-cp -n "$MSYSTEM_PREFIX"/include/windows.*.h "$INSTALL_PREFIX/llvm/include/" 2>/dev/null || true
+# Qt 6.12's windows platform plugin needs windows.graphics.display.interop.h
+# (IDisplayInformationStaticsInterop, for per-monitor HDR). That interop header
+# is Windows-SDK-only -- mingw-w64 has no IDL for it, so neither this toolchain
+# nor MSYS2 ships it. Generate it from a minimal IDL with the toolchain's widl
+# (modelled on mingw-w64's windows.graphics.capture.interop.idl; IID + signatures
+# match the Windows SDK). Methods return opaque void**, so no Display import is
+# needed. Goes next to the sibling windows.*.interop.h in the triple include dir.
+_wgdi_h="$INSTALL_PREFIX/llvm/$MINGW_TRIPLE/include/windows.graphics.display.interop.h"
+if [[ ! -f "$_wgdi_h" ]]; then
+  _wgdi_idl="$(mktemp -d)/windows.graphics.display.interop.idl"
+  cat > "$_wgdi_idl" <<'IDL'
+#ifdef __WIDL__
+#pragma winrt ns_prefix
+#endif
+import "inspectable.idl";
+[
+    uuid(7449121c-382b-4705-8da7-a795ba482013)
+]
+interface IDisplayInformationStaticsInterop : IInspectable
+{
+    HRESULT GetForWindow([in] HWND window, [in] REFIID riid, [out, iid_is(riid)] void **displayInformation);
+    HRESULT GetForMonitor([in] HMONITOR monitor, [in] REFIID riid, [out, iid_is(riid)] void **displayInformation);
+}
+IDL
+  "$INSTALL_PREFIX/llvm/bin/$MINGW_TRIPLE-widl" -h \
+    -I"$INSTALL_PREFIX/llvm/generic-w64-mingw32/include" \
+    -I"$INSTALL_PREFIX/llvm/$MINGW_TRIPLE/include" \
+    -o "$_wgdi_h" "$_wgdi_idl"
+fi
