@@ -20,7 +20,9 @@ unzip
 git
 )
 
-pacman -S --needed "${PACKAGES[@]}"
+# --noconfirm is required in CI: without it pacman blocks on the [Y/n] prompt,
+# reads EOF on stdin and aborts, installing nothing (no toolchain/python/meson).
+pacman -S --needed --noconfirm "${PACKAGES[@]}"
 
 mkdir -p $INSTALL_PREFIX/sysroot/include
 SDK_DIR=.
