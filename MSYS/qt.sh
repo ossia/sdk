@@ -34,7 +34,8 @@ mkdir -p qt6-build-static
                    -Dharfbuzz_DIR="$INSTALL_PREFIX_CMAKE/sysroot" \
                    -DHARFBUZZ_INCLUDE_DIRS="$INSTALL_PREFIX_CMAKE/sysroot/include" \
                    -DHARFBUZZ_LIBRARIES="$INSTALL_PREFIX_CMAKE/sysroot/lib/libharfbuzz.a" \
-                   -DVulkan_INCLUDE_DIR="$INSTALL_PREFIX_CMAKE/llvm/include"
+                   -DVulkan_INCLUDE_DIR="$INSTALL_PREFIX_CMAKE/llvm/include" \
+                   -DCMAKE_IGNORE_PREFIX_PATH="$(cygpath -m "$MSYSTEM_PREFIX")"
 
   # For qtcore to pick up cmake_cxx_standard
   cmake .
