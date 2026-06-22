@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 source ./common.sh
 source ../common/clone-llvm.sh
@@ -10,6 +10,30 @@ CMAKE=cmake
 export PATH=$INSTALL_PREFIX/llvm/$MINGW_TRIPLE/bin:$PATH
 mkdir -p llvm-build
 cd llvm-build
+
+# orc_rt (compiler-rt ORC runtime, for the JIT's native-TLS/platform support)
+# is only available on Windows for x86_64: LLVM has no COFF/aarch64 JITLink
+# backend and ALL_ORC_SUPPORTED_ARCH lists x86_64 only for WIN32. So on arm64
+# we build clang libs without compiler-rt/orc until upstream adds support.
+ORC_CMAKE_FLAGS=(-DLLVM_ENABLE_PROJECTS="clang")
+if [[ "$SDK_ARCH" == "x86_64" ]]; then
+  ORC_CMAKE_FLAGS=(
+    -DLLVM_ENABLE_PROJECTS="clang;compiler-rt"
+    -DALL_ORC_SUPPORTED_ARCH=$SDK_ARCH
+    -DCOMPILER_RT_BUILD_ORC=ON
+    -DCOMPILER_RT_BUILD_BUILTINS=OFF
+    -DCOMPILER_RT_BUILD_SANITIZERS=OFF
+    -DCOMPILER_RT_BUILD_XRAY=OFF
+    -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
+    -DCOMPILER_RT_BUILD_PROFILE=OFF
+    -DCOMPILER_RT_BUILD_MEMPROF=OFF
+    -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF
+    -DCOMPILER_RT_BUILD_GWP_ASAN=OFF
+    -DCMAKE_C_COMPILER_TARGET=$MINGW_TRIPLE
+    -DCMAKE_CXX_COMPILER_TARGET=$MINGW_TRIPLE
+    -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
+  )
+fi
 
 $CMAKE -GNinja \
  -DCMAKE_C_FLAGS="$CFLAGS" \
@@ -34,7 +58,7 @@ $CMAKE -GNinja \
  -DLLVM_ENABLE_TERMINFO=0 \
  -DLLVM_ENABLE_BINDINGS=OFF \
  -DLLVM_ENABLE_OCAMLDOC=OFF \
- -DLLVM_ENABLE_PROJECTS="clang" \
+ "${ORC_CMAKE_FLAGS[@]}" \
  -DCLANG_INCLUDE_DOCS=0 \
  -DCLANG_BUILD_TOOLS=0 \
  -DCLANG_ENABLE_STATIC_ANALYZER=0 \
