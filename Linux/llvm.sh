@@ -93,7 +93,9 @@ source ./common/clone-llvm.sh
   -DLLVM_ENABLE_EH=ON \
   -DLLVM_ENABLE_RTTI=ON \
   -DLLVM_ENABLE_PROJECTS="clang;lld;polly" \
-  -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt;orc-rt" \
+  -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt" \
+  -DRUNTIMES_${ARCH}-unknown-linux-gnu_ALL_ORC_SUPPORTED_ARCH=${ARCH} \
+  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_ORC=ON \
   -DCLANG_DEFAULT_CXX_STDLIB:STRING=libc++ \
   -DCLANG_DEFAULT_RTLIB:STRING=libgcc \
   -DLIBCXX_ENABLE_STATIC=ON \
