@@ -28,6 +28,9 @@ xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform
  -DLLVM_ENABLE_EH=ON \
  -DLLVM_ENABLE_PROJECTS="clang;polly;compiler-rt" \
  -DCMAKE_CXX_STANDARD=20 \
+ -DCMAKE_C_FLAGS="$CPUFLAGS -O3 -ffast-math -fno-finite-math-only" \
+ -DCMAKE_CXX_FLAGS="$CPUFLAGS -O3 -ffast-math -fno-finite-math-only" \
+ -DSANITIZER_MIN_OSX_VERSION=$MACOS_VERSION \
  -DALL_ORC_SUPPORTED_ARCH=$TARGET_ARCH \
  -DCOMPILER_RT_BUILD_ORC=ON \
  -DCOMPILER_RT_BUILD_BUILTINS=OFF \
