@@ -93,16 +93,7 @@ source ./common/clone-llvm.sh
   -DLLVM_ENABLE_EH=ON \
   -DLLVM_ENABLE_RTTI=ON \
   -DLLVM_ENABLE_PROJECTS="clang;lld;polly" \
-  -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt" \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_ORC=ON \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_BUILTINS=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_SANITIZERS=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_XRAY=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_LIBFUZZER=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_PROFILE=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_MEMPROF=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_CTX_PROFILE=OFF \
-  -DRUNTIMES_${ARCH}-unknown-linux-gnu_COMPILER_RT_BUILD_GWP_ASAN=OFF \
+  -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;compiler-rt;orc-rt" \
   -DCLANG_DEFAULT_CXX_STDLIB:STRING=libc++ \
   -DCLANG_DEFAULT_RTLIB:STRING=libgcc \
   -DLIBCXX_ENABLE_STATIC=ON \
