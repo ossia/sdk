@@ -1,0 +1,30 @@
+--- a/llvm/lib/ExecutionEngine/JITLink/COFFLinkGraphBuilder.cpp
++++ b/llvm/lib/ExecutionEngine/JITLink/COFFLinkGraphBuilder.cpp
+@@ -269,6 +269,27 @@
+   if (auto Err = handleAlternateNames())
+     return Err;
+ 
++  // Some COMDAT sections are never claimed by an external "leader" symbol and so
++  // never reach exportCOMDATSymbol() -- notably the leaderless
++  // IMAGE_COMDAT_SELECT_ANY .xdata/.pdata SEH unwind sections clang emits for
++  // x86_64-w64-windows-gnu. Their section symbol is then left without a graph
++  // symbol, so a relocation targeting it (e.g. .pdata -> .xdata) fails with
++  // "Could not find symbol at given index". Define a graph symbol for the
++  // section symbol of any still-pending COMDAT export so such relocations resolve.
++  for (COFFSectionIndex SecIndex = 1;
++       SecIndex < static_cast<COFFSectionIndex>(PendingComdatExports.size());
++       ++SecIndex) {
++    auto &PendingComdatExport = PendingComdatExports[SecIndex];
++    if (!PendingComdatExport)
++      continue;
++    if (Block *B = getGraphBlock(SecIndex)) {
++      auto &GSym = G->addAnonymousSymbol(*B, 0, 0, /*IsCallable=*/false,
++                                         /*IsLive=*/false);
++      setGraphSymbol(SecIndex, PendingComdatExport->SymbolIndex, GSym);
++    }
++    PendingComdatExport = std::nullopt;
++  }
++
+   if (auto Err = calculateImplicitSizeOfSymbols())
+     return Err;
+ 
