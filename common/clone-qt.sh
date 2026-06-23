@@ -43,6 +43,15 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     # available so the build degrades gracefully on mingw (no-op off Windows).
     perl -pi -e 's/#if QT_CONFIG\(cpp_winrt\)/#if QT_CONFIG(cpp_winrt) && __has_include(<windows.graphics.display.interop.h>)/g' src/plugins/platforms/windows/qwindowsscreen.cpp
 
+    # qversiontagging.cpp unconditionally emits versioned qt_version_tag symbols
+    # (.symver qt_version_tag@Qt_6.x on ELF) whose version nodes are only defined
+    # by the shared-lib version script. In a -static build there is no version
+    # script at the consumer's link, so lld (--no-undefined-version by default
+    # since LLD 17) errors with "qt_version_tag@Qt_6.x has undefined version".
+    # Qt already auto-defines QT_NO_VERSION_TAGGING for core-lib/static builds in
+    # qversiontagging.h; honour it in the .cpp so the symbols aren't emitted.
+    perl -0pi -e 's/#if QT_VERSION_MINOR > 0/#ifndef QT_NO_VERSION_TAGGING\n#if QT_VERSION_MINOR > 0/; s/make_versioned_symbol\(SYM, QT_VERSION_MAJOR, QT_VERSION_MINOR, "\@\@"\);/make_versioned_symbol(SYM, QT_VERSION_MAJOR, QT_VERSION_MINOR, "\@\@");\n#endif/' src/corelib/global/qversiontagging.cpp
+
     # # link to cppwinrt
     # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
     # # syncqt build error
