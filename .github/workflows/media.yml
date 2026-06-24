@@ -1,0 +1,351 @@
+name: Build SDK media
+
+# Builds the fast-moving MEDIA libs (ffmpeg, faust, sdl, fftw, ...) on top of a
+# published CORE (see core.yml), then tars the WHOLE merged prefix as the final
+# SDK artifact (same names as the old build.yml, so consumers are unaffected).
+#
+# Core handoff: each leg computes the same content hash as core.yml (via the
+# shared core-hash action), downloads core-<platform>-<arch>-<hash>, extracts it
+# into the prefix, and builds media against it. If the exact core is missing the
+# resolve step picks: skip (master, core still building -> cascade handles it),
+# rolling-latest (PR), or inline full build (PR/dispatch bootstrap).
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'Linux/faust.sh'
+      - 'Linux/ffmpeg.sh'
+      - 'Linux/fftw.sh'
+      - 'Linux/sdl.sh'
+      - 'Linux/portaudio.sh'
+      - 'Linux/jack.sh'
+      - 'Linux/pipewire.sh'
+      - 'Linux/lv2.sh'
+      - 'Linux/ysfx.sh'
+      - 'macOS/ffmpeg.sh'
+      - 'macOS/sdl.sh'
+      - 'macOS/jack.sh'
+      - 'macOS/faust.sh'
+      - 'macOS/ysfx.sh'
+      - 'macOS/sndfile.sh'
+      - 'MSYS/ffmpeg.sh'
+      - 'MSYS/fftw.sh'
+      - 'MSYS/portaudio.sh'
+      - 'MSYS/sdl.sh'
+      - 'MSYS/faust.sh'
+      - 'MSYS/jack.sh'
+      - 'MSYS/dnssd.sh'
+      - 'MSYS/ysfx.sh'
+      - 'common/clone-faust.sh'
+      - 'common/clone-ffmpeg.sh'
+      - 'common/clone-fftw.sh'
+      - 'common/clone-sdl.sh'
+      - 'common/clone-portaudio.sh'
+      - 'common/clone-jack.sh'
+      - 'common/clone-pipewire.sh'
+      - 'common/clone-lv2.sh'
+      - 'common/clone-ysfx.sh'
+      - 'common/patches/**'
+      - '.github/workflows/media.yml'
+      - '.github/resolve-core.sh'
+      - '.github/sysroot-guard.sh'
+      - '.github/actions/core-hash/**'
+  pull_request:
+    paths:
+      - 'Linux/faust.sh'
+      - 'Linux/ffmpeg.sh'
+      - 'Linux/fftw.sh'
+      - 'Linux/sdl.sh'
+      - 'Linux/portaudio.sh'
+      - 'Linux/jack.sh'
+      - 'Linux/pipewire.sh'
+      - 'Linux/lv2.sh'
+      - 'Linux/ysfx.sh'
+      - 'macOS/ffmpeg.sh'
+      - 'macOS/sdl.sh'
+      - 'macOS/jack.sh'
+      - 'macOS/faust.sh'
+      - 'macOS/ysfx.sh'
+      - 'macOS/sndfile.sh'
+      - 'MSYS/ffmpeg.sh'
+      - 'MSYS/fftw.sh'
+      - 'MSYS/portaudio.sh'
+      - 'MSYS/sdl.sh'
+      - 'MSYS/faust.sh'
+      - 'MSYS/jack.sh'
+      - 'MSYS/dnssd.sh'
+      - 'MSYS/ysfx.sh'
+      - 'common/clone-faust.sh'
+      - 'common/clone-ffmpeg.sh'
+      - 'common/clone-fftw.sh'
+      - 'common/clone-sdl.sh'
+      - 'common/clone-portaudio.sh'
+      - 'common/clone-jack.sh'
+      - 'common/clone-pipewire.sh'
+      - 'common/clone-lv2.sh'
+      - 'common/clone-ysfx.sh'
+      - 'common/patches/**'
+      - '.github/workflows/media.yml'
+      - '.github/resolve-core.sh'
+      - '.github/sysroot-guard.sh'
+      - '.github/actions/core-hash/**'
+  workflow_run:
+    workflows: ["Build SDK core"]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: media-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read   # download core prereleases + upload-artifact
+
+jobs:
+  linux:
+    name: media-linux-${{ matrix.arch }}
+    # Skip the cascade run if the core build failed.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64,  runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IS_MASTER: ${{ github.event_name == 'workflow_run' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: corehash
+        uses: ./.github/actions/core-hash
+        with: { platform: linux, arch: '${{ matrix.arch }}' }
+
+      - id: resolve
+        run: |
+          bash .github/resolve-core.sh \
+            "${{ steps.corehash.outputs.core_tag }}" \
+            "core-linux-${{ matrix.arch }}-latest" \
+            "sdk-core-linux-${{ matrix.arch }}.tar.xz" \
+            "core-dl" "$IS_MASTER"
+
+      - name: Prepare install prefix
+        if: steps.resolve.outputs.mode != 'skip'
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-${{ matrix.arch }}
+          sudo chmod 0777 /opt/ossia-sdk-${{ matrix.arch }}
+
+      - name: Extract core into prefix
+        if: steps.resolve.outputs.mode == 'download'
+        run: tar xaf core-dl/sdk-core-linux-${{ matrix.arch }}.tar.xz -C /
+
+      - name: Restore ccache
+        if: steps.resolve.outputs.mode != 'skip'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-media-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-media-linux-${{ matrix.arch }}-
+
+      - name: Guard core (snapshot)
+        if: steps.resolve.outputs.mode == 'download'
+        run: bash .github/sysroot-guard.sh /opt/ossia-sdk-${{ matrix.arch }}/sysroot "$RUNNER_TEMP/sysroot.snap" snapshot
+
+      - name: Build (Docker)
+        if: steps.resolve.outputs.mode != 'skip'
+        working-directory: Linux
+        env:
+          STAGE: ${{ steps.resolve.outputs.mode == 'inline' && 'full' || 'media' }}
+          CPU_ARCH: ${{ matrix.arch }}
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: ./create-sdk.sh
+
+      - name: Guard core (verify)
+        if: steps.resolve.outputs.mode == 'download'
+        run: bash .github/sysroot-guard.sh /opt/ossia-sdk-${{ matrix.arch }}/sysroot "$RUNNER_TEMP/sysroot.snap" verify
+
+      - uses: actions/upload-artifact@v4
+        if: steps.resolve.outputs.mode != 'skip'
+        with:
+          name: sdk-linux-${{ matrix.arch }}
+          path: Linux/sdk-linux-${{ matrix.arch }}.tar.xz
+          if-no-files-found: error
+
+      - name: Save ccache
+        if: always() && steps.resolve.outputs.mode != 'skip'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-media-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  macos:
+    name: media-macos-${{ matrix.arch }}
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: macos-15
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64,  prefix_arch: aarch64 }
+          - { arch: x86_64, prefix_arch: x86_64 }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IS_MASTER: ${{ github.event_name == 'workflow_run' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: corehash
+        uses: ./.github/actions/core-hash
+        with: { platform: macos, arch: '${{ matrix.arch }}' }
+
+      - id: resolve
+        run: |
+          bash .github/resolve-core.sh \
+            "${{ steps.corehash.outputs.core_tag }}" \
+            "core-macos-${{ matrix.arch }}-latest" \
+            "sdk-core-macOS-${{ matrix.arch }}.tar.gz" \
+            "core-dl" "$IS_MASTER"
+
+      - name: Prepare install prefix
+        if: steps.resolve.outputs.mode != 'skip'
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-${{ matrix.prefix_arch }}
+          sudo chown "$(whoami)" /opt/ossia-sdk-${{ matrix.prefix_arch }}
+
+      - name: Extract core into prefix
+        if: steps.resolve.outputs.mode == 'download'
+        run: tar xaf core-dl/sdk-core-macOS-${{ matrix.arch }}.tar.gz -C /
+
+      - name: Restore ccache
+        if: steps.resolve.outputs.mode != 'skip'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-media-macos-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-media-macos-${{ matrix.arch }}-
+
+      - name: Guard core (snapshot)
+        if: steps.resolve.outputs.mode == 'download'
+        run: bash .github/sysroot-guard.sh /opt/ossia-sdk-${{ matrix.prefix_arch }}/freetype "$RUNNER_TEMP/core.snap" snapshot
+
+      - name: Build
+        if: steps.resolve.outputs.mode != 'skip'
+        working-directory: macOS
+        env:
+          STAGE: ${{ steps.resolve.outputs.mode == 'inline' && 'full' || 'media' }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 3G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          ./deps.sh
+          source ./common.sh
+          ./all.sh
+
+      - name: Guard core (verify)
+        if: steps.resolve.outputs.mode == 'download'
+        run: bash .github/sysroot-guard.sh /opt/ossia-sdk-${{ matrix.prefix_arch }}/freetype "$RUNNER_TEMP/core.snap" verify
+
+      - uses: actions/upload-artifact@v4
+        if: steps.resolve.outputs.mode != 'skip'
+        with:
+          name: sdk-macos-${{ matrix.arch }}
+          path: macOS/sdk-macOS-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+      - name: Save ccache
+        if: always() && steps.resolve.outputs.mode != 'skip'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-media-macos-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  windows:
+    name: media-windows-${{ matrix.arch }}
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: windows-2022,   msystem: CLANG64,    sdk_arch: x86_64 }
+          - { arch: arm64,  runner: windows-11-arm, msystem: CLANGARM64, sdk_arch: aarch64 }
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IS_MASTER: ${{ github.event_name == 'workflow_run' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git wget tar unzip diffutils yasm
+
+      - id: corehash
+        uses: ./.github/actions/core-hash
+        with: { platform: windows, arch: '${{ matrix.arch }}' }
+
+      - id: resolve
+        shell: bash   # Git bash: has gh on PATH
+        run: |
+          bash .github/resolve-core.sh \
+            "${{ steps.corehash.outputs.core_tag }}" \
+            "core-windows-${{ matrix.arch }}-latest" \
+            "sdk-core-mingw-${{ matrix.sdk_arch }}.7z" \
+            "core-dl" "$IS_MASTER"
+
+      - name: Extract core into prefix
+        if: steps.resolve.outputs.mode == 'download'
+        run: |
+          source ./common.sh
+          mkdir -p "$INSTALL_PREFIX"
+          dl="$(cygpath -u "$GITHUB_WORKSPACE")/core-dl"
+          7z x "$dl"/sdk-core-mingw-*.7z -o"$INSTALL_PREFIX" -y
+        working-directory: MSYS
+
+      - name: Guard core (snapshot)
+        if: steps.resolve.outputs.mode == 'download'
+        working-directory: MSYS
+        run: |
+          source ./common.sh
+          bash "$(cygpath -u "$GITHUB_WORKSPACE")/.github/sysroot-guard.sh" "$INSTALL_PREFIX/sysroot" "$RUNNER_TEMP/sysroot.snap" snapshot
+
+      - name: Build
+        if: steps.resolve.outputs.mode != 'skip'
+        working-directory: MSYS
+        env:
+          STAGE: ${{ steps.resolve.outputs.mode == 'inline' && 'full' || 'media' }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 2G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          export CCACHE_DIR="$(cygpath -u "$GITHUB_WORKSPACE")/.ccache"
+          ./deps.sh
+          ./all.sh
+
+      - name: Guard core (verify)
+        if: steps.resolve.outputs.mode == 'download'
+        working-directory: MSYS
+        run: |
+          source ./common.sh
+          bash "$(cygpath -u "$GITHUB_WORKSPACE")/.github/sysroot-guard.sh" "$INSTALL_PREFIX/sysroot" "$RUNNER_TEMP/sysroot.snap" verify
+
+      - uses: actions/upload-artifact@v4
+        if: steps.resolve.outputs.mode != 'skip'
+        with:
+          name: sdk-windows-${{ matrix.arch }}
+          path: MSYS/sdk-mingw-*.7z
+          if-no-files-found: warn

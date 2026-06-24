@@ -1,0 +1,314 @@
+name: Build SDK core
+
+# Builds the slow-moving CORE of the SDK (llvm, qt, openssl, sysroot=zlib/
+# freetype/...) for every platform/arch and PUBLISHES each as an asset on a
+# content-hash-keyed GitHub prerelease (tag core-<platform>-<arch>-<hash>).
+# media.yml then downloads these instead of rebuilding the core. Each leg owns
+# its own per-(platform,arch) release, so there is no cross-leg upload race.
+#
+# Triggered only when a core input changes (paths below must mirror the file
+# list in .github/actions/core-hash). On a pull_request the legs build-and-
+# validate only (fork GITHUB_TOKEN is read-only and cannot publish a release).
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'common/versions.sh'
+      - 'common/clone-llvm.sh'
+      - 'common/clone-qt.sh'
+      - 'common/clone-freetype.sh'
+      - 'common/clone-zlib.sh'
+      - 'common/clone-openssl.sh'
+      - 'common/clone-cmake.sh'
+      - 'common/qtmodules'
+      - 'common/qtfeatures'
+      - 'Linux/llvm.sh'
+      - 'Linux/qt.sh'
+      - 'Linux/openssl.sh'
+      - 'Linux/freetype.sh'
+      - 'Linux/zlib.sh'
+      - 'Linux/cmake.sh'
+      - 'Linux/common.sh'
+      - 'Linux/build-all.sh'
+      - 'Linux/build-all-release.sh'
+      - 'Linux/create-sdk.sh'
+      - 'Linux/CentOS/common.release.sh'
+      - 'Linux/Dockerfile.centos'
+      - 'macOS/llvm-libs.sh'
+      - 'macOS/qt.sh'
+      - 'macOS/freetype.sh'
+      - 'macOS/common.sh'
+      - 'macOS/all.sh'
+      - 'macOS/deps.sh'
+      - 'MSYS/llvm.sh'
+      - 'MSYS/llvm-deps.sh'
+      - 'MSYS/qt.sh'
+      - 'MSYS/freetype.sh'
+      - 'MSYS/zlib.sh'
+      - 'MSYS/cmake.sh'
+      - 'MSYS/common.sh'
+      - 'MSYS/all.sh'
+      - 'MSYS/deps.sh'
+      - '.github/workflows/core.yml'
+      - '.github/actions/core-hash/**'
+  pull_request:
+    paths:
+      - 'common/versions.sh'
+      - 'common/clone-llvm.sh'
+      - 'common/clone-qt.sh'
+      - 'common/clone-freetype.sh'
+      - 'common/clone-zlib.sh'
+      - 'common/clone-openssl.sh'
+      - 'common/clone-cmake.sh'
+      - 'common/qtmodules'
+      - 'common/qtfeatures'
+      - 'Linux/llvm.sh'
+      - 'Linux/qt.sh'
+      - 'Linux/openssl.sh'
+      - 'Linux/freetype.sh'
+      - 'Linux/zlib.sh'
+      - 'Linux/cmake.sh'
+      - 'Linux/common.sh'
+      - 'Linux/build-all.sh'
+      - 'Linux/build-all-release.sh'
+      - 'Linux/create-sdk.sh'
+      - 'Linux/CentOS/common.release.sh'
+      - 'Linux/Dockerfile.centos'
+      - 'macOS/llvm-libs.sh'
+      - 'macOS/qt.sh'
+      - 'macOS/freetype.sh'
+      - 'macOS/common.sh'
+      - 'macOS/all.sh'
+      - 'macOS/deps.sh'
+      - 'MSYS/llvm.sh'
+      - 'MSYS/llvm-deps.sh'
+      - 'MSYS/qt.sh'
+      - 'MSYS/freetype.sh'
+      - 'MSYS/zlib.sh'
+      - 'MSYS/cmake.sh'
+      - 'MSYS/common.sh'
+      - 'MSYS/all.sh'
+      - 'MSYS/deps.sh'
+      - '.github/workflows/core.yml'
+      - '.github/actions/core-hash/**'
+  workflow_dispatch:
+
+concurrency:
+  group: core-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write   # create/upload core prereleases
+
+jobs:
+  linux:
+    name: core-linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64,  runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: corehash
+        uses: ./.github/actions/core-hash
+        with:
+          platform: linux
+          arch: ${{ matrix.arch }}
+
+      # Skip the (multi-hour) build if this exact core is already published.
+      - id: check
+        run: |
+          if gh release view "${{ steps.corehash.outputs.core_tag }}" \
+               --json assets -q '.assets[].name' 2>/dev/null | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Core ${{ steps.corehash.outputs.core_tag }} already published; skipping." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore ccache
+        if: steps.check.outputs.exists != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-core-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-core-linux-${{ matrix.arch }}-
+
+      - name: Prepare install prefix
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-${{ matrix.arch }}
+          sudo chmod 0777 /opt/ossia-sdk-${{ matrix.arch }}
+
+      - name: Build core (Docker)
+        if: steps.check.outputs.exists != 'true'
+        working-directory: Linux
+        env:
+          STAGE: core
+          CPU_ARCH: ${{ matrix.arch }}
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: ./create-sdk.sh
+
+      - name: Publish core release
+        if: steps.check.outputs.exists != 'true' && github.event_name != 'pull_request'
+        env:
+          CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
+        run: |
+          bash .github/publish-core.sh "$CORE_TAG" "Linux/sdk-core-linux-${{ matrix.arch }}.tar.xz" \
+            "core-linux-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
+
+      - name: Save ccache
+        if: always() && steps.check.outputs.exists != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-core-linux-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  macos:
+    name: core-macos-${{ matrix.arch }}
+    runs-on: macos-15
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: arm64,  prefix_arch: aarch64 }
+          - { arch: x86_64, prefix_arch: x86_64 }
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: corehash
+        uses: ./.github/actions/core-hash
+        with:
+          platform: macos
+          arch: ${{ matrix.arch }}
+
+      - id: check
+        run: |
+          if gh release view "${{ steps.corehash.outputs.core_tag }}" \
+               --json assets -q '.assets[].name' 2>/dev/null | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore ccache
+        if: steps.check.outputs.exists != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-core-macos-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-core-macos-${{ matrix.arch }}-
+
+      - name: Prepare install prefix
+        if: steps.check.outputs.exists != 'true'
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-${{ matrix.prefix_arch }}
+          sudo chown "$(whoami)" /opt/ossia-sdk-${{ matrix.prefix_arch }}
+
+      - name: Build core
+        if: steps.check.outputs.exists != 'true'
+        working-directory: macOS
+        env:
+          STAGE: core
+          TARGET_ARCH: ${{ matrix.arch }}
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 3G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          ./deps.sh
+          source ./common.sh
+          ./all.sh
+
+      - name: Publish core release
+        if: steps.check.outputs.exists != 'true' && github.event_name != 'pull_request'
+        env:
+          CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
+        run: |
+          bash .github/publish-core.sh "$CORE_TAG" "macOS/sdk-core-macOS-${{ matrix.arch }}.tar.gz" \
+            "core-macos-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
+
+      - name: Save ccache
+        if: always() && steps.check.outputs.exists != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-core-macos-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  windows:
+    name: core-windows-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: windows-2022,    msystem: CLANG64 }
+          - { arch: arm64,  runner: windows-11-arm,  msystem: CLANGARM64 }
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git wget tar unzip diffutils yasm
+
+      - id: corehash
+        uses: ./.github/actions/core-hash
+        with:
+          platform: windows
+          arch: ${{ matrix.arch }}
+
+      - id: check
+        shell: bash   # Git bash: has gh on PATH (msys2 minimal PATH does not)
+        run: |
+          if gh release view "${{ steps.corehash.outputs.core_tag }}" \
+               --json assets -q '.assets[].name' 2>/dev/null | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build core
+        if: steps.check.outputs.exists != 'true'
+        working-directory: MSYS
+        env:
+          STAGE: core
+          TARGET_ARCH: ${{ matrix.arch }}
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 2G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          export CCACHE_DIR="$(cygpath -u "$GITHUB_WORKSPACE")/.ccache"
+          ./deps.sh
+          ./all.sh
+
+      - name: Publish core release
+        if: steps.check.outputs.exists != 'true' && github.event_name != 'pull_request'
+        shell: bash   # Git bash: has gh on PATH
+        env:
+          CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
+        run: |
+          file=$(ls MSYS/sdk-core-mingw-*.7z | head -1)
+          bash .github/publish-core.sh "$CORE_TAG" "$file" \
+            "core-windows-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
