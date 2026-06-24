@@ -280,6 +280,9 @@ jobs:
         include:
           - { arch: x86_64, runner: windows-2022,   msystem: CLANG64,    sdk_arch: x86_64 }
           - { arch: arm64,  runner: windows-11-arm, msystem: CLANGARM64, sdk_arch: aarch64 }
+    defaults:
+      run:
+        shell: msys2 {0}   # build/extract/guard steps run in msys2; gh steps override to bash
     env:
       GH_TOKEN: ${{ github.token }}
       IS_MASTER: ${{ github.event_name == 'workflow_run' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
