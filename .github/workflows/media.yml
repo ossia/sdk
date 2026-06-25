@@ -10,86 +10,16 @@ name: Build SDK media
 # resolve step picks: skip (master, core still building -> cascade handles it),
 # rolling-latest (PR), or inline full build (PR/dispatch bootstrap).
 
+# Triggers are intentionally BROAD (any non-doc change): a core-only change makes
+# the resolve step a cheap no-op (mode=skip on master -> the workflow_run cascade
+# does the real rebuild; fallback/inline on a PR). No need to enumerate media
+# inputs here -- the core hash + resolve logic decide what actually runs.
 on:
   push:
     branches: [ master ]
-    paths:
-      - 'Linux/faust.sh'
-      - 'Linux/ffmpeg.sh'
-      - 'Linux/fftw.sh'
-      - 'Linux/sdl.sh'
-      - 'Linux/portaudio.sh'
-      - 'Linux/jack.sh'
-      - 'Linux/pipewire.sh'
-      - 'Linux/lv2.sh'
-      - 'Linux/ysfx.sh'
-      - 'macOS/ffmpeg.sh'
-      - 'macOS/sdl.sh'
-      - 'macOS/jack.sh'
-      - 'macOS/faust.sh'
-      - 'macOS/ysfx.sh'
-      - 'macOS/sndfile.sh'
-      - 'MSYS/ffmpeg.sh'
-      - 'MSYS/fftw.sh'
-      - 'MSYS/portaudio.sh'
-      - 'MSYS/sdl.sh'
-      - 'MSYS/faust.sh'
-      - 'MSYS/jack.sh'
-      - 'MSYS/dnssd.sh'
-      - 'MSYS/ysfx.sh'
-      - 'common/clone-faust.sh'
-      - 'common/clone-ffmpeg.sh'
-      - 'common/clone-fftw.sh'
-      - 'common/clone-sdl.sh'
-      - 'common/clone-portaudio.sh'
-      - 'common/clone-jack.sh'
-      - 'common/clone-pipewire.sh'
-      - 'common/clone-lv2.sh'
-      - 'common/clone-ysfx.sh'
-      - 'common/patches/**'
-      - '.github/workflows/media.yml'
-      - '.github/resolve-core.sh'
-      - '.github/sysroot-guard.sh'
-      - '.github/actions/core-hash/**'
+    paths-ignore: [ '**/*.md' ]
   pull_request:
-    paths:
-      - 'Linux/faust.sh'
-      - 'Linux/ffmpeg.sh'
-      - 'Linux/fftw.sh'
-      - 'Linux/sdl.sh'
-      - 'Linux/portaudio.sh'
-      - 'Linux/jack.sh'
-      - 'Linux/pipewire.sh'
-      - 'Linux/lv2.sh'
-      - 'Linux/ysfx.sh'
-      - 'macOS/ffmpeg.sh'
-      - 'macOS/sdl.sh'
-      - 'macOS/jack.sh'
-      - 'macOS/faust.sh'
-      - 'macOS/ysfx.sh'
-      - 'macOS/sndfile.sh'
-      - 'MSYS/ffmpeg.sh'
-      - 'MSYS/fftw.sh'
-      - 'MSYS/portaudio.sh'
-      - 'MSYS/sdl.sh'
-      - 'MSYS/faust.sh'
-      - 'MSYS/jack.sh'
-      - 'MSYS/dnssd.sh'
-      - 'MSYS/ysfx.sh'
-      - 'common/clone-faust.sh'
-      - 'common/clone-ffmpeg.sh'
-      - 'common/clone-fftw.sh'
-      - 'common/clone-sdl.sh'
-      - 'common/clone-portaudio.sh'
-      - 'common/clone-jack.sh'
-      - 'common/clone-pipewire.sh'
-      - 'common/clone-lv2.sh'
-      - 'common/clone-ysfx.sh'
-      - 'common/patches/**'
-      - '.github/workflows/media.yml'
-      - '.github/resolve-core.sh'
-      - '.github/sysroot-guard.sh'
-      - '.github/actions/core-hash/**'
+    paths-ignore: [ '**/*.md' ]
   workflow_run:
     workflows: ["Build SDK core"]
     types: [completed]
@@ -289,12 +219,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.msystem }}
-          update: true
-          install: git wget tar unzip diffutils yasm
-
+      # corehash + resolve run in Git bash (no msys2 needed), so they gate the
+      # ~3min msys2 setup: a no-op leg (mode=skip) skips it entirely.
       - id: corehash
         uses: ./.github/actions/core-hash
         with: { platform: windows, arch: '${{ matrix.arch }}' }
@@ -307,6 +233,13 @@ jobs:
             "core-windows-${{ matrix.arch }}-latest" \
             "sdk-core-mingw-${{ matrix.sdk_arch }}.7z" \
             "core-dl" "$IS_MASTER"
+
+      - uses: msys2/setup-msys2@v2
+        if: steps.resolve.outputs.mode != 'skip'
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git wget tar unzip diffutils yasm
 
       - name: Extract core into prefix
         if: steps.resolve.outputs.mode == 'download'

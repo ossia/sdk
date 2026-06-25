@@ -6,92 +6,20 @@ name: Build SDK core
 # media.yml then downloads these instead of rebuilding the core. Each leg owns
 # its own per-(platform,arch) release, so there is no cross-leg upload race.
 #
-# Triggered only when a core input changes (paths below must mirror the file
-# list in .github/actions/core-hash). On a pull_request the legs build-and-
-# validate only (fork GITHUB_TOKEN is read-only and cannot publish a release).
+# Triggers are intentionally BROAD (any non-doc change). We do NOT enumerate the
+# core inputs here: the precise contract is the content hash in
+# .github/actions/core-hash, and each leg short-circuits (exit early) when that
+# exact core is already published -- so triggering on a media-only change is a
+# cheap no-op. Broad-and-imprecise is the safe direction (a *missed* trigger is
+# what breaks the cache; over-triggering self-corrects). On a pull_request the
+# legs build-and-validate only (fork GITHUB_TOKEN cannot publish a release).
 
 on:
   push:
     branches: [ master ]
-    paths:
-      - 'common/versions.sh'
-      - 'common/clone-llvm.sh'
-      - 'common/clone-qt.sh'
-      - 'common/clone-freetype.sh'
-      - 'common/clone-zlib.sh'
-      - 'common/clone-openssl.sh'
-      - 'common/clone-cmake.sh'
-      - 'common/qtmodules'
-      - 'common/qtfeatures'
-      - 'Linux/llvm.sh'
-      - 'Linux/qt.sh'
-      - 'Linux/openssl.sh'
-      - 'Linux/freetype.sh'
-      - 'Linux/zlib.sh'
-      - 'Linux/cmake.sh'
-      - 'Linux/common.sh'
-      - 'Linux/build-all.sh'
-      - 'Linux/build-all-release.sh'
-      - 'Linux/create-sdk.sh'
-      - 'Linux/CentOS/common.release.sh'
-      - 'Linux/Dockerfile.centos'
-      - 'macOS/llvm-libs.sh'
-      - 'macOS/qt.sh'
-      - 'macOS/freetype.sh'
-      - 'macOS/common.sh'
-      - 'macOS/all.sh'
-      - 'macOS/deps.sh'
-      - 'MSYS/llvm.sh'
-      - 'MSYS/llvm-deps.sh'
-      - 'MSYS/qt.sh'
-      - 'MSYS/freetype.sh'
-      - 'MSYS/zlib.sh'
-      - 'MSYS/cmake.sh'
-      - 'MSYS/common.sh'
-      - 'MSYS/all.sh'
-      - 'MSYS/deps.sh'
-      - '.github/workflows/core.yml'
-      - '.github/actions/core-hash/**'
+    paths-ignore: [ '**/*.md' ]
   pull_request:
-    paths:
-      - 'common/versions.sh'
-      - 'common/clone-llvm.sh'
-      - 'common/clone-qt.sh'
-      - 'common/clone-freetype.sh'
-      - 'common/clone-zlib.sh'
-      - 'common/clone-openssl.sh'
-      - 'common/clone-cmake.sh'
-      - 'common/qtmodules'
-      - 'common/qtfeatures'
-      - 'Linux/llvm.sh'
-      - 'Linux/qt.sh'
-      - 'Linux/openssl.sh'
-      - 'Linux/freetype.sh'
-      - 'Linux/zlib.sh'
-      - 'Linux/cmake.sh'
-      - 'Linux/common.sh'
-      - 'Linux/build-all.sh'
-      - 'Linux/build-all-release.sh'
-      - 'Linux/create-sdk.sh'
-      - 'Linux/CentOS/common.release.sh'
-      - 'Linux/Dockerfile.centos'
-      - 'macOS/llvm-libs.sh'
-      - 'macOS/qt.sh'
-      - 'macOS/freetype.sh'
-      - 'macOS/common.sh'
-      - 'macOS/all.sh'
-      - 'macOS/deps.sh'
-      - 'MSYS/llvm.sh'
-      - 'MSYS/llvm-deps.sh'
-      - 'MSYS/qt.sh'
-      - 'MSYS/freetype.sh'
-      - 'MSYS/zlib.sh'
-      - 'MSYS/cmake.sh'
-      - 'MSYS/common.sh'
-      - 'MSYS/all.sh'
-      - 'MSYS/deps.sh'
-      - '.github/workflows/core.yml'
-      - '.github/actions/core-hash/**'
+    paths-ignore: [ '**/*.md' ]
   workflow_dispatch:
 
 concurrency:
@@ -266,12 +194,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: ${{ matrix.msystem }}
-          update: true
-          install: git wget tar unzip diffutils yasm
-
+      # corehash + check run in Git bash (no msys2 needed), so they gate the
+      # ~3min msys2 setup: a no-op leg (core already published) skips it entirely.
       - id: corehash
         uses: ./.github/actions/core-hash
         with:
@@ -287,6 +211,13 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - uses: msys2/setup-msys2@v2
+        if: steps.check.outputs.exists != 'true'
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git wget tar unzip diffutils yasm
 
       - name: Build core
         if: steps.check.outputs.exists != 'true'
