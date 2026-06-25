@@ -31,10 +31,12 @@ runs:
         platform='${{ inputs.platform }}'
         arch='${{ inputs.arch }}'
 
-        # Files shared by every platform's core (versions + the clone scripts
-        # that carry the actual upstream pins / cherry-picks / patches).
+        # Files shared by every platform's core: the clone scripts that carry
+        # the actual upstream pins / cherry-picks / patches. NB: common/versions.sh
+        # is deliberately NOT hashed as a whole file -- only the CORE version vars
+        # are folded in below, so a media-only bump (SDL_VERSION, FFMPEG_VERSION,
+        # ...) does NOT rotate the core hash and media keeps reusing the same core.
         common_files=(
-          common/versions.sh
           common/clone-llvm.sh
           common/clone-qt.sh
           common/clone-freetype.sh
@@ -79,8 +81,14 @@ runs:
         # is intentionally NOT folded in here — it belongs to the media hash.
         # Qt patches live inside common/clone-qt.sh, which is already hashed.
 
-        hash=$(printf '%s\n' "${files[@]}" | LC_ALL=C sort -u \
-                 | xargs sha256sum | sha256sum | cut -c1-12)
+        # Only the CORE version pins from versions.sh (NOT media ones). Keep this
+        # list in sync with what the core stage actually builds.
+        core_versions=$(grep -E \
+          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION)=' \
+          common/versions.sh | LC_ALL=C sort)
+
+        hash=$( { printf '%s\n' "${files[@]}" | LC_ALL=C sort -u | xargs sha256sum; \
+                  printf '%s\n' "$core_versions"; } | sha256sum | cut -c1-12)
 
         echo "core_hash=$hash" >> "$GITHUB_OUTPUT"
         echo "core_tag=core-${platform}-${arch}-${hash}" >> "$GITHUB_OUTPUT"
