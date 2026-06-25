@@ -6,7 +6,7 @@ source ../common/clone-sdl.sh
 rm -rf sdl-build
 mkdir sdl-build
 
-cmake  -S SDL2-$SDL_VERSION -B sdl-build \
+cmake  -S SDL3-$SDL_VERSION -B sdl-build \
 -GNinja \
  -DSDL_STATIC_PIC=1 \
  -DBUILD_SHARED_LIBS=0 \

@@ -4,7 +4,7 @@ source ./common.sh
 source ../common/clone-sdl.sh
 
 xcrun cmake \
- -S SDL2-$SDL_VERSION \
+ -S SDL3-$SDL_VERSION \
  -B sdl-build \
  -GNinja \
  -DSDL_STATIC=1 \

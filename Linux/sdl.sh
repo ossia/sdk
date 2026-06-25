@@ -3,7 +3,7 @@
 source ./common.sh clang
 source ./common/clone-sdl.sh
 
-cmake -S SDL2-$SDL_VERSION -B sdl-build \
+cmake -S SDL3-$SDL_VERSION -B sdl-build \
 -GNinja \
 -DSDL_STATIC=1 \
 -DSDL_STATIC_PIC=1 \

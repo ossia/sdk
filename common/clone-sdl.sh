@@ -8,9 +8,10 @@ else
   SED=sed
 fi
 
-if [[ ! -d SDL2-$SDL_VERSION ]]; then
-  curl -ksSLOJ https://www.libsdl.org/release/SDL2-$SDL_VERSION.tar.gz
-  tar xzf SDL2-$SDL_VERSION.tar.gz
-  $SED -i '/error Nope/d' "SDL2-$SDL_VERSION/src/dynapi/SDL_dynapi.h"
-  $SED -i 's/IBUS_FOUND/0/' "SDL2-$SDL_VERSION/CMakeLists.txt"
+# SDL3: tarballs moved to the GitHub releases (libsdl.org/release/ is SDL2 only).
+if [[ ! -d SDL3-$SDL_VERSION ]]; then
+  curl -ksSLOJ "https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL3-$SDL_VERSION.tar.gz"
+  tar xzf SDL3-$SDL_VERSION.tar.gz
+  # Allow forcing SDL_DYNAMIC_API=0 (fully static, no dynapi indirection).
+  $SED -i '/error Nope/d' "SDL3-$SDL_VERSION/src/dynapi/SDL_dynapi.h" || true
 fi
