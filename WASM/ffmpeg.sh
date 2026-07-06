@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ./common.sh
-VERSION=snapshot
+VERSION=$FFMPEG_VERSION
 
 if [[ ! -d ffmpeg ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
@@ -45,6 +45,6 @@ ARGS=(
   --prefix=$INSTALL_PREFIX/ffmpeg
 )
 
-emconfigure ../ffmpeg/configure "${ARGS[@]}"
+emconfigure ../ffmpeg-$VERSION/configure "${ARGS[@]}"
 emmake make -j$NPROC
 emmake make install

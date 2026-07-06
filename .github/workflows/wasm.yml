@@ -1,0 +1,91 @@
+name: Build SDK WASM
+
+# Automated CI for the WebAssembly SDK (emscripten toolchain + Qt + ffmpeg).
+# WASM does not fit the core/media split (core.yml + media.yml): it has a single
+# arch-independent output and its own self-provisioned toolchain (emsdk), so it
+# lives in its own workflow. Runs on every non-doc push/PR and can be dispatched
+# manually; uploads the packaged SDK as a CI artifact, same shape as the other
+# platforms' legs in build.yml.
+#
+# NB: the wasm LLVM cross-build + faust are disabled for now in WASM/all.sh (too
+# slow; we use emscripten's bundled LLVM), so this leg builds emsdk + Qt + ffmpeg.
+# Like the windows legs in build.yml, the job is continue-on-error until a first
+# real run shakes out runner-specific issues (mainly the host Qt build deps).
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore: [ '**/*.md' ]
+  pull_request:
+    paths-ignore: [ '**/*.md' ]
+  workflow_dispatch:
+
+concurrency:
+  group: wasm-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read   # upload-artifact only
+
+jobs:
+  wasm:
+    name: wasm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    # TODO: drop once a first real CI run confirms the leg is green.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential git wget curl ca-certificates \
+            cmake ninja-build pkg-config ccache xz-utils perl python3 python3-venv \
+            libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libx11-xcb-dev \
+            libxcb1-dev libxcb-glx0-dev libxcb-keysyms1-dev libxcb-image0-dev \
+            libxcb-shm0-dev libxcb-icccm4-dev libxcb-sync-dev libxcb-xfixes0-dev \
+            libxcb-shape0-dev libxcb-randr0-dev libxcb-render-util0-dev \
+            libxcb-util-dev libxcb-xinerama0-dev libxcb-cursor-dev \
+            libfontconfig1-dev libfreetype-dev libglib2.0-dev \
+            libssl-dev libpcre2-dev zlib1g-dev
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-wasm-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-wasm-
+
+      - name: Prepare install prefix
+        run: |
+          sudo mkdir -p /opt/ossia-sdk-wasm
+          sudo chmod 0777 /opt/ossia-sdk-wasm
+
+      - name: Build WASM SDK
+        working-directory: WASM
+        env:
+          # cmake honours these env vars as the initial launcher for every
+          # cmake-based step (LLVM, Qt, faust); ffmpeg's configure is autotools
+          # and is not ccache-fronted here.
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 5G
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: ./all.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-wasm
+          path: WASM/sdk-wasm.tar.xz
+          if-no-files-found: error
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-wasm-${{ github.run_id }}-${{ github.run_attempt }}

@@ -1,5 +1,8 @@
 export SDL_VERSION=2.32.10
 export FFMPEG_VERSION=8.1
+# emsdk pin for the WASM SDK. Must match Qt's QT_EMCC_RECOMMENDED_VERSION for
+# $QT_VERSION (qtbase/cmake/QtPublicWasmToolchainHelpers.cmake); 6.12.0-beta1 -> 5.0.5.
+export EMSDK_VERSION=5.0.5
 export FFTW_VERSION=3.3.11
 export LLVM_MINGW_VERSION=20260616
 export LLVM_VERSION=llvmorg-22.1.8

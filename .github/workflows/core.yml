@@ -165,7 +165,7 @@ jobs:
         env:
           CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
         run: |
-          bash .github/publish-core.sh "$CORE_TAG" "macOS/sdk-core-macOS-${{ matrix.arch }}.tar.gz" \
+          bash .github/publish-core.sh "$CORE_TAG" "macOS/sdk-core-macOS-${{ matrix.arch }}.tar.xz" \
             "core-macos-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
 
       - name: Save ccache

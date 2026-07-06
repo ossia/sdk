@@ -139,7 +139,7 @@ jobs:
           bash .github/resolve-core.sh \
             "${{ steps.corehash.outputs.core_tag }}" \
             "core-macos-${{ matrix.arch }}-latest" \
-            "sdk-core-macOS-${{ matrix.arch }}.tar.gz" \
+            "sdk-core-macOS-${{ matrix.arch }}.tar.xz" \
             "core-dl" "$IS_MASTER"
 
       - name: Prepare install prefix
@@ -150,7 +150,7 @@ jobs:
 
       - name: Extract core into prefix
         if: steps.resolve.outputs.mode == 'download'
-        run: tar xaf core-dl/sdk-core-macOS-${{ matrix.arch }}.tar.gz -C /
+        run: tar xaf core-dl/sdk-core-macOS-${{ matrix.arch }}.tar.xz -C /
 
       - name: Restore ccache
         if: steps.resolve.outputs.mode != 'skip'
