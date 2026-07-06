@@ -2,6 +2,11 @@
 
 mkdir -p qt6-build-host
 (
+  # The host Qt tools build with the NATIVE compiler, so the emscripten target
+  # flags exported by common.sh (inherited here from all.sh) must not leak into
+  # it -- c++ rejects -sABORTING_MALLOC, -fwasm-exceptions, -msimd128, ...
+  # Only the wasm build below (which re-sources common.sh) gets them.
+  unset CFLAGS CXXFLAGS LDFLAGS
   cd qt6-build-host
   ../qt/configure \
      -skip qtwayland \
