@@ -3,18 +3,27 @@
 mkdir -p qt6-build-host
 (
   cd qt6-build-host
-  ../qt6/configure \
+  ../qt/configure \
      -skip qtwayland \
      -skip qtserialport \
-     -skip qtwebsockets \
      -skip qtsvg \
      -skip qtimageformats \
+     -skip qtmultimedia \
+     -skip qtquick3d \
+     -skip qtquicktimeline \
+     -skip qtquick3dphysics \
      -release \
      -nomake tests \
      -nomake examples \
      -cmake-generator Ninja \
      -no-feature-zstd \
-     -prefix /opt/ossia-sdk-wasm/qt6-host -- -DBUILD_qtwebsockets=ON 
+     -no-rpath \
+     -no-intelcet \
+     -no-glibc-fortify-source \
+     -no-stack-protector \
+     -no-stack-clash-protection \
+     -no-relro-now-linker \
+     -prefix /opt/ossia-sdk-wasm/qt6-host
   ninja
   ninja install
 )
@@ -24,7 +33,7 @@ source ./common.sh
 mkdir -p qt6-build-static
 (
   cd qt6-build-static
-  ../qt6/configure \
+  ../qt/configure \
      -skip qtwayland \
      -skip qtserialport \
      -skip qtsvg \
@@ -35,12 +44,15 @@ mkdir -p qt6-build-static
      -cmake-generator Ninja \
      -prefix /opt/ossia-sdk-wasm/qt-wasm \
      -feature-thread \
-     -sse2 \
+     -feature-wasm-jspi -feature-wasm-exceptions \
+     -feature-wasm-simd128 \
      -feature-opengles3 \
      -no-feature-zstd \
      -qt-host-path /opt/ossia-sdk-wasm/qt6-host \
-     -platform wasm-emscripten \
-     -device-option QT_EMSCRIPTEN_ASYNCIFY=1 -- -DBUILD_qtwebsockets=ON 
+     -platform wasm-emscripten 
+  cmake .  -DCMAKE_C_FLAGS="$CFLAGS" \
+  -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+  -DCMAKE_CXX_STANDARD=23
   ninja
   ninja install
 )

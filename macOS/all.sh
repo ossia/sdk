@@ -38,7 +38,13 @@ if [[ "$STAGE" == "core" ]]; then
   for d in llvm-libs qt6-static freetype harfbuzz; do
     [[ -e "$INSTALL_PREFIX/$d" ]] && core_paths+=("$INSTALL_PREFIX/$d")
   done
-  tar caf sdk-core-macOS-$TARGET_ARCH.tar.gz "${core_paths[@]}"
+  # xz (not gzip): the x86_64 core exceeds the 2GB GitHub release-asset limit
+  # enforced by .github/publish-core.sh when gzipped. xz roughly halves it and
+  # matches the Linux core format. XZ_OPT (-T0 -9: all cores, max dictionary) is
+  # best-effort -- honoured when tar shells out to the external xz (installed via
+  # deps.sh); ignored by bsdtar's internal liblzma, which still yields xz ~level6,
+  # itself well under the limit. Either way the output is a valid .tar.xz.
+  XZ_OPT='-T0 -9' tar caf sdk-core-macOS-$TARGET_ARCH.tar.xz "${core_paths[@]}"
 else
   # media/full: the whole merged prefix is the shippable SDK (unchanged name).
   tar caf sdk-macOS-$TARGET_ARCH.tar.gz $INSTALL_PREFIX
