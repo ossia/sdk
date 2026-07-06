@@ -38,11 +38,19 @@ source ./common.sh
 mkdir -p qt6-build-static
 (
   cd qt6-build-static
+  # Skip the same modules as the host build above: the wasm cross-build pulls
+  # host tools (Qt6::balsam / Qt6Quick3DTools, QuickTimeline) from qt6-host, so
+  # anything built here must also exist there. Quick3D/multimedia aren't needed
+  # for the (audio-focused) wasm SDK.
   ../qt/configure \
      -skip qtwayland \
      -skip qtserialport \
      -skip qtsvg \
      -skip qtimageformats \
+     -skip qtmultimedia \
+     -skip qtquick3d \
+     -skip qtquicktimeline \
+     -skip qtquick3dphysics \
      -release \
      -nomake tests \
      -nomake examples \
