@@ -18,8 +18,11 @@ on:
   push:
     branches: [ master ]
     paths-ignore: [ '**/*.md' ]
-  pull_request:
-    paths-ignore: [ '**/*.md' ]
+  # TEMP (wasm-ci debug branch): PR trigger disabled so iterating on the WASM
+  # leg does not fire the full linux/macos/windows core matrix on every push.
+  # REVERT THIS BLOCK before merging.
+  # pull_request:
+  #   paths-ignore: [ '**/*.md' ]
   workflow_dispatch:
 
 concurrency:
