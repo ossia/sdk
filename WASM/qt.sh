@@ -22,7 +22,6 @@ mkdir -p qt6-build-host
      -nomake examples \
      -cmake-generator Ninja \
      -no-feature-zstd \
-     -no-rpath \
      -no-intelcet \
      -no-glibc-fortify-source \
      -no-stack-protector \
@@ -37,6 +36,10 @@ source ./common.sh
 
 mkdir -p qt6-build-static
 (
+  # Safety net so the qt6-host tools (qlalr, moc, qmlcachegen, ...) invoked
+  # during the cross-build always find their Qt libs even if rpath is off;
+  # affects native host tools only, not the emcc/wasm output.
+  export LD_LIBRARY_PATH="/opt/ossia-sdk-wasm/qt6-host/lib:${LD_LIBRARY_PATH:-}"
   cd qt6-build-static
   # Skip the same modules as the host build above: the wasm cross-build pulls
   # host tools (Qt6::balsam / Qt6Quick3DTools, QuickTimeline) from qt6-host, so
