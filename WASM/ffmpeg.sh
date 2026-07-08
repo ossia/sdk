@@ -3,6 +3,13 @@
 source ./common.sh
 VERSION=$FFMPEG_VERSION
 
+# ffmpeg's configure calls the raw llvm tools (llvm-nm, llvm-ranlib) directly;
+# they live in emsdk's upstream/bin, which emsdk_env.sh does NOT put on PATH
+# (it only adds .../upstream/emscripten). Scope this to the ffmpeg build.
+if [[ -n "${EMSDK:-}" && -d "$EMSDK/upstream/bin" ]]; then
+  export PATH="$EMSDK/upstream/bin:$PATH"
+fi
+
 if [[ ! -d ffmpeg ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
   tar xaf ffmpeg-$VERSION.tar.bz2
