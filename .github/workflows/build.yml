@@ -140,7 +140,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: sdk-macos-${{ matrix.arch }}
-          path: macOS/sdk-macOS-${{ matrix.arch }}.tar.gz
+          path: macOS/sdk-macOS-${{ matrix.arch }}.tar.xz
           if-no-files-found: error
 
       - name: Save ccache
