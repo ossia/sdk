@@ -46,6 +46,8 @@ if [[ "$STAGE" == "core" ]]; then
   # itself well under the limit. Either way the output is a valid .tar.xz.
   XZ_OPT='-T0 -9' tar caf sdk-core-macOS-$TARGET_ARCH.tar.xz "${core_paths[@]}"
 else
-  # media/full: the whole merged prefix is the shippable SDK (unchanged name).
-  tar caf sdk-macOS-$TARGET_ARCH.tar.gz $INSTALL_PREFIX
+  # media/full: the whole merged prefix is the shippable SDK. xz (not gzip) for
+  # a smaller artifact and format uniformity with the Linux SDK. NB: consumers
+  # fetch this by name -- the extension change must be mirrored downstream.
+  XZ_OPT='-T0 -9' tar caf sdk-macOS-$TARGET_ARCH.tar.xz $INSTALL_PREFIX
 fi
