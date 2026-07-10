@@ -11,8 +11,6 @@ mkdir -p qt6-build-host
   ../qt/configure \
      -skip qtwayland \
      -skip qtserialport \
-     -skip qtsvg \
-     -skip qtimageformats \
      -skip qtmultimedia \
      -skip qtquick3d \
      -skip qtquicktimeline \
@@ -48,8 +46,6 @@ mkdir -p qt6-build-static
   ../qt/configure \
      -skip qtwayland \
      -skip qtserialport \
-     -skip qtsvg \
-     -skip qtimageformats \
      -skip qtmultimedia \
      -skip qtquick3d \
      -skip qtquicktimeline \
