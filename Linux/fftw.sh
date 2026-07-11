@@ -21,17 +21,17 @@ declare -a FFTW_AARCH64_FLAGS=(
   ARM_CPU_TYPE=cortex-a72
 )
 
+# Do not enable the generic-simd128/256 kernels here: combined with the native
+# x86 codelets they push the solver count past 4096 and overflow FFTW's 12-bit
+# slvndx bitfield, corrupting solver selection and crashing the planner (FFTW#379).
 declare -a FFTW_X86_64_FLAGS=(
   --enable-threads
   --prefix=$INSTALL_PREFIX/fftw
   --enable-fma
-  --enable-generic-simd128
-  --enable-generic-simd256
   --enable-sse2
   --enable-avx
   --enable-avx-128-fma
   --enable-avx2
-  --enable-fma
   --disable-fortran
   --with-gcc-arch=$GCC_ARCH
 )
