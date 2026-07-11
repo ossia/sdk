@@ -28,7 +28,8 @@ export LDFLAGS="-L$INSTALL_PREFIX_CMAKE/sysroot/lib $LDFLAGS"
 	--extra-cflags=" $CFLAGS " \
 	--extra-ldflags=" $LDFLAGS " \
 	--extra-libs=" $LDFLAGS " \
- 	--prefix="$INSTALL_PREFIX/ffmpeg"
+ 	--prefix="$INSTALL_PREFIX/ffmpeg" \
+  || { echo "::group::ffmpeg config.log (tail)"; tail -n 150 ffbuild/config.log; echo "::endgroup::"; exit 1; }
 
 # 
 $MAKE V=1 -j1
