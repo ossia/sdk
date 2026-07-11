@@ -216,6 +216,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       IS_MASTER: ${{ github.event_name == 'workflow_run' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
+      # Job-level so the Extract/Guard steps compute the SAME INSTALL_PREFIX as
+      # the Build step. Without it common.sh defaults SDK_ARCH to x86_64, so on
+      # arm64 the core extracted into /c/ossia-sdk-x86_64 and the build (looking
+      # in /c/ossia-sdk-aarch64) failed to find it (e.g. 'libsnappy not found').
+      TARGET_ARCH: ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
