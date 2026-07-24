@@ -13,6 +13,7 @@ cmake \
   -B freetype-build \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DFT_DISABLE_PNG=TRUE \
+  -DFT_DISABLE_BZIP2=TRUE \
   -DFT_DISABLE_HARFBUZZ=TRUE \
   -DFT_DISABLE_BROTLI=TRUE \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX/sysroot" \
@@ -35,6 +36,7 @@ cmake --build freetype-build --target install/strip
     -Dicu=disabled \
     -Ddocs=disabled \
     -Dtests=disabled \
+    "${HB_SHAPING_ONLY[@]}" \
     -Dprefix=$INSTALL_PREFIX/sysroot
   cd build
   ninja
@@ -49,6 +51,7 @@ cmake \
   -B freetype-build-final \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DFT_DISABLE_PNG=TRUE \
+  -DFT_DISABLE_BZIP2=TRUE \
   -DFT_DISABLE_HARFBUZZ=FALSE \
   -DFT_DISABLE_BROTLI=TRUE \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX/sysroot" \
