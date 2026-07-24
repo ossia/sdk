@@ -53,7 +53,17 @@ fi
 # CMAKE_<LANG>_COMPILER_LAUNCHER (set in the workflow).
 command -v ccache >/dev/null 2>&1 && export CCACHE_LAUNCHER="ccache" || export CCACHE_LAUNCHER=""
 
-export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew"
+# Keep every dependency-discovery mechanism inside the SDK -- Homebrew is never
+# present on an end-user machine, so anything we accidentally link from it ships
+# broken (this is how the harfbuzz build pulled in an arm64 /opt/homebrew libpng).
+# cmake find_package: ignore both Homebrew prefixes (/opt/homebrew on arm64,
+# /usr/local on Intel). Threaded into every cmake build via CMAKE_ADDITIONAL_FLAGS.
+export CMAKE_ADDITIONAL_FLAGS="-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOS_VERSION -DCMAKE_OSX_SYSROOT=$MACOS_SYSROOT -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew;/usr/local"
+# meson/autotools ignore the cmake flag above but honour pkg-config, so pin its
+# search path at the SDK prefix. A build that needs an SDK .pc still prepends its
+# own dir to PKG_CONFIG_PATH (e.g. freetype in the harfbuzz step); nothing that
+# relies on discovery can reach a Homebrew .pc. No SDK lib comes from Homebrew.
+export PKG_CONFIG_LIBDIR="$INSTALL_PREFIX/lib/pkgconfig"
 export CFLAGS=" -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -O3 -ffast-math -fno-finite-math-only "
 export CFLAGS_NOARCH=" -mmacosx-version-min=$MACOS_VERSION -O3 -ffast-math -fno-finite-math-only "
 export CXXFLAGS=" -mmacosx-version-min=$MACOS_VERSION $CPUFLAGS -O3 -ffast-math -fno-finite-math-only "
