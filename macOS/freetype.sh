@@ -37,7 +37,7 @@ cmake --build freetype-build --target install/strip
   cd harfbuzz
   export LIBRARY_PATH=$INSTALL_PREFIX/freetype
   export PKG_CONFIG_PATH=$INSTALL_PREFIX/freetype/lib/pkgconfig
-  meson build -Dbuildtype=release -Ddefault_library=static -Dglib=disabled -Dgobject=disabled -Dicu=disabled -Ddocs=disabled -Dprefix=$INSTALL_PREFIX/harfbuzz 
+  meson build -Dbuildtype=release -Ddefault_library=static -Dglib=disabled -Dgobject=disabled -Dicu=disabled -Ddocs=disabled -Dtests=disabled "${HB_SHAPING_ONLY[@]}" -Dprefix=$INSTALL_PREFIX/harfbuzz
   cd build
   ninja
   ninja install

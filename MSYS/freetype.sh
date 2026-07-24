@@ -12,8 +12,7 @@ cmake \
   -DFT_DISABLE_HARFBUZZ=TRUE \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX_CMAKE/sysroot" \
   -DZLIB_ROOT="$INSTALL_PREFIX_CMAKE/sysroot" \
-  -DBZIP2_INCLUDE_DIR="$INSTALL_PREFIX_CMAKE/sysroot/include" \
-  -DBZIP2_LIBRARIES="$INSTALL_PREFIX_CMAKE/sysroot/lib/libbz2.a" \
+  -DFT_DISABLE_BZIP2=TRUE \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
 
 cmake --build freetype-build --parallel
@@ -30,7 +29,8 @@ cmake --build freetype-build --target install/strip
     -Dicu=disabled \
     -Ddocs=disabled \
     -Dtests=disabled \
-    -Dprefix=$INSTALL_PREFIX/sysroot 
+    "${HB_SHAPING_ONLY[@]}" \
+    -Dprefix=$INSTALL_PREFIX/sysroot
   cd build
   ninja
   ninja install
@@ -48,8 +48,7 @@ cmake \
   -DFT_DISABLE_HARFBUZZ=FALSE \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX_CMAKE/sysroot" \
   -DZLIB_ROOT="$INSTALL_PREFIX_CMAKE/sysroot" \
-  -DBZIP2_INCLUDE_DIR="$INSTALL_PREFIX_CMAKE/sysroot/include" \
-  -DBZIP2_LIBRARIES="$INSTALL_PREFIX_CMAKE/sysroot/lib/libbz2.a" \
+  -DFT_DISABLE_BZIP2=TRUE \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX_CMAKE/sysroot
 
 cmake --build freetype-build-final
