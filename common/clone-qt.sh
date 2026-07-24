@@ -23,7 +23,8 @@ git config --global maintenance.auto false
 # once. Nothing left to apply is success; keep going. A real conflict still
 # fails hard, because that one does need a human.
 qt_pick() {
-  local repo=$1 ref=$2 url="https://codereview.qt-project.org/qt/$repo" i ok=0
+  local repo=$1 ref=$2 i ok=0
+  local url="https://codereview.qt-project.org/qt/$repo"
   # Retry the fetch: the shallow-file race above is transient (a second read
   # sees a settled file), so a retry clears it; a genuine network/ref error
   # still gives up after five tries rather than cherry-picking a stale FETCH_HEAD.
