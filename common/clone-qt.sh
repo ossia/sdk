@@ -2,6 +2,18 @@
 
 source ../common/versions.sh
 
+# git 2.55 races on a shallow repo's .git/shallow: when a `fetch --depth` runs
+# next to git's background maintenance (commit-graph / auto-gc), the fetch reads
+# a shallow file whose stat changed underneath it and aborts with
+#   fatal: shallow file has changed since we read it
+# Our Qt picks are exactly this pattern -- a dozen `fetch --depth 2` in a row on
+# a shallow clone -- and it took down every git-2.55 leg (all of macOS + Windows;
+# Linux on 2.54 was immune) at a different, random pick each run. Stop git from
+# mutating .git/shallow behind our back. Global is fine: this is a CI checkout.
+git config --global gc.auto 0
+git config --global fetch.writeCommitGraph false
+git config --global maintenance.auto false
+
 # Apply a Gerrit change to the repo we are currently in.
 #
 # We carry a dozen-odd unmerged changes against a moving Qt branch, so a change
@@ -11,8 +23,19 @@ source ../common/versions.sh
 # once. Nothing left to apply is success; keep going. A real conflict still
 # fails hard, because that one does need a human.
 qt_pick() {
-  local repo=$1 ref=$2
-  git fetch $SDK_FETCH_DEPTH "https://codereview.qt-project.org/qt/$repo" "$ref"
+  local repo=$1 ref=$2 url="https://codereview.qt-project.org/qt/$repo" i ok=0
+  # Retry the fetch: the shallow-file race above is transient (a second read
+  # sees a settled file), so a retry clears it; a genuine network/ref error
+  # still gives up after five tries rather than cherry-picking a stale FETCH_HEAD.
+  for i in 1 2 3 4 5; do
+    if git fetch $SDK_FETCH_DEPTH "$url" "$ref"; then ok=1; break; fi
+    echo "clone-qt: fetch of $repo $ref failed (try $i/5); retrying" >&2
+    sleep $((i * 2))
+  done
+  if [[ $ok -eq 0 ]]; then
+    echo "clone-qt: fetch of $repo $ref failed after 5 tries" >&2
+    return 1
+  fi
   if git cherry-pick --keep-redundant-commits FETCH_HEAD; then
     return 0
   fi
