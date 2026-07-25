@@ -14,6 +14,23 @@ export PYTHON_VERSION=3.13.14
 export MESON_VERSION=0.61.1
 export PIPEWIRE_VERSION=1.6.7
 
+# git 2.55 runs maintenance (gc / commit-graph) in the background after clone and
+# fetch. On our many shallow clones it races the very next git command in the
+# script -- two ways seen in CI, both on git-2.55 runners (macOS + Windows; the
+# Linux container's git 2.54 is immune):
+#   fatal: shallow file has changed since we read it        (during the Qt picks)
+#   fatal: Unable to create '.../.git/index.lock': File exists   (during the llvm clone)
+# Turn the background writers off globally, once, before any clone runs. This is
+# sourced by every clone script (and each platform common.sh) ahead of its first
+# git call, so it covers llvm/freetype/qt/... not just the Qt picks. Idempotent;
+# skipped where git is absent. Not folded into the core hash (only the version
+# pins above are), so this does not rotate the already-built cores.
+if command -v git >/dev/null 2>&1; then
+  git config --global gc.auto 0 || true
+  git config --global maintenance.auto false || true
+  git config --global fetch.writeCommitGraph false || true
+fi
+
 # In CI, clone shallow to cut clone time/bandwidth (LLVM and Qt history is huge).
 # Local dev keeps full history. GitHub Actions exports CI=true on every runner;
 # Linux/create-sdk.sh forwards CI into the build container.
