@@ -5,10 +5,11 @@ name: Build SDK media
 # SDK artifact (same names as the old build.yml, so consumers are unaffected).
 #
 # Core handoff: each leg computes the same content hash as core.yml (via the
-# shared core-hash action), downloads core-<platform>-<arch>-<hash>, extracts it
-# into the prefix, and builds media against it. If the exact core is missing the
-# resolve step picks: skip (master, core still building -> cascade handles it),
-# rolling-latest (PR), or inline full build (PR/dispatch bootstrap).
+# shared core-hash action), downloads its platform/arch asset from the single
+# rolling $CORE_RELEASE prerelease, checks the asset's .sha sidecar matches that
+# hash, extracts it into the prefix, and builds media against it. If no matching
+# core is published the resolve step picks: skip (master, core still building ->
+# cascade handles it) or inline full build (PR/dispatch bootstrap).
 
 # Triggers are intentionally BROAD (any non-doc change): a core-only change makes
 # the resolve step a cheap no-op (mode=skip on master -> the workflow_run cascade
@@ -32,6 +33,10 @@ concurrency:
 
 permissions:
   contents: read   # download core prereleases + upload-artifact
+
+env:
+  # The single rolling prerelease core.yml publishes the current master core to.
+  CORE_RELEASE: continuous
 
 jobs:
   linux:
@@ -59,10 +64,10 @@ jobs:
       - id: resolve
         run: |
           bash .github/resolve-core.sh \
-            "${{ steps.corehash.outputs.core_tag }}" \
-            "core-linux-${{ matrix.arch }}-latest" \
+            "$CORE_RELEASE" \
             "sdk-core-linux-${{ matrix.arch }}.tar.xz" \
-            "core-dl" "$IS_MASTER"
+            "core-dl" "$IS_MASTER" \
+            "${{ steps.corehash.outputs.core_hash }}"
 
       - name: Prepare install prefix
         if: steps.resolve.outputs.mode != 'skip'
@@ -137,10 +142,10 @@ jobs:
       - id: resolve
         run: |
           bash .github/resolve-core.sh \
-            "${{ steps.corehash.outputs.core_tag }}" \
-            "core-macos-${{ matrix.arch }}-latest" \
+            "$CORE_RELEASE" \
             "sdk-core-macOS-${{ matrix.arch }}.tar.xz" \
-            "core-dl" "$IS_MASTER"
+            "core-dl" "$IS_MASTER" \
+            "${{ steps.corehash.outputs.core_hash }}"
 
       - name: Prepare install prefix
         if: steps.resolve.outputs.mode != 'skip'
@@ -234,10 +239,10 @@ jobs:
         shell: bash   # Git bash: has gh on PATH
         run: |
           bash .github/resolve-core.sh \
-            "${{ steps.corehash.outputs.core_tag }}" \
-            "core-windows-${{ matrix.arch }}-latest" \
+            "$CORE_RELEASE" \
             "sdk-core-mingw-${{ matrix.sdk_arch }}.7z" \
-            "core-dl" "$IS_MASTER"
+            "core-dl" "$IS_MASTER" \
+            "${{ steps.corehash.outputs.core_hash }}"
 
       - uses: msys2/setup-msys2@v2
         if: steps.resolve.outputs.mode != 'skip'

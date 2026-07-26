@@ -1,18 +1,22 @@
 name: Build SDK core
 
 # Builds the slow-moving CORE of the SDK (llvm, qt, openssl, sysroot=zlib/
-# freetype/...) for every platform/arch and PUBLISHES each as an asset on a
-# content-hash-keyed GitHub prerelease (tag core-<platform>-<arch>-<hash>).
-# media.yml then downloads these instead of rebuilding the core. Each leg owns
-# its own per-(platform,arch) release, so there is no cross-leg upload race.
+# freetype/...) for every platform/arch and PUBLISHES each as an asset on ONE
+# rolling prerelease ($CORE_RELEASE) that holds all of the current master build's
+# core artefacts. Each asset carries a tiny "<asset>.sha" sidecar with its
+# content hash; media.yml downloads these instead of rebuilding the core.
+# The six legs upload distinct per-(platform,arch) asset names to the same
+# release, so there is no cross-leg collision (only a harmless race to create the
+# release, which is idempotent -- see publish-core.sh).
 #
 # Triggers are intentionally BROAD (any non-doc change). We do NOT enumerate the
 # core inputs here: the precise contract is the content hash in
 # .github/actions/core-hash, and each leg short-circuits (exit early) when that
-# exact core is already published -- so triggering on a media-only change is a
-# cheap no-op. Broad-and-imprecise is the safe direction (a *missed* trigger is
-# what breaks the cache; over-triggering self-corrects). On a pull_request the
-# legs build-and-validate only (fork GITHUB_TOKEN cannot publish a release).
+# exact core is already published (its sidecar hash matches) -- so triggering on
+# a media-only change is a cheap no-op. Broad-and-imprecise is the safe direction
+# (a *missed* trigger is what breaks the cache; over-triggering self-corrects).
+# On a pull_request the legs build-and-validate only (fork GITHUB_TOKEN cannot
+# publish a release).
 
 on:
   push:
@@ -28,6 +32,11 @@ concurrency:
 
 permissions:
   contents: write   # create/upload core prereleases
+
+env:
+  # The single rolling prerelease that holds every core artefact for the current
+  # master branch. media.yml reads the same value.
+  CORE_RELEASE: continuous
 
 jobs:
   linux:
@@ -51,13 +60,15 @@ jobs:
           platform: linux
           arch: ${{ matrix.arch }}
 
-      # Skip the (multi-hour) build if this exact core is already published.
+      # Skip the (multi-hour) build if this exact core is already published
+      # (its sidecar hash on $CORE_RELEASE matches this build's inputs).
       - id: check
         run: |
-          if gh release view "${{ steps.corehash.outputs.core_tag }}" \
-               --json assets -q '.assets[].name' 2>/dev/null | grep -q .; then
+          if [ "$(bash .github/core-published.sh "$CORE_RELEASE" \
+                    "sdk-core-linux-${{ matrix.arch }}.tar.xz" \
+                    '${{ steps.corehash.outputs.core_hash }}')" = "true" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Core ${{ steps.corehash.outputs.core_tag }} already published; skipping." >> "$GITHUB_STEP_SUMMARY"
+            echo "Core sdk-core-linux-${{ matrix.arch }} already published; skipping." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
@@ -88,10 +99,10 @@ jobs:
       - name: Publish core release
         if: steps.check.outputs.exists != 'true' && github.event_name != 'pull_request'
         env:
-          CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
+          CORE_HASH: ${{ steps.corehash.outputs.core_hash }}
         run: |
-          bash .github/publish-core.sh "$CORE_TAG" "Linux/sdk-core-linux-${{ matrix.arch }}.tar.xz" \
-            "core-linux-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
+          bash .github/publish-core.sh "$CORE_RELEASE" \
+            "Linux/sdk-core-linux-${{ matrix.arch }}.tar.xz" "$CORE_HASH"
 
       - name: Save ccache
         if: always() && steps.check.outputs.exists != 'true'
@@ -123,8 +134,9 @@ jobs:
 
       - id: check
         run: |
-          if gh release view "${{ steps.corehash.outputs.core_tag }}" \
-               --json assets -q '.assets[].name' 2>/dev/null | grep -q .; then
+          if [ "$(bash .github/core-published.sh "$CORE_RELEASE" \
+                    "sdk-core-macOS-${{ matrix.arch }}.tar.xz" \
+                    '${{ steps.corehash.outputs.core_hash }}')" = "true" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -163,10 +175,10 @@ jobs:
       - name: Publish core release
         if: steps.check.outputs.exists != 'true' && github.event_name != 'pull_request'
         env:
-          CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
+          CORE_HASH: ${{ steps.corehash.outputs.core_hash }}
         run: |
-          bash .github/publish-core.sh "$CORE_TAG" "macOS/sdk-core-macOS-${{ matrix.arch }}.tar.xz" \
-            "core-macos-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
+          bash .github/publish-core.sh "$CORE_RELEASE" \
+            "macOS/sdk-core-macOS-${{ matrix.arch }}.tar.xz" "$CORE_HASH"
 
       - name: Save ccache
         if: always() && steps.check.outputs.exists != 'true'
@@ -184,8 +196,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { arch: x86_64, runner: windows-2022,    msystem: CLANG64 }
-          - { arch: arm64,  runner: windows-11-arm,  msystem: CLANGARM64 }
+          - { arch: x86_64, runner: windows-2022,    msystem: CLANG64,    sdk_arch: x86_64 }
+          - { arch: arm64,  runner: windows-11-arm,  msystem: CLANGARM64, sdk_arch: aarch64 }
     defaults:
       run:
         shell: msys2 {0}
@@ -205,8 +217,9 @@ jobs:
       - id: check
         shell: bash   # Git bash: has gh on PATH (msys2 minimal PATH does not)
         run: |
-          if gh release view "${{ steps.corehash.outputs.core_tag }}" \
-               --json assets -q '.assets[].name' 2>/dev/null | grep -q .; then
+          if [ "$(bash .github/core-published.sh "$CORE_RELEASE" \
+                    "sdk-core-mingw-${{ matrix.sdk_arch }}.7z" \
+                    '${{ steps.corehash.outputs.core_hash }}')" = "true" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -238,8 +251,7 @@ jobs:
         if: steps.check.outputs.exists != 'true' && github.event_name != 'pull_request'
         shell: bash   # Git bash: has gh on PATH
         env:
-          CORE_TAG: ${{ steps.corehash.outputs.core_tag }}
+          CORE_HASH: ${{ steps.corehash.outputs.core_hash }}
         run: |
           file=$(ls MSYS/sdk-core-mingw-*.7z | head -1)
-          bash .github/publish-core.sh "$CORE_TAG" "$file" \
-            "core-windows-${{ matrix.arch }}-latest" "${{ github.ref == 'refs/heads/master' }}"
+          bash .github/publish-core.sh "$CORE_RELEASE" "$file" "$CORE_HASH"
