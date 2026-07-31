@@ -2,13 +2,9 @@
 
 source ./common.sh clang
 
-if [[ ! -d faust ]] ;
-then
-$GIT clone --depth=1 https://github.com/grame-cncm/faust -b master-dev
-fi
-
-cd faust/build
-echo '
+# Same set as common/clone-faust.sh, minus INCLUDE_LLVM_STATIC_IN_ARCHIVE: this
+# SDK ships LLVM combined into libfaust.a.
+FAUST_BACKENDS='
 set ( ASMJS_BACKEND  OFF CACHE STRING  "Include ASMJS backend" FORCE )
 set ( C_BACKEND      COMPILER STATIC DYNAMIC        CACHE STRING  "Include C backend"         FORCE )
 set ( CPP_BACKEND    COMPILER STATIC DYNAMIC        CACHE STRING  "Include CPP backend"       FORCE )
@@ -20,7 +16,10 @@ set ( LLVM_BACKEND   COMPILER STATIC DYNAMIC        CACHE STRING  "Include LLVM 
 set ( OLDCPP_BACKEND OFF        CACHE STRING  "Include old CPP backend"   FORCE )
 set ( RUST_BACKEND   OFF        CACHE STRING  "Include RUST backend"      FORCE )
 set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
-' > backends/llvm.cmake
+'
+source ../common/clone-faust.sh
+
+cd faust/build
 
 sed -i 's/no-rtti/rtti/g' CMakeLists.txt
 
