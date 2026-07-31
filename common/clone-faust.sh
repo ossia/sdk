@@ -1,14 +1,13 @@
 #!/bin/bash -eu
 
 source ../common/versions.sh
-(
-if [[ ! -d faust ]]; then
-  git clone --recursive -j4 $SDK_CLONE_DEPTH $SDK_SHALLOW_SUBMODULES https://github.com/grame-cncm/faust
-fi
 
-(
-cd faust/build
-echo '
+FAUST_REPO=https://github.com/grame-cncm/faust
+
+# Backend selection written to faust/build/backends/llvm.cmake. Platforms that
+# need a different set (WASM) assign FAUST_BACKENDS before sourcing this file.
+if [[ -z "${FAUST_BACKENDS:-}" ]]; then
+FAUST_BACKENDS='
 set ( INCLUDE_LLVM_STATIC_IN_ARCHIVE OFF )
 set ( ASMJS_BACKEND  OFF CACHE STRING  "Include ASMJS backend" FORCE )
 set ( C_BACKEND      COMPILER STATIC DYNAMIC        CACHE STRING  "Include C backend"         FORCE )
@@ -21,7 +20,40 @@ set ( LLVM_BACKEND   COMPILER STATIC DYNAMIC        CACHE STRING  "Include LLVM 
 set ( OLDCPP_BACKEND OFF        CACHE STRING  "Include old CPP backend"   FORCE )
 set ( RUST_BACKEND   OFF        CACHE STRING  "Include RUST backend"      FORCE )
 set ( WASM_BACKEND   OFF   CACHE STRING  "Include WASM backend"  FORCE )
-' > backends/llvm.cmake
-)
-)
+'
+fi
 
+# Apply one of $FAUST_PRS on top of $FAUST_VERSION. Run from inside the clone.
+faust_pick() {
+  local pr=$1
+  echo "clone-faust: applying PR #$pr"
+  git fetch $SDK_FETCH_DEPTH "$FAUST_REPO" "refs/pull/$pr/head"
+  # Once a PR lands upstream and FAUST_VERSION moves past it the pick comes out
+  # empty. That is success, not a conflict, so keep going. A real conflict still
+  # fails hard, because that one does need a human.
+  git cherry-pick --keep-redundant-commits FETCH_HEAD
+}
+
+if [[ ! -d faust ]]; then
+(
+  set -e
+  git clone --recursive -j4 $SDK_CLONE_DEPTH $SDK_SHALLOW_SUBMODULES "$FAUST_REPO"
+  cd faust
+
+  # FAUST_VERSION is a commit, not a tag, so it cannot be cloned with -b, and a
+  # shallow clone only carries the tip of the default branch.
+  git fetch $SDK_FETCH_DEPTH origin "$FAUST_VERSION"
+  git checkout "$FAUST_VERSION"
+  git submodule update --init --recursive
+
+  # cherry-pick refuses to run without a committer identity.
+  git config user.email "you@example.com"
+  git config user.name "Your Name"
+
+  for pr in ${FAUST_PRS:-}; do
+    faust_pick "$pr"
+  done
+)
+fi
+
+echo "$FAUST_BACKENDS" > faust/build/backends/llvm.cmake
