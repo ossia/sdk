@@ -32,7 +32,13 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: media-${{ github.ref }}
+  # workflow_run fires on *completed*, not on *succeeded*, so a core run that was
+  # cancelled (two merges in quick succession supersede each other) still starts a
+  # cascade here -- one whose jobs all skip on the conclusion guard below. Left in
+  # the shared group it would cancel a media run that is doing real work on its way
+  # to doing nothing, so give the doomed cascade a group of its own. A cascade from
+  # a core that did succeed keeps the shared group and still supersedes as before.
+  group: media-${{ github.ref }}${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success') && '-noop' || '' }}
   cancel-in-progress: true
 
 permissions:
