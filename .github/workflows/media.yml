@@ -15,12 +15,16 @@ name: Build SDK media
 # cascade handles it) or inline full build (PR/dispatch bootstrap).
 
 # Triggers are intentionally BROAD (any non-doc change): a core-only change makes
-# the resolve step a cheap no-op (mode=skip on master -> the workflow_run cascade
-# does the real rebuild; fallback/inline on a PR). No need to enumerate media
-# inputs here -- the core hash + resolve logic decide what actually runs.
+# the resolve step a cheap no-op (fallback/inline on a PR). No need to enumerate
+# media inputs here -- the core hash + resolve logic decide what actually runs.
+#
+# On master the cascade below is the only entry point. core.yml triggers on the
+# same non-doc pushes and short-circuits in seconds when its hash is already
+# published, so every master push reaches media through it. Listing master under
+# push as well started a second, redundant run that the cascade then cancelled
+# mid-build, leaving six cancelled checks on every master commit.
 on:
   push:
-    branches: [ master ]
     tags: [ 'sdk*' ]        # a tag push publishes the full SDK to that release
     paths-ignore: [ '**/*.md' ]
   pull_request:
