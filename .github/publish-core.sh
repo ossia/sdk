@@ -2,7 +2,7 @@
 # Publish a core SDK tarball as an asset on the single rolling master-core
 # prerelease (one release for the whole current-master build, not one per
 # artefact). Alongside the tarball we upload a tiny "<asset>.sha" sidecar
-# holding the content hash, so core.yml can skip an unchanged rebuild
+# holding the content hash, so the core-* jobs can skip an unchanged rebuild
 # (see core-published.sh) and media can verify it got the right core.
 #
 # Usage: publish-core.sh <release_tag> <asset_file> <core_hash>

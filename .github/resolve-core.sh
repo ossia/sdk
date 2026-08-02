@@ -34,8 +34,9 @@ if gh release download "$RELEASE_TAG" -p "$ASSET" -p "$ASSET.sha" -D "$DEST" 2>/
   rm -f "$DEST/$ASSET"
 fi
 
-# On a master / cascade build the matching core must exist; if it doesn't,
-# core.yml is (re)building it right now, so defer rather than fail.
+# Legacy path: with the core->media cascade this deferred to it. sdk.yml runs
+# media after core in the same run and always passes is_master=false, so this
+# branch is unused there; it is kept for manual/monolithic callers.
 if [ "$IS_MASTER" = "true" ]; then
   echo "::warning::matching core not published to '$RELEASE_TAG' yet; deferring to the core->media cascade."
   emit skip; exit 0

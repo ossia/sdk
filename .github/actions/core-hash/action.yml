@@ -1,7 +1,7 @@
 name: "Compute core SDK hash"
 description: >
   Compute a deterministic content hash of the CORE build inputs for a given
-  platform, so core.yml (producer) and media.yml (consumer) agree on which
+  platform, so the core-* (producer) and media-* (consumer) jobs in sdk.yml agree on which
   published core release to use. THIS IS THE CONTRACT between the two workflows:
   both must call this action so the hash is computed by identical code.
 
