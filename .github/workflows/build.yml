@@ -1,10 +1,10 @@
 name: Build SDK (full, manual)
 
-# MANUAL ESCAPE HATCH. Day-to-day CI is split into core.yml (slow libs, publishes
-# a hashed core release) + media.yml (fast libs, builds on the published core).
+# MANUAL ESCAPE HATCH. Day-to-day CI is sdk.yml, which builds the slow libs into
+# a hashed core release and the fast libs on top of it.
 # This workflow still does the old monolithic full build (STAGE defaults to
 # 'full') for one-shot rebuilds / debugging; it is workflow_dispatch-only so it
-# never runs automatically. Prefer core.yml + media.yml.
+# never runs automatically. Prefer sdk.yml.
 #
 # Builds the ossia SDK for every supported platform/arch and uploads each
 # result as a CI artifact. amd64 + arm64 for Linux, macOS and Windows.

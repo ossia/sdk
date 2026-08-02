@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Print "true" if the core asset <asset> is already published on release <tag>
 # with a "<asset>.sha" sidecar whose hash matches <want> -- i.e. this exact core
-# has been built before and core.yml can skip the (multi-hour) rebuild. Prints
+# has been built before and the core-* jobs can skip the (multi-hour) rebuild. Prints
 # "false" otherwise (missing release, missing asset, or a stale hash).
 # Requires: gh (GH_TOKEN).
 set -euo pipefail

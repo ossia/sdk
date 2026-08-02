@@ -1,7 +1,7 @@
 name: Build SDK WASM
 
 # Automated CI for the WebAssembly SDK (emscripten toolchain + Qt + ffmpeg).
-# WASM does not fit the core/media split (core.yml + media.yml): it has a single
+# WASM does not fit the core/media split in sdk.yml: it has a single
 # arch-independent output and its own self-provisioned toolchain (emsdk), so it
 # lives in its own workflow. Runs on every non-doc push/PR and can be dispatched
 # manually; uploads the packaged SDK both as a CI artifact and as a release asset
