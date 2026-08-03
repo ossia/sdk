@@ -1,7 +1,8 @@
 export SDL_VERSION=2.32.10
 export FFMPEG_VERSION=8.1
 # emsdk pin for the WASM SDK. Must match Qt's QT_EMCC_RECOMMENDED_VERSION for
-# $QT_VERSION (qtbase/cmake/QtPublicWasmToolchainHelpers.cmake); 6.12.0-beta1 -> 5.0.5.
+# $QT_VERSION (qtbase/cmake/QtPublicWasmToolchainHelpers.cmake); still 5.0.5 on
+# the 6.12 branch. Re-check this when moving QT_VERSION.
 export EMSDK_VERSION=5.0.5
 export FFTW_VERSION=3.3.11
 # Faust does tag releases (2.85.9 is the latest) but the SDK tracks master-dev:
@@ -20,7 +21,12 @@ export FAUST_PRS="1281"
 export LLVM_MINGW_VERSION=20260616
 export LLVM_VERSION=llvmorg-22.1.8
 export OPENSSL_VERSION=3.5.7
-export QT_VERSION=v6.12.0-beta1
+# qt5.git super-repo commit, not a tag: v6.12.0-beta1 is two months and 1171
+# commits behind the 6.12 branch. A full SHA rather than a branch name keeps the
+# build reproducible; github.com and code.qt.io both allow fetching one directly
+# into a shallow clone, which is what clone-qt.sh and WASM/qt-deps.sh rely on.
+# To bump: take the current tip of https://github.com/qt/qt5 refs/heads/6.12.
+export QT_VERSION=02761a0550f53096f48e394cd8824c96b78eaa3d
 export CMAKE_VERSION_SHORT=4.3
 export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14
