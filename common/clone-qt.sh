@@ -46,7 +46,16 @@ qt_pick() {
 }
 
 if [[ ! -d qt ]]; then
-git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
+# $QT_VERSION is a super-repo SHA, so this cannot be `clone -b`: that only takes
+# a branch or tag name. Fetch the commit directly instead -- allowed by both
+# github.com and code.qt.io, and it works with --depth 1.
+git init -q qt
+(
+  cd qt
+  git remote add origin https://github.com/qt/qt5
+  git fetch $SDK_CLONE_DEPTH origin $QT_VERSION
+  git checkout -q FETCH_HEAD
+)
 
 (
   cd qt
@@ -57,71 +66,61 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     git config user.email "you@example.com"
     git config user.name "Your Name"
 
+    # The 658xxx changes were abandoned in favour of dev-targeted rewrites; the
+    # old refs still resolve, so a stale one builds silently instead of failing.
     # qarraydata: prevent a -fsanitize=integer warning
-    qt_pick qtbase refs/changes/65/658065/1
-     # Enable exports on static builds
-    qt_pick qtbase refs/changes/66/658066/1
-     # missing qstringlist include
-    qt_pick qtbase refs/changes/67/658067/1
-     # link to brotlicommon
-    qt_pick qtbase refs/changes/68/658068/1
-     # stylesheet missing include
-    qt_pick qtbase refs/changes/69/658069/1
-     # qfsm disable sorting
-    qt_pick qtbase refs/changes/75/658075/1
+    qt_pick qtbase refs/changes/00/757200/1
+    # qhash: same, for the hash functions themselves
+    qt_pick qtbase refs/changes/05/757205/2
+    # Enable exports on static builds
+    qt_pick qtbase refs/changes/66/658066/2
+    # missing qstringlist include
+    qt_pick qtbase refs/changes/01/757201/1
+    # link to brotlicommon
+    qt_pick qtbase refs/changes/02/757202/1
+    # stylesheet missing include
+    qt_pick qtbase refs/changes/03/757203/1
+    # qfsm disable sorting
+    qt_pick qtbase refs/changes/07/757207/1
     # qsimd.cpp: add missing stdlib.h for getenv -- merged upstream (6.11/dev), now in 6.12.0
     # win32 fontdatabase unity build fix
-    qt_pick qtbase refs/changes/04/686804/1
+    qt_pick qtbase refs/changes/04/686804/2
     # win32 Font api clash
-    qt_pick qtbase refs/changes/05/686805/1
+    qt_pick qtbase refs/changes/05/686805/2
 
-    # 6.12: QTipLabel::styleSheetParentDestroyed() definition is not guarded by
-    # QT_CONFIG(style_stylesheet) while its declaration/members are, so the build
-    # breaks with -no-feature-style-stylesheet. Guard the out-of-line definition.
-    perl -0pi -e 's/\nvoid QTipLabel::styleSheetParentDestroyed\(\)\n\{\n    setProperty\("_q_stylesheet_parent", QVariant\(\)\);\n    styleSheetParent = nullptr;\n\}\n/\n#if QT_CONFIG(style_stylesheet)\nvoid QTipLabel::styleSheetParentDestroyed()\n{\n    setProperty("_q_stylesheet_parent", QVariant());\n    styleSheetParent = nullptr;\n}\n#endif\n/' src/widgets/kernel/qtooltip.cpp
+    # These three were in-place perl rewrites until they went upstream; they are
+    # ordinary picks now, so nothing here edits Qt sources with a regex any more.
+    # QTipLabel::styleSheetParentDestroyed() unguarded (-no-feature-style-stylesheet)
+    qt_pick qtbase refs/changes/16/757216/1
+    # windows.graphics.display.interop.h is Windows-SDK-only, mingw-w64 lacks it
+    qt_pick qtbase refs/changes/17/757217/1
+    # .symver version nodes are undefined in a static link, lld rejects them
+    qt_pick qtbase refs/changes/18/757218/1
 
-    # 6.12: the windows platform plugin's cpp_winrt path needs
-    # windows.graphics.display.interop.h (HDR per-monitor), a Windows-SDK-only
-    # header that mingw-w64 does not ship. Gate those blocks on the header being
-    # available so the build degrades gracefully on mingw (no-op off Windows).
-    perl -pi -e 's/#if QT_CONFIG\(cpp_winrt\)/#if QT_CONFIG(cpp_winrt) && __has_include(<windows.graphics.display.interop.h>)/g' src/plugins/platforms/windows/qwindowsscreen.cpp
-
-    # qversiontagging.cpp unconditionally emits versioned qt_version_tag symbols
-    # (.symver qt_version_tag@Qt_6.x on ELF) whose version nodes are only defined
-    # by the shared-lib version script. In a -static build there is no version
-    # script at the consumer's link, so lld (--no-undefined-version by default
-    # since LLD 17) errors with "qt_version_tag@Qt_6.x has undefined version".
-    # Qt already auto-defines QT_NO_VERSION_TAGGING for core-lib/static builds in
-    # qversiontagging.h; honour it in the .cpp so the symbols aren't emitted.
-    perl -0pi -e 's/#if QT_VERSION_MINOR > 0/#ifndef QT_NO_VERSION_TAGGING\n#if QT_VERSION_MINOR > 0/; s/make_versioned_symbol\(SYM, QT_VERSION_MAJOR, QT_VERSION_MINOR, "\@\@"\);/make_versioned_symbol(SYM, QT_VERSION_MAJOR, QT_VERSION_MINOR, "\@\@");\n#endif/' src/corelib/global/qversiontagging.cpp
-
-    # macos iconengine protection
-    qt_pick qtbase refs/changes/10/723510/3
-    # macos crash when screen goes off and on
-    qt_pick qtbase refs/changes/89/729289/1
-    # qyieldcpu: Fix compilation with macOS 26.4 SDK (QTBUG-145239)
-    qt_pick qtbase refs/changes/70/725070/3
-    # # link to cppwinrt
-    # git fetch https://jcelerier@codereview.qt-project.org/a/qt/qtbase refs/changes/77/658077/1 && git cherry-pick FETCH_HEAD
-    # # syncqt build error
-    # git fetch $SDK_FETCH_DEPTH https://codereview.qt-project.org/qt/qtbase refs/changes/49/662349/1 && git cherry-pick FETCH_HEAD
+    # macos iconengine protection -- merged to dev, drop this once it reaches 6.12
+    qt_pick qtbase refs/changes/10/723510/7
+    # macos crashes when a QNSView outlives its QCocoaWindow (screen off/on,
+    # embedding hosts). Supersedes the old 729289 pick.
+    qt_pick qtbase refs/changes/09/757209/3
+    # QRhiVulkan: swapchain recreated with a stale extent on resize
+    qt_pick qtbase refs/changes/71/726771/3
   )
 
   (
     cd qtdeclarative
     git config user.email "you@example.com"
     git config user.name "Your Name"
-    qt_pick qtdeclarative refs/changes/68/464668/1
-
-    # ci: fix missing include for std::terminate
-    # git fetch $SDK_FETCH_DEPTH https://codereview.qt-project.org/qt/qtdeclarative refs/changes/54/662354/1 && git cherry-pick FETCH_HEAD
+    # cmake: do not try to use qmlcachegen if it is not being built
+    qt_pick qtdeclarative refs/changes/68/464668/2
+    # masm: PATH_MAX used with no limits.h in scope
+    qt_pick qtdeclarative refs/changes/04/757204/1
   )
 
   (
     cd qtshadertools
     git config user.email "you@example.com"
     git config user.name "Your Name"
-    qt_pick qtshadertools refs/changes/63/464663/2
+    qt_pick qtshadertools refs/changes/63/464663/4
   )
 
   (
@@ -130,7 +129,7 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     git config user.name "Your Name"
     # openxr missing iterator -- already present in 6.12.0-beta1 (vendored OpenXR updated upstream)
     # QSSGLightmapBaker: add missing QGuiApplication include
-    qt_pick qtquick3d refs/changes/07/686807/1
+    qt_pick qtquick3d refs/changes/07/686807/2
   )
 
   (
@@ -138,7 +137,7 @@ git clone $SDK_CLONE_DEPTH https://github.com/qt/qt5 qt -b $QT_VERSION
     git config user.email "you@example.com"
     git config user.name "Your Name"
     # assimp missing ostream
-    qt_pick qtquick3d-assimp refs/changes/32/687132/1
+    qt_pick qtquick3d-assimp refs/changes/32/687132/2
 
   )
 )
