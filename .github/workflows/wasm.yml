@@ -99,6 +99,31 @@ jobs:
         run: |
           bash .github/publish-sdk.sh "$SDK_RELEASE" "WASM/sdk-wasm.tar.xz" "$SDK_ROLLING"
 
+      # `extra` stage: prebuilt extension deps (onnxruntime, ...), built against
+      # the SDK just produced above and shipped as their own release assets.
+      - name: Build extension prebuilts (extra)
+        working-directory: WASM
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: STAGE=extra ./all.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onnxruntime-wasm
+          path: WASM/onnxruntime-wasm.tar.xz
+          if-no-files-found: error
+
+      - name: Publish extension prebuilts to release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for f in WASM/onnxruntime-*.tar.xz; do
+            bash .github/publish-sdk.sh "$SDK_RELEASE" "$f" "$SDK_ROLLING"
+          done
+
       - name: Save ccache
         if: always()
         uses: actions/cache/save@v4
