@@ -2,29 +2,36 @@
 # Shared recipe for the `extra` SDK stage: produce a per-platform onnxruntime an
 # addon can drop in.
 #
-#   wasm        : build from source with JSPI => -fwasm-exceptions, matching
-#                 score's -sJSPI link (the public prebuilts are legacy-EH and
-#                 leave __resumeException undefined at link).
-#   arm desktop : build from source with the accelerator EPs that actually help
-#                 score's real-time-CV workload -- MLAS+KleidiAI (default) plus
-#                 XNNPACK, and CoreML on Apple. The official prebuilts are
-#                 CPU-only MLAS with no XNNPACK/CoreML, so we build our own.
-#                 (ACL/ArmNN/DirectML/WebGPU are deliberately NOT enabled -- see
-#                 docs; ArmNN was removed from ORT in v1.25, the rest regress or
-#                 are unmaintained. QNN is a separate quantized-only artifact.)
+#   wasm        : STATIC lib built from source with JSPI => -fwasm-exceptions,
+#                 matching score's -sJSPI link (public prebuilts are legacy-EH
+#                 and leave __resumeException undefined at link).
+#   arm desktop : SHARED lib (libonnxruntime.so/.dylib) built from source with the
+#                 accelerator EPs that help score's real-time-CV workload -- MLAS
+#                 +KleidiAI (default on aarch64) plus XNNPACK, and CoreML on Apple.
+#                 Shared, not static: it bundles the EPs + third-party deps
+#                 (abseil/protobuf/onnx/re2/...) inside the .so, so the consumer
+#                 links one library and there are no protobuf/Abseil symbol clashes
+#                 with score's own copies. (Static is only needed for wasm.)
+#                 NOT enabled: ACL, ArmNN (removed from ORT v1.25), DirectML,
+#                 WebGPU, Vulkan/OpenCL. QNN/RKNPU/Hailo are separate runtimes,
+#                 not ORT EPs -- handled as their own `extra` artifacts.
 #   x86_64      : the upstream prebuilt is already well-tuned -> repackage.
 #
 # Output: $SDK_ROOT/onnxruntime-<platform>[-<arch>].tar.xz
-#
-# NB: a from-source static ORT is a SET of archives (libonnxruntime_*.a + per-EP
-# libs + third-party: abseil, protobuf-lite, onnx, re2, flatbuffers, cpuinfo,
-# nlohmann_json, ...), not one .a. We stage them all under lib/ and let the
-# consumer link the group; matching the compiler score uses avoids LTO/ABI skew.
 source ../common/versions.sh
 
 _ort_src() {   # ensure the pinned onnxruntime source tree exists
   [[ -d onnxruntime ]] || git clone --quiet --depth 1 --recursive \
     --branch "v$ONNXRUNTIME_VERSION" https://github.com/microsoft/onnxruntime
+}
+
+_ort_headers() {   # stage -- public C/C++ API + enabled-EP provider factory headers
+  local stage="$1"
+  cp -a onnxruntime/include/onnxruntime/core/session/. "$stage/include/"
+  for h in coreml/coreml_provider_factory.h xnnpack/xnnpack_provider_factory.h; do
+    [[ -f "onnxruntime/include/onnxruntime/core/providers/$h" ]] &&
+      cp "onnxruntime/include/onnxruntime/core/providers/$h" "$stage/include/"
+  done
 }
 
 build_onnxruntime() {
@@ -56,17 +63,13 @@ build_onnxruntime() {
       if [[ "$arch" =~ (arm64|aarch64) ]]; then
         _ort_src
         ( cd onnxruntime
-          # CoreML (ANE/GPU) + XNNPACK on top of MLAS+KleidiAI (default).
-          # --build_apple_framework merges the many static libs into one.
           python3 tools/ci_build/build.py \
             --config Release --build_dir build-mac --parallel --skip_tests \
             --use_coreml --use_xnnpack --osx_arch arm64 --apple_deploy_target 13.3 \
-            --enable_lto --build_apple_framework \
+            --enable_lto --build_shared_lib \
             --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF )
-        # onnxruntime.framework carries a single merged static lib + headers.
-        local fw; fw="$(find onnxruntime/build-mac -name onnxruntime.framework -type d | head -1)"
-        cp -a "$fw/Headers/." "$stage/include/"
-        cp    "$fw/onnxruntime" "$stage/lib/libonnxruntime.a"
+        cp onnxruntime/build-mac/Release/libonnxruntime*.dylib "$stage/lib/"
+        _ort_headers "$stage"
       else
         _ort_repackage macos "$arch" "$stage"
       fi
@@ -79,13 +82,11 @@ build_onnxruntime() {
         ( cd onnxruntime
           python3 tools/ci_build/build.py \
             --config Release --build_dir build-linux --parallel --skip_tests \
-            --use_xnnpack --enable_lto \
+            --use_xnnpack --enable_lto --build_shared_lib \
             --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF \
                                   onnxruntime_USE_ARM_NEON_NCHWC=ON )
-        # Static ORT = a set of archives; ship them all + a link order manifest.
-        find onnxruntime/build-linux/Release -name 'lib*.a' -exec cp {} "$stage/lib/" \;
-        cp -a onnxruntime/include/onnxruntime/core/session/. "$stage/include/"
-        ( cd "$stage/lib" && ls libonnxruntime*.a lib*.a 2>/dev/null | sort -u > ../link-order.txt )
+        cp -a onnxruntime/build-linux/Release/libonnxruntime.so* "$stage/lib/"
+        _ort_headers "$stage"
       else
         _ort_repackage linux "$arch" "$stage"
       fi
