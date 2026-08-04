@@ -32,6 +32,8 @@ export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14
 export MESON_VERSION=0.61.1
 export PIPEWIRE_VERSION=1.6.7
+# `extra` stage: prebuilt extension dependencies (see common/build-*.sh)
+export ONNXRUNTIME_VERSION=1.27.0
 
 # git 2.55 runs maintenance (gc / commit-graph) in the background after clone and
 # fetch. On our many shallow clones it races the very next git command in the

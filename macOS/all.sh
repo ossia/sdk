@@ -25,12 +25,22 @@ build_media() {
   ./ysfx.sh
 }
 
+# `extra`: per-addon prebuilt deps shipped as their own release assets, kept out
+# of `full` so the base SDK build is unaffected. See common/build-onnxruntime.sh.
+build_extra() {
+  ./onnxruntime.sh
+}
+
 case "$STAGE" in
   core)  build_core ;;
   media) build_media ;;
+  extra) build_extra ;;
   full)  build_core; build_media ;;
-  *) echo "all.sh: unknown STAGE='$STAGE' (expected core|media|full)" >&2; exit 1 ;;
+  *) echo "all.sh: unknown STAGE='$STAGE' (expected core|media|extra|full)" >&2; exit 1 ;;
 esac
+
+# `extra` ships its own per-dep tarballs, not the SDK prefix -- skip the packaging below.
+if [[ "$STAGE" == "extra" ]]; then exit 0; fi
 
 if [[ "$STAGE" == "core" ]]; then
   # Ship only the core-owned top-level dirs (allowlist); media is added later.

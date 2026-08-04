@@ -36,15 +36,24 @@ build_media() {
   # ./faust.sh
 }
 
+# `extra`: per-addon prebuilt deps, shipped as their own release assets (NOT
+# bundled in sdk-wasm), built against the just-built SDK toolchain. Kept out of
+# `full` so the base SDK build is unaffected -- CI runs it as a separate STAGE.
+build_extra() {
+  ./onnxruntime.sh
+}
+
 case "$STAGE" in
   core)  build_core ;;
   media) build_media ;;
+  extra) build_extra ;;
   full)  build_core; build_media ;;
-  *) echo "all.sh: unknown STAGE='$STAGE' (expected core|media|full)" >&2; exit 1 ;;
+  *) echo "all.sh: unknown STAGE='$STAGE' (expected core|media|extra|full)" >&2; exit 1 ;;
 esac
 
 # Package the whole prefix (toolchain + libs) as the shippable SDK. xz for the
-# best ratio; the tree (emsdk + llvm + Qt) is large.
-if [[ "$STAGE" != "core" ]]; then
+# best ratio; the tree (emsdk + llvm + Qt) is large. `extra` ships its own
+# per-dep tarballs (see build-onnxruntime.sh), not the SDK prefix.
+if [[ "$STAGE" == "media" || "$STAGE" == "full" ]]; then
   XZ_OPT='-T0 -9' tar caf "$SDK_ROOT/sdk-wasm.tar.xz" "$INSTALL_PREFIX"
 fi
