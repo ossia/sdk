@@ -48,7 +48,8 @@ build_onnxruntime() {
         python3 tools/ci_build/build.py \
           --config Release --build_dir build-wasm \
           --build_wasm_static_lib --enable_wasm_simd --enable_wasm_threads \
-          --enable_wasm_jspi --skip_tests --parallel --compile_no_warning_as_error
+          --enable_wasm_jspi --skip_tests --parallel --compile_no_warning_as_error \
+          --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF
         cp build-wasm/Release/libonnxruntime_webassembly.a "$stage/lib/libonnxruntime.a"
         cp -a include/onnxruntime/core/session/. "$stage/include/" )
       # Guard: JSPI must have removed the legacy __resumeException reference.
