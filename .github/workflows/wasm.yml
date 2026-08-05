@@ -41,8 +41,6 @@ jobs:
     name: wasm
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-    # TODO: drop once a first real CI run confirms the leg is green.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 

@@ -25,6 +25,21 @@ _ort_src() {   # ensure the pinned onnxruntime source tree exists
     --branch "v$ONNXRUNTIME_VERSION" https://github.com/microsoft/onnxruntime
 }
 
+# A static archive may legitimately leave libc/libc++ symbols undefined, so grepping
+# for individual names only catches what we already know about. Link a trivial user
+# with score's flags instead: anything the archive needs and cannot get is an error
+# here rather than in every consumer.
+_ort_wasm_linktest() {   # stage
+  local stage="$1" d; d="$(mktemp -d)"
+  cat > "$d/t.cpp" <<'EOF'
+#include <onnxruntime_c_api.h>
+int main() { return OrtGetApiBase() == nullptr; }
+EOF
+  em++ -fwasm-exceptions -pthread -msimd128 -sJSPI -sERROR_ON_UNDEFINED_SYMBOLS=1 \
+    -I"$stage/include" "$d/t.cpp" "$stage/lib/libonnxruntime.a" -o "$d/t.js"
+  rm -rf "$d"
+}
+
 _ort_headers() {   # stage -- public C/C++ API + enabled-EP provider factory headers
   local stage="$1"
   cp -a onnxruntime/include/onnxruntime/core/session/. "$stage/include/"
@@ -44,19 +59,23 @@ build_onnxruntime() {
     wasm)
       tag="wasm"; _ort_src
       ( cd onnxruntime
-        # --enable_wasm_jspi -> "-fwasm-exceptions -s WASM_LEGACY_EXCEPTIONS=0"
+        # build.py hardcodes cmake/external/emsdk, both to install a toolchain and
+        # to locate Emscripten.cmake. Point it at ours so it cannot pull its own.
+        rm -rf cmake/external/emsdk
+        ln -s "${EMSDK:?EMSDK unset}" cmake/external/emsdk
+        # $CXXFLAGS et al. reach CMAKE_CXX_FLAGS and add -mrelaxed-simd, which turns
+        # on MLAS dispatch declarations whose definitions ORT never compiles. Its own
+        # flags already match what score links with.
+        env -u CFLAGS -u CXXFLAGS -u LDFLAGS \
         python3 tools/ci_build/build.py \
           --config Release --build_dir build-wasm \
           --build_wasm_static_lib --enable_wasm_simd --enable_wasm_threads \
           --enable_wasm_jspi --skip_tests --parallel --compile_no_warning_as_error \
+          --emsdk_version "${EMSDK_VERSION:?EMSDK_VERSION unset}" \
           --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF
         cp build-wasm/Release/libonnxruntime_webassembly.a "$stage/lib/libonnxruntime.a"
         cp -a include/onnxruntime/core/session/. "$stage/include/" )
-      # Guard: JSPI must have removed the legacy __resumeException reference.
-      if "${EMSDK:?EMSDK unset}/upstream/bin/llvm-nm" "$stage/lib/libonnxruntime.a" \
-           | grep -q ' U __resumeException'; then
-        echo "build-onnxruntime: wasm lib still references __resumeException" >&2; exit 1
-      fi
+      _ort_wasm_linktest "$stage"
       ;;
 
     macos)
