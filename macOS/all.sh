@@ -20,6 +20,7 @@ build_media() {
   # ./sndfile.sh
   # ./portaudio.sh
   ./sdl.sh
+  ./sdl3.sh
   ./jack.sh
   ./faust.sh      # needs llvm-config from the core's $INSTALL_PREFIX/llvm-libs
   ./ysfx.sh

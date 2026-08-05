@@ -32,6 +32,7 @@ build_media() {
   ./fftw.sh
   ./portaudio.sh
   ./sdl.sh
+  ./sdl3.sh
   ./faust.sh
   ./jack.sh
   ./dnssd.sh
