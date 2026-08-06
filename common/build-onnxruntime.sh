@@ -118,7 +118,9 @@ build_onnxruntime() {
     *) echo "build-onnxruntime: unknown EXTRA_PLATFORM='$plat'" >&2; exit 1 ;;
   esac
 
-  out="$SDK_ROOT/onnxruntime-$tag.tar.xz"
+  # Versioned, so a consumer can pin the onnxruntime it wants rather than whatever
+  # the release happens to carry.
+  out="$SDK_ROOT/onnxruntime-$ONNXRUNTIME_VERSION-$tag.tar.xz"
   ( cd "$stage" && XZ_OPT='-T0 -9' tar caf "$out" . )
   rm -rf "$stage"
   echo "build-onnxruntime: produced $out"
