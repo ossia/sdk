@@ -61,6 +61,8 @@ build_onnxruntime() {
       ( cd onnxruntime
         # build.py hardcodes cmake/external/emsdk, both to install a toolchain and
         # to locate Emscripten.cmake. Point it at ours so it cannot pull its own.
+        # It is a submodule path, so `git submodule sync` refuses to see a symlink
+        # there; _ort_src already cloned recursively, so skip that step.
         rm -rf cmake/external/emsdk
         ln -s "${EMSDK:?EMSDK unset}" cmake/external/emsdk
         # $CXXFLAGS et al. reach CMAKE_CXX_FLAGS and add -mrelaxed-simd, which turns
@@ -71,7 +73,7 @@ build_onnxruntime() {
           --config Release --build_dir build-wasm \
           --build_wasm_static_lib --enable_wasm_simd --enable_wasm_threads \
           --enable_wasm_jspi --skip_tests --parallel --compile_no_warning_as_error \
-          --emsdk_version "${EMSDK_VERSION:?EMSDK_VERSION unset}" \
+          --emsdk_version "${EMSDK_VERSION:?EMSDK_VERSION unset}" --skip_submodule_sync \
           --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF
         cp build-wasm/Release/libonnxruntime_webassembly.a "$stage/lib/libonnxruntime.a"
         cp -a include/onnxruntime/core/session/. "$stage/include/" )
