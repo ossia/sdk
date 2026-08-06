@@ -70,6 +70,8 @@ jobs:
     name: plan
     runs-on: ubuntu-24.04
     steps:
+      # tee, not >>: the summary renders in the UI but never reaches the job log,
+      # and the log is what you have when reading back a finished run.
       - name: Resolved decisions for this run
         run: |
           {
@@ -81,7 +83,7 @@ jobs:
             echo "| publish SDK | \`$PUBLISH_SDK\` |"
             echo "| SDK release | \`$SDK_RELEASE\` (rolling: \`$SDK_ROLLING\`) |"
             echo "| force core rebuild | \`$FORCE_CORE\` |"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------- linux ----
   core-linux:
