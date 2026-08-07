@@ -21,6 +21,7 @@ build_media() {
   ./ffmpeg.sh
   ./fftw.sh
   ./sdl.sh
+  ./sdl3.sh
   ./portaudio.sh
   ./jack.sh
   ./pipewire.sh

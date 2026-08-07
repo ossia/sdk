@@ -1,4 +1,13 @@
+# SDL2 is transitional: libossia's joystick/game-controller/audio backends and
+# its find_package(SDL2) still speak the SDL2 API, so an SDL3-only SDK would flip
+# OSSIA_ENABLE_SDL off and drop the joystick protocol and the SDL audio engine
+# from the releases -- silently, since score_assert_feature is a no-op today.
+# Both SDLs are therefore installed side by side ($INSTALL_PREFIX/SDL2 and
+# $INSTALL_PREFIX/SDL3) so an SDK tag stays consumable by today's score while the
+# port happens in libossia. Drop SDL_VERSION and every sdl.sh once libossia is on
+# SDL3.
 export SDL_VERSION=2.32.10
+export SDL3_VERSION=3.4.14
 export FFMPEG_VERSION=8.1
 # emsdk pin for the WASM SDK. Must match Qt's QT_EMCC_RECOMMENDED_VERSION for
 # $QT_VERSION (qtbase/cmake/QtPublicWasmToolchainHelpers.cmake); still 5.0.5 on
