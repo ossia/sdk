@@ -1,6 +1,8 @@
 #!/bin/bash
 
+export SDK_COMMON_ROOT=$(cd "$PWD/.." ; pwd -P)
 source ./common.sh
+source ../common/ffmpeg-features.sh
 VERSION=$FFMPEG_VERSION
 
 # ffmpeg's configure calls the raw llvm tools (llvm-nm, llvm-ranlib) directly;
@@ -10,7 +12,7 @@ if [[ -n "${EMSDK:-}" && -d "$EMSDK/upstream/bin" ]]; then
   export PATH="$EMSDK/upstream/bin:$PATH"
 fi
 
-if [[ ! -d ffmpeg ]]; then
+if [[ ! -d ffmpeg-$VERSION ]]; then
   wget -nv https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.bz2
   tar xaf ffmpeg-$VERSION.tar.bz2
 fi
@@ -19,26 +21,11 @@ mkdir  -p ffmpeg-build
 cd ffmpeg-build
 
 
-# configure FFMpeg with Emscripten
+# Feature flags live in common/ffmpeg-features.wasm, which is SELF-CONTAINED --
+# the shared desktop file is not layered under it (no network, no external
+# codecs, no hardware; payload size is the binding constraint here).
 ARGS=(
-  --target-os=none        # use none to prevent any os specific configurations
-  --arch=x86_32           # use x86_32 to achieve minimal architectural optimization
-  --enable-cross-compile  # enable cross compile
-  --disable-x86asm        # disable x86 asm
-  --disable-inline-asm    # disable inline asm
-  --disable-doc 
-  --disable-ffmpeg 
-  --disable-ffplay
-  --disable-ffprobe
-  --disable-debug 
-  --pkg-config-flags="--static" 
-  --enable-gpl --enable-version3 
-  --disable-openssl 
-  --disable-securetransport 
-  --disable-network 
-  --disable-iconv 
-  --enable-protocols 
-  --disable-lzma 
+  $(ffmpeg_features wasm)
   --nm="llvm-nm -g"
   --ar=emar
   --ranlib=llvm-ranlib
@@ -52,6 +39,7 @@ ARGS=(
   --prefix=$INSTALL_PREFIX/ffmpeg
 )
 
-emconfigure ../ffmpeg-$VERSION/configure "${ARGS[@]}"
+emconfigure ../ffmpeg-$VERSION/configure "${ARGS[@]}" \
+  || { echo "::group::ffmpeg config.log (tail)"; tail -n 150 ffbuild/config.log; echo "::endgroup::"; exit 1; }
 emmake make -j$NPROC
 emmake make install
