@@ -48,8 +48,10 @@ export LIBXML2_VERSION=v2.15.3
 # the aarch64 C-only build is bit-exact with the x86 SIMD build. The branch also
 # turns upstream's unconditional -flto off: with it every archive member is LLVM
 # bitcode, which ld can only consume from a link targeting that exact arch, so
-# the library could not be linked into a fat (x86_64 + x86_64h) macOS binary.
-export SVTJPEGXS_VERSION=42189ca0d8825d3489fa0cba3154535230230ab7
+# the library could not be linked into a fat (x86_64 + x86_64h) macOS binary,
+# and lets -DSVT_JPEGXS_ARCH_X86 override the arch auto-detection, which is what
+# makes a cross build to x86_64 from an arm64 host possible at all.
+export SVTJPEGXS_VERSION=9cbff356bc6de08462cbf4a6b916b940cedfca53
 # emsdk pin for the WASM SDK. Must match Qt's QT_EMCC_RECOMMENDED_VERSION for
 # $QT_VERSION (qtbase/cmake/QtPublicWasmToolchainHelpers.cmake); still 5.0.5 on
 # the 6.12 branch. Re-check this when moving QT_VERSION.
