@@ -33,6 +33,12 @@ export VPX_VERSION=v1.16.0
 # Also what qtimageformats' webp plugin wants; see the note in
 # common/build-media-deps.sh about -system-webp vs Qt's bundled copy.
 export WEBP_VERSION=v1.6.0
+# MP3 encoding: ffmpeg ships no native MP3 encoder at all. SourceForge is lame's
+# only home, so the tarball is mirrored on the ossia sdk36 release
+# (sha256 ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e).
+export LAME_VERSION=3.100
+# ffmpeg's dash and imf demuxers are gated on libxml2.
+export LIBXML2_VERSION=v2.15.3
 # ossia/SVT-JPEG-XS branch ossia-arm64 = upstream main @ 8056642 (0.10.0, the
 # minimum ffmpeg 9 accepts; their newest TAG is only v0.9.0) plus one commit
 # making the build work off x86. Upstream unconditionally does

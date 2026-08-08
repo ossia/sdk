@@ -51,6 +51,10 @@
 # Hap DEcoding works without this (libavcodec carries its own snappy); Hap
 # ENcoding needs the real library.
 --enable-libsnappy
+# ffmpeg has no native MP3 encoder, so without this MP3 export is impossible.
+--enable-libmp3lame
+# Gates the dash and imf demuxers -- DASH playback needs it.
+--enable-libxml2
 
 --disable-iconv
 --disable-lzma

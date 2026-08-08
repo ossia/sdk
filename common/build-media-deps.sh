@@ -115,6 +115,31 @@ _md_clone() {  # name ref url [url...]
     $GIT reset --quiet --hard "$ref" -- 2>/dev/null || true )
 }
 
+_md_fetch_tar() {  # name stripdir url [url...]
+  # Some deps have no git upstream worth using -- lame lives on SourceForge and
+  # nowhere else official. Same mirror-list shape as _md_clone: the ossia
+  # release first, upstream as fallback.
+  local name=$1 strip=$2; shift 2
+  local urls=("$@")
+  [[ -d "$MEDIA_DEPS_SRC/$name" ]] && return 0
+
+  local url tmp="$MEDIA_DEPS_SRC/.$name.tar"
+  for url in "${urls[@]}"; do
+    if curl -fksSL -o "$tmp" "$url"; then
+      rm -rf "$MEDIA_DEPS_SRC/$name.tmp"; mkdir -p "$MEDIA_DEPS_SRC/$name.tmp"
+      # -z/-j named explicitly, never -a: bsdtar rejects -a in extract mode on
+      # macOS 15 (see common/clone-openssl.sh).
+      if tar xzf "$tmp" -C "$MEDIA_DEPS_SRC/$name.tmp" --strip-components="$strip"; then
+        rm -f "$tmp"; mv "$MEDIA_DEPS_SRC/$name.tmp" "$MEDIA_DEPS_SRC/$name"; return 0
+      fi
+      rm -rf "$MEDIA_DEPS_SRC/$name.tmp"
+    fi
+    echo "media-deps: $name: $url unusable, trying the next mirror" >&2
+  done
+  echo "media-deps: $name: every mirror failed (${urls[*]})" >&2
+  return 1
+}
+
 # cmake flags every dep here wants. $CMAKE_ADDITIONAL_FLAGS carries the macOS
 # deployment target / sysroot / Homebrew-ignore set and is empty elsewhere.
 _md_cmake_flags() {
@@ -330,6 +355,39 @@ _md_build_svtjpegxs() {   # JPEG XS encode+decode, native in ffmpeg 9 as libsvtj
     -DBUILD_APPS=OFF -DBUILD_TESTING=OFF
   cmake --build "$(_md_build_dir svtjpegxs)"
   cmake --install "$(_md_build_dir svtjpegxs)"
+}
+
+_md_build_mp3lame() {
+  # MP3 encoding. ffmpeg has NO native MP3 encoder -- without this, score cannot
+  # export MP3 at all. SourceForge is lame's only home, so the ossia release
+  # mirrors the tarball.
+  _md_fetch_tar lame 1 \
+    https://github.com/ossia/sdk/releases/download/sdk36/lame-$LAME_VERSION.tar.gz \
+    https://downloads.sourceforge.net/project/lame/lame/${LAME_VERSION%.*}/lame-$LAME_VERSION.tar.gz
+  ( cd "$MEDIA_DEPS_SRC/lame"
+    rm -f config.status
+    ./configure --prefix="$(_md_native_prefix)" \
+      --enable-static --disable-shared --disable-frontend --disable-gtktest --with-pic \
+      ${MD_LAME_EXTRA_FLAGS:+"${MD_LAME_EXTRA_FLAGS[@]}"}
+    make -j"$NPROC"
+    make install )
+}
+
+_md_build_xml2() {
+  # Unlocks ffmpeg's dash and imf demuxers (dash_demuxer_deps="libxml2"), i.e.
+  # DASH playback -- odd to have network enabled without it.
+  _md_clone libxml2 "$LIBXML2_VERSION" https://github.com/GNOME/libxml2 \
+                                       https://gitlab.gnome.org/GNOME/libxml2.git
+  _md_cmake_flags
+  # Everything off but the parser: ffmpeg only needs xmlCheckVersion and the
+  # tree/reader API. Leaving zlib/lzma on would put -lz -llzma in libxml-2.0.pc
+  # and make ffmpeg's --static pkg-config resolution depend on them.
+  cmake -S "$MEDIA_DEPS_SRC/libxml2" -B "$(_md_build_dir xml2)" "${MD_CMAKE_FLAGS[@]}" \
+    -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_PROGRAMS=OFF \
+    -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ICU=OFF \
+    -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_LZMA=OFF
+  cmake --build "$(_md_build_dir xml2)"
+  cmake --install "$(_md_build_dir xml2)"
 }
 
 # -------------------------------------------------------------- protocol ----
