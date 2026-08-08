@@ -12,6 +12,10 @@ build_core() {
   ./zlib.sh
   ./openssl.sh
   ./freetype.sh
+  # Before qt.sh: qtimageformats compiles its bundled libwebp into QWebpPlugin
+  # unless -system-webp (common/qtfeatures) is set, which would put a second
+  # copy of libwebp in every statically linked score alongside libavcodec's.
+  ./media-deps.sh webp
   ./qt.sh
   # ./fontconfig.sh
 }
