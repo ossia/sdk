@@ -39,8 +39,11 @@ export WEBP_VERSION=v1.6.0
 # enable_language(ASM_NASM) + add_definitions(-DARCH_X86_64=1), so aarch64 could
 # not configure at all -- which would have cost us JPEG XS on Apple Silicon,
 # Linux aarch64 and Windows ARM. Verified: x86 unit tests still 11997/11997, and
-# the aarch64 C-only build is bit-exact with the x86 SIMD build.
-export SVTJPEGXS_VERSION=2a0998cec1b713b561583762edb6eacb34eb987c
+# the aarch64 C-only build is bit-exact with the x86 SIMD build. The branch also
+# turns upstream's unconditional -flto off: with it every archive member is LLVM
+# bitcode, which ld can only consume from a link targeting that exact arch, so
+# the library could not be linked into a fat (x86_64 + x86_64h) macOS binary.
+export SVTJPEGXS_VERSION=42189ca0d8825d3489fa0cba3154535230230ab7
 # emsdk pin for the WASM SDK. Must match Qt's QT_EMCC_RECOMMENDED_VERSION for
 # $QT_VERSION (qtbase/cmake/QtPublicWasmToolchainHelpers.cmake); still 5.0.5 on
 # the 6.12 branch. Re-check this when moving QT_VERSION.

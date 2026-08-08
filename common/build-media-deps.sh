@@ -47,6 +47,14 @@ _md_native_path() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else echo "$1"; fi
 }
 
+# Build directory for a dep. $MD_BUILD_TAG keeps configurations apart: macOS
+# builds the whole set once per architecture slice, and a shared build dir there
+# is silently wrong -- cmake reads CFLAGS from the environment only on the FIRST
+# configure, so slice 2 re-used slice 1's cached "-arch x86_64" and produced
+# accidentally-fat archives (or, where a project assigns CMAKE_C_FLAGS itself,
+# the wrong arch outright).
+_md_build_dir() { echo "$1-build${MD_BUILD_TAG:-}"; }
+
 # Marker files, not "is the .a there" probes: several of these install multiple
 # artifacts and a half-finished build would otherwise look complete.
 _md_done()      { [[ -f "$MEDIA_DEPS_PREFIX/.media-deps/$1" ]]; }
@@ -122,6 +130,13 @@ _md_cmake_flags() {
     # ones in sysroot/lib -- and ffmpeg then fails with "opus not found using
     # pkg-config" because only one of the two is on PKG_CONFIG_PATH.
     -DCMAKE_INSTALL_LIBDIR=lib
+    # Pass the Apple arch as a CACHE variable. CMake does NOT read
+    # CMAKE_OSX_ARCHITECTURES from the environment, and relying on the -arch in
+    # $CFLAGS is not enough either: a project that assigns CMAKE_C_FLAGS
+    # wholesale drops it. SVT-JPEG-XS does exactly that, so its "x86_64h" slice
+    # came out as x86_64 and lipo refused the merge ("have the same
+    # architectures (x86_64)"). Empty and harmless off macOS.
+    ${CMAKE_OSX_ARCHITECTURES:+-DCMAKE_OSX_ARCHITECTURES=$CMAKE_OSX_ARCHITECTURES}
     ${CMAKE_ADDITIONAL_FLAGS:-}
   )
 }
@@ -145,8 +160,8 @@ _md_build_amf_headers() {   # headers only; ffmpeg dlopens amfrt64.dll / libamfr
 _md_build_vulkan_headers() {   # headers only; ffmpeg dlopens the Vulkan loader
   _md_clone Vulkan-Headers "$VULKAN_HEADERS_VERSION" https://github.com/KhronosGroup/Vulkan-Headers
   _md_cmake_flags
-  cmake -S "$MEDIA_DEPS_SRC/Vulkan-Headers" -B vulkan-headers-build "${MD_CMAKE_FLAGS[@]}"
-  cmake --install vulkan-headers-build
+  cmake -S "$MEDIA_DEPS_SRC/Vulkan-Headers" -B "$(_md_build_dir vulkan-headers)" "${MD_CMAKE_FLAGS[@]}"
+  cmake --install "$(_md_build_dir vulkan-headers)"
   # Vulkan-Headers ships no .pc. ffmpeg's probe is header-only
   # (check_pkg_config_header_only vulkan "vulkan >= 1.3.277"), so a Cflags-only
   # file is enough and must NOT name a library -- we do not link the loader.
@@ -168,17 +183,17 @@ _md_build_dav1d() {   # AV1 decoding; ffmpeg's native AV1 decoder is far slower
   # tags, so it goes first; code.videolan.org is the fallback, not the primary.
   _md_clone dav1d "$DAV1D_VERSION" https://github.com/videolan/dav1d \
                                   https://code.videolan.org/videolan/dav1d.git
-  rm -rf dav1d-build
+  rm -rf "$(_md_build_dir dav1d)"
   # Not $MESON_COMMON_FLAGS: that array carries -Dglib/-Dgobject/-Dicu/-Ddocs,
   # which are pipewire's options, and meson hard-errors on options a project
   # does not define.
-  meson setup dav1d-build "$MEDIA_DEPS_SRC/dav1d" \
+  meson setup "$(_md_build_dir dav1d)" "$MEDIA_DEPS_SRC/dav1d" \
     --prefix="$MEDIA_DEPS_PREFIX" --libdir=lib \
     --buildtype=release --default-library=static \
     -Denable_tools=false -Denable_tests=false \
     ${MD_MESON_EXTRA_FLAGS:+"${MD_MESON_EXTRA_FLAGS[@]}"}
-  ninja -C dav1d-build
-  ninja -C dav1d-build install
+  ninja -C "$(_md_build_dir dav1d)"
+  ninja -C "$(_md_build_dir dav1d)" install
 }
 
 _md_build_x264() {
@@ -213,19 +228,19 @@ _md_build_x265() {
                                  https://bitbucket.org/multicoreware/x265_git.git
   _md_cmake_flags
   # x265's CMakeLists lives in source/, not at the repo root.
-  cmake -S "$MEDIA_DEPS_SRC/x265/source" -B x265-build "${MD_CMAKE_FLAGS[@]}" \
+  cmake -S "$MEDIA_DEPS_SRC/x265/source" -B "$(_md_build_dir x265)" "${MD_CMAKE_FLAGS[@]}" \
     -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_PIC=ON
-  cmake --build x265-build
-  cmake --install x265-build
+  cmake --build "$(_md_build_dir x265)"
+  cmake --install "$(_md_build_dir x265)"
 }
 
 _md_build_opus() {
   _md_clone opus "$OPUS_VERSION" https://github.com/xiph/opus
   _md_cmake_flags
-  cmake -S "$MEDIA_DEPS_SRC/opus" -B opus-build "${MD_CMAKE_FLAGS[@]}" \
+  cmake -S "$MEDIA_DEPS_SRC/opus" -B "$(_md_build_dir opus)" "${MD_CMAKE_FLAGS[@]}" \
     -DOPUS_BUILD_PROGRAMS=OFF -DOPUS_BUILD_TESTING=OFF
-  cmake --build opus-build
-  cmake --install opus-build
+  cmake --build "$(_md_build_dir opus)"
+  cmake --install "$(_md_build_dir opus)"
 }
 
 _md_build_vpx() {
@@ -247,8 +262,8 @@ _md_build_vpx() {
   # invoking make over this Makefile is what wedged x264.
   rm -f "$MEDIA_DEPS_SRC"/libvpx/{config.mk,config.log,libvpx.pc,vpx_config.h,vpx_config.asm,vpx_version.h} \
         "$MEDIA_DEPS_SRC"/libvpx/{vpx_scale_rtcd.h,vpx_dsp_rtcd.h,vp8_rtcd.h,vp9_rtcd.h} 2>/dev/null || true
-  rm -rf vpx-build; mkdir -p vpx-build
-  ( cd vpx-build
+  rm -rf "$(_md_build_dir vpx)"; mkdir -p "$(_md_build_dir vpx)"
+  ( cd "$(_md_build_dir vpx)"
     "$(_md_native_path "$MEDIA_DEPS_SRC/libvpx")/configure" --prefix="$(_md_native_prefix)" \
       --enable-static --disable-shared --enable-pic \
       --enable-vp8 --enable-vp9 --disable-examples --disable-tools \
@@ -268,12 +283,12 @@ _md_build_webp() {
   _md_clone libwebp "$WEBP_VERSION" https://github.com/webmproject/libwebp \
                                   https://chromium.googlesource.com/webm/libwebp
   _md_cmake_flags
-  cmake -S "$MEDIA_DEPS_SRC/libwebp" -B webp-build "${MD_CMAKE_FLAGS[@]}" \
+  cmake -S "$MEDIA_DEPS_SRC/libwebp" -B "$(_md_build_dir webp)" "${MD_CMAKE_FLAGS[@]}" \
     -DWEBP_BUILD_ANIM_UTILS=OFF -DWEBP_BUILD_CWEBP=OFF -DWEBP_BUILD_DWEBP=OFF \
     -DWEBP_BUILD_GIF2WEBP=OFF -DWEBP_BUILD_IMG2WEBP=OFF -DWEBP_BUILD_VWEBP=OFF \
     -DWEBP_BUILD_WEBPINFO=OFF -DWEBP_BUILD_WEBPMUX=OFF -DWEBP_BUILD_EXTRAS=OFF
-  cmake --build webp-build
-  cmake --install webp-build
+  cmake --build "$(_md_build_dir webp)"
+  cmake --install "$(_md_build_dir webp)"
 }
 
 _md_build_snappy() {
@@ -283,10 +298,10 @@ _md_build_snappy() {
   # platforms ship the same snappy.
   _md_clone snappy "$SNAPPY_VERSION" https://github.com/jcelerier/snappy
   _md_cmake_flags
-  cmake -S "$MEDIA_DEPS_SRC/snappy" -B snappy-build "${MD_CMAKE_FLAGS[@]}" \
+  cmake -S "$MEDIA_DEPS_SRC/snappy" -B "$(_md_build_dir snappy)" "${MD_CMAKE_FLAGS[@]}" \
     -DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF -DSNAPPY_INSTALL=ON
-  cmake --build snappy-build
-  cmake --install snappy-build
+  cmake --build "$(_md_build_dir snappy)"
+  cmake --install "$(_md_build_dir snappy)"
   # snappy ships no .pc; ffmpeg's libsnappy probe is a plain link check, but
   # gstreamer and other consumers expect one.
   mkdir -p "$MEDIA_DEPS_PREFIX/lib/pkgconfig"
@@ -311,22 +326,22 @@ _md_build_svtjpegxs() {   # JPEG XS encode+decode, native in ffmpeg 9 as libsvtj
   _md_clone SVT-JPEG-XS "$SVTJPEGXS_VERSION" https://github.com/ossia/SVT-JPEG-XS \
                                              https://github.com/OpenVisualCloud/SVT-JPEG-XS
   _md_cmake_flags
-  cmake -S "$MEDIA_DEPS_SRC/SVT-JPEG-XS" -B svtjpegxs-build "${MD_CMAKE_FLAGS[@]}" \
+  cmake -S "$MEDIA_DEPS_SRC/SVT-JPEG-XS" -B "$(_md_build_dir svtjpegxs)" "${MD_CMAKE_FLAGS[@]}" \
     -DBUILD_APPS=OFF -DBUILD_TESTING=OFF
-  cmake --build svtjpegxs-build
-  cmake --install svtjpegxs-build
+  cmake --build "$(_md_build_dir svtjpegxs)"
+  cmake --install "$(_md_build_dir svtjpegxs)"
 }
 
 # -------------------------------------------------------------- protocol ----
 _md_build_srt() {   # SRT ingress/egress. Encryption comes from the SDK's openssl.
   _md_clone srt "$SRT_VERSION" https://github.com/Haivision/srt
   _md_cmake_flags
-  cmake -S "$MEDIA_DEPS_SRC/srt" -B srt-build "${MD_CMAKE_FLAGS[@]}" \
+  cmake -S "$MEDIA_DEPS_SRC/srt" -B "$(_md_build_dir srt)" "${MD_CMAKE_FLAGS[@]}" \
     -DENABLE_SHARED=OFF -DENABLE_STATIC=ON \
     -DENABLE_APPS=OFF -DENABLE_EXAMPLES=OFF -DENABLE_UNITTESTS=OFF \
     ${MD_SRT_EXTRA_FLAGS:+"${MD_SRT_EXTRA_FLAGS[@]}"}
-  cmake --build srt-build
-  cmake --install srt-build
+  cmake --build "$(_md_build_dir srt)"
+  cmake --install "$(_md_build_dir srt)"
 }
 
 # ----------------------------------------------------------------- driver ---
