@@ -2,26 +2,40 @@ Subject: [PATCH] patch: updated for ffmpeg 9.0 rpi
 
 Raspberry Pi / ARM SBC support: the sand pixel formats, the V4L2 request-API
 HEVC decoder, and the -no_cvt_hw ffmpeg CLI option. Rebased from the 8.1
-version of this patch; the whole 8.1 patch still applied except for:
+version of this patch.
 
-  configure                  2 hunks -- the --enable-omx/--enable-omx-rpi help
-                             lines it anchored on were removed in 9.0
-  libavcodec/v4l2_buffers.c  2 hunks -- 9.0 added an #include and turned a
-                             /* fallthrough */ comment into av_fallthrough
-  fftools/ffmpeg_dec.c       1 hunk  -- video_frame_process() was reindented
+Hunks that needed rebasing:
 
-Dropped, deliberately: the tests/checkasm/{Makefile,checkasm.h} and
-tests/ref/fate/source hunks. They only register the rpi_sand asm check with
-checkasm and fate, neither of which the SDK builds (--disable-doc, no fate
-run), so carrying them just adds rebase work on every ffmpeg bump.
+  configure                  2 -- the --enable-omx/--enable-omx-rpi help lines
+                                  it anchored on were removed in 9.0
+  libavcodec/v4l2_buffers.c  2 -- 9.0 added an #include and turned a
+                                  /* fallthrough */ comment into av_fallthrough
+  fftools/ffmpeg_dec.c       1 -- video_frame_process() was reindented
 
-Verified: applies with zero fuzz to a pristine ffmpeg-9.0 tarball, and the
-result configures (CONFIG_SAND=yes, HAVE_X86ASM=yes) and builds clean on
-linux-x86_64 with the SDK's full flag set.
+API changes that the hunks applying cleanly did NOT catch -- the patch context
+around them was untouched, so `patch` was perfectly happy and these only show up
+as compile errors, and only on aarch64, because x86_64 never passes
+--enable-v4l2-request and so never compiles these files:
+
+  v4l2_req_hevc_vx.c  ff_attach_decode_data() went from (AVFrame*) to
+                      (AVCodecContext*, AVFrame*)
+  v4l2_m2m_dec.c      AVCodec.pix_fmts is gone; decoders now use the
+                      CODEC_PIXFMTS() macro from codec_internal.h
+
+The tests/checkasm and tests/ref/fate hunks are dropped rather than rebased:
+they only register the rpi_sand asm check with checkasm and fate, neither of
+which this SDK builds, so carrying them is pure rebase tax on every bump.
+
+Verified: applies with zero fuzz to a pristine ffmpeg-9.0 tarball; the result
+configures and builds clean on linux-x86_64 both with the SDK's normal flags
+and with the full aarch64 feature set forced on (--enable-sand
+--enable-v4l2-request --enable-v4l2-m2m --enable-libdrm --enable-libudev
+--enable-libv4l2), which is what actually compiles the patched files -- and on
+a real linux-aarch64 box.
 ---
-diff -urN '--exclude=.git' ffmpeg-9.0/configure rb/configure
+diff -urN '--exclude=.git' ffmpeg-9.0/configure rb2/configure
 --- ffmpeg-9.0/configure	2026-08-03 18:14:47.000000000 -0400
-+++ rb/configure	2026-08-08 01:08:36.277760443 -0400
++++ rb2/configure	2026-08-08 11:47:19.001770482 -0400
 @@ -204,6 +204,7 @@
    --enable-cairo           enable cairo [no]
    --disable-coreimage      disable Apple CoreImage framework [autodetect]
@@ -207,9 +221,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/configure rb/configure
  case $target_os in
  *-dos|freedos|opendos)
      if test_cpp_condition sys/version.h "defined(__DJGPP__) && __DJGPP__ == 2 && __DJGPP_MINOR__ == 5"; then
-diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_dec.c rb/fftools/ffmpeg_dec.c
+diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_dec.c rb2/fftools/ffmpeg_dec.c
 --- ffmpeg-9.0/fftools/ffmpeg_dec.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/fftools/ffmpeg_dec.c	2026-08-08 01:08:52.791313663 -0400
++++ rb2/fftools/ffmpeg_dec.c	2026-08-08 11:47:19.002072442 -0400
 @@ -387,7 +387,7 @@
  static int video_frame_process(DecoderPriv *dp, AVFrame *frame,
                                 unsigned *outputs_mask)
@@ -237,9 +251,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_dec.c rb/fftools/ffmpeg_dec
                        AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX))
                      continue;
                  if (config->pix_fmt == *p)
-diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_filter.c rb/fftools/ffmpeg_filter.c
+diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_filter.c rb2/fftools/ffmpeg_filter.c
 --- ffmpeg-9.0/fftools/ffmpeg_filter.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/fftools/ffmpeg_filter.c	2026-08-08 01:08:26.590848135 -0400
++++ rb2/fftools/ffmpeg_filter.c	2026-08-08 11:47:19.002213427 -0400
 @@ -3080,8 +3080,8 @@
          break;
      case AVMEDIA_TYPE_VIDEO:
@@ -261,9 +275,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_filter.c rb/fftools/ffmpeg_
      if (need_reinit) {
          ret = ifilter_parameters_from_frame(ifilter, frame);
          if (ret < 0)
-diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg.h rb/fftools/ffmpeg.h
+diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg.h rb2/fftools/ffmpeg.h
 --- ffmpeg-9.0/fftools/ffmpeg.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/fftools/ffmpeg.h	2026-08-08 01:08:26.590590722 -0400
++++ rb2/fftools/ffmpeg.h	2026-08-08 11:47:19.002314310 -0400
 @@ -735,6 +735,8 @@
  extern float frame_drop_threshold;
  extern int do_benchmark;
@@ -273,9 +287,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg.h rb/fftools/ffmpeg.h
  extern int do_hex_dump;
  extern int do_pkt_dump;
  extern int copy_ts;
-diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_hw.c rb/fftools/ffmpeg_hw.c
+diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_hw.c rb2/fftools/ffmpeg_hw.c
 --- ffmpeg-9.0/fftools/ffmpeg_hw.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/fftools/ffmpeg_hw.c	2026-08-08 01:08:26.590929939 -0400
++++ rb2/fftools/ffmpeg_hw.c	2026-08-08 11:47:19.002354692 -0400
 @@ -73,6 +73,8 @@
      char *name;
      size_t index_pos;
@@ -285,9 +299,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_hw.c rb/fftools/ffmpeg_hw.c
      index_pos = strlen(type_name);
      name = av_malloc(index_pos + 4);
      if (!name)
-diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_opt.c rb/fftools/ffmpeg_opt.c
+diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_opt.c rb2/fftools/ffmpeg_opt.c
 --- ffmpeg-9.0/fftools/ffmpeg_opt.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/fftools/ffmpeg_opt.c	2026-08-08 01:08:26.590998384 -0400
++++ rb2/fftools/ffmpeg_opt.c	2026-08-08 11:47:19.002432640 -0400
 @@ -59,6 +59,7 @@
  float frame_drop_threshold = 0;
  int do_benchmark      = 0;
@@ -310,9 +324,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/fftools/ffmpeg_opt.c rb/fftools/ffmpeg_opt
        "write program-readable progress information", "url" },
      { "stdin",                  OPT_TYPE_BOOL, OPT_EXPERT,
          { &stdin_interaction },
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/hevcdec.c rb/libavcodec/hevc/hevcdec.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/hevcdec.c rb2/libavcodec/hevc/hevcdec.c
 --- ffmpeg-9.0/libavcodec/hevc/hevcdec.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/hevc/hevcdec.c	2026-08-08 01:08:26.591481981 -0400
++++ rb2/libavcodec/hevc/hevcdec.c	2026-08-08 11:47:19.002600176 -0400
 @@ -353,6 +353,19 @@
      else
          avctx->color_range = AVCOL_RANGE_MPEG;
@@ -441,9 +455,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/hevcdec.c rb/libavcodec/he
  #if CONFIG_HEVC_VAAPI_HWACCEL
                                 HWACCEL_VAAPI(hevc),
  #endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/parser.c rb/libavcodec/hevc/parser.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/parser.c rb2/libavcodec/hevc/parser.c
 --- ffmpeg-9.0/libavcodec/hevc/parser.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/hevc/parser.c	2026-08-08 01:08:26.591625680 -0400
++++ rb2/libavcodec/hevc/parser.c	2026-08-08 11:47:19.002732347 -0400
 @@ -95,6 +95,19 @@
      avctx->profile  = sps->ptl.general_ptl.profile_idc;
      avctx->level    = sps->ptl.general_ptl.level_idc;
@@ -464,9 +478,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/parser.c rb/libavcodec/hev
      if (sps->vps->vps_timing_info_present_flag) {
          num = sps->vps->vps_num_units_in_tick;
          den = sps->vps->vps_time_scale;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/refs.c rb/libavcodec/hevc/refs.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/refs.c rb2/libavcodec/hevc/refs.c
 --- ffmpeg-9.0/libavcodec/hevc/refs.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/hevc/refs.c	2026-08-08 01:08:26.591658630 -0400
++++ rb2/libavcodec/hevc/refs.c	2026-08-08 11:47:19.002772007 -0400
 @@ -169,16 +169,19 @@
              goto fail;
          frame->nb_rpl_elems = s->pkt.nb_nals;
@@ -518,9 +532,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc/refs.c rb/libavcodec/hevc/
  
      return 0;
  }
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v1.h rb/libavcodec/hevc-ctrls-v1.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v1.h rb2/libavcodec/hevc-ctrls-v1.h
 --- ffmpeg-9.0/libavcodec/hevc-ctrls-v1.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/hevc-ctrls-v1.h	2026-08-08 01:08:26.591154782 -0400
++++ rb2/libavcodec/hevc-ctrls-v1.h	2026-08-08 11:47:19.002830837 -0400
 @@ -0,0 +1,229 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
@@ -751,9 +765,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v1.h rb/libavcodec/h
 +};
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v2.h rb/libavcodec/hevc-ctrls-v2.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v2.h rb2/libavcodec/hevc-ctrls-v2.h
 --- ffmpeg-9.0/libavcodec/hevc-ctrls-v2.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/hevc-ctrls-v2.h	2026-08-08 01:08:26.591172790 -0400
++++ rb2/libavcodec/hevc-ctrls-v2.h	2026-08-08 11:47:19.002886341 -0400
 @@ -0,0 +1,257 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
@@ -1012,9 +1026,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v2.h rb/libavcodec/h
 +};
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v3.h rb/libavcodec/hevc-ctrls-v3.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v3.h rb2/libavcodec/hevc-ctrls-v3.h
 --- ffmpeg-9.0/libavcodec/hevc-ctrls-v3.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/hevc-ctrls-v3.h	2026-08-08 01:08:26.591220833 -0400
++++ rb2/libavcodec/hevc-ctrls-v3.h	2026-08-08 11:47:19.002932952 -0400
 @@ -0,0 +1,255 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
@@ -1271,9 +1285,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v3.h rb/libavcodec/h
 +#define V4L2_CID_HANTRO_HEVC_SLICE_HEADER_SKIP	(V4L2_CID_CODEC_HANTRO_BASE + 0)
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v4.h rb/libavcodec/hevc-ctrls-v4.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v4.h rb2/libavcodec/hevc-ctrls-v4.h
 --- ffmpeg-9.0/libavcodec/hevc-ctrls-v4.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/hevc-ctrls-v4.h	2026-08-08 01:08:26.591263938 -0400
++++ rb2/libavcodec/hevc-ctrls-v4.h	2026-08-08 11:47:19.003022579 -0400
 @@ -0,0 +1,524 @@
 +/* SPDX-License-Identifier: ((GPL-2.0+ WITH Linux-syscall-note) OR BSD-3-Clause) */
 +/*
@@ -1799,9 +1813,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hevc-ctrls-v4.h rb/libavcodec/h
 +};
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwaccel_internal.h rb/libavcodec/hwaccel_internal.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwaccel_internal.h rb2/libavcodec/hwaccel_internal.h
 --- ffmpeg-9.0/libavcodec/hwaccel_internal.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/hwaccel_internal.h	2026-08-08 01:08:26.591693443 -0400
++++ rb2/libavcodec/hwaccel_internal.h	2026-08-08 11:47:19.003061879 -0400
 @@ -163,6 +163,17 @@
       * Callback to flush the hwaccel state.
       */
@@ -1820,9 +1834,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwaccel_internal.h rb/libavcode
  } FFHWAccel;
  
  static inline const FFHWAccel *ffhwaccel(const AVHWAccel *codec)
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwaccels.h rb/libavcodec/hwaccels.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwaccels.h rb2/libavcodec/hwaccels.h
 --- ffmpeg-9.0/libavcodec/hwaccels.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/hwaccels.h	2026-08-08 01:08:26.591714606 -0400
++++ rb2/libavcodec/hwaccels.h	2026-08-08 11:47:19.003087388 -0400
 @@ -47,6 +47,7 @@
  extern const struct FFHWAccel ff_hevc_d3d12va_hwaccel;
  extern const struct FFHWAccel ff_hevc_dxva2_hwaccel;
@@ -1831,9 +1845,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwaccels.h rb/libavcodec/hwacce
  extern const struct FFHWAccel ff_hevc_vaapi_hwaccel;
  extern const struct FFHWAccel ff_hevc_vdpau_hwaccel;
  extern const struct FFHWAccel ff_hevc_videotoolbox_hwaccel;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwconfig.h rb/libavcodec/hwconfig.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwconfig.h rb2/libavcodec/hwconfig.h
 --- ffmpeg-9.0/libavcodec/hwconfig.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/hwconfig.h	2026-08-08 01:08:26.591732994 -0400
++++ rb2/libavcodec/hwconfig.h	2026-08-08 11:47:19.003111675 -0400
 @@ -67,6 +67,8 @@
      HW_CONFIG_HWACCEL(1, 1, 0, D3D11,        D3D11VA,      ff_ ## codec ## _d3d11va2_hwaccel)
  #define HWACCEL_NVDEC(codec) \
@@ -1843,9 +1857,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/hwconfig.h rb/libavcodec/hwconf
  #define HWACCEL_VAAPI(codec) \
      HW_CONFIG_HWACCEL(1, 1, 1, VAAPI,        VAAPI,        ff_ ## codec ## _vaapi_hwaccel)
  #define HWACCEL_VDPAU(codec) \
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/Makefile rb/libavcodec/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/Makefile rb2/libavcodec/Makefile
 --- ffmpeg-9.0/libavcodec/Makefile	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/Makefile	2026-08-08 01:08:26.591083784 -0400
++++ rb2/libavcodec/Makefile	2026-08-08 11:47:19.003160329 -0400
 @@ -184,7 +184,10 @@
  OBJS-$(CONFIG_VIDEODSP)                += videodsp.o
  OBJS-$(CONFIG_VP3DSP)                  += vp3dsp.o
@@ -1867,9 +1881,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/Makefile rb/libavcodec/Makefile
  OBJS-$(CONFIG_HEVC_VAAPI_HWACCEL)         += vaapi_hevc.o h265_profile_level.o
  OBJS-$(CONFIG_HEVC_VDPAU_HWACCEL)         += vdpau_hevc.o h265_profile_level.o
  OBJS-$(CONFIG_HEVC_VULKAN_HWACCEL)        += vulkan_decode.o vulkan_hevc.o
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/mmaldec.c rb/libavcodec/mmaldec.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/mmaldec.c rb2/libavcodec/mmaldec.c
 --- ffmpeg-9.0/libavcodec/mmaldec.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/mmaldec.c	2026-08-08 01:08:26.591765703 -0400
++++ rb2/libavcodec/mmaldec.c	2026-08-08 11:47:19.003233730 -0400
 @@ -24,6 +24,9 @@
   * MMAL Video Decoder
   */
@@ -1888,9 +1902,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/mmaldec.c rb/libavcodec/mmaldec
  #include <stdatomic.h>
  
  #include "avcodec.h"
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/rawenc.c rb/libavcodec/rawenc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/rawenc.c rb2/libavcodec/rawenc.c
 --- ffmpeg-9.0/libavcodec/rawenc.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/rawenc.c	2026-08-08 01:08:26.591849271 -0400
++++ rb2/libavcodec/rawenc.c	2026-08-08 11:47:19.003284808 -0400
 @@ -24,6 +24,7 @@
   * Raw Video Encoder
   */
@@ -2047,9 +2061,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/rawenc.c rb/libavcodec/rawenc.c
  }
  
  const FFCodec ff_rawvideo_encoder = {
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/raw_pix_fmt_tags.h rb/libavcodec/raw_pix_fmt_tags.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/raw_pix_fmt_tags.h rb2/libavcodec/raw_pix_fmt_tags.h
 --- ffmpeg-9.0/libavcodec/raw_pix_fmt_tags.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/raw_pix_fmt_tags.h	2026-08-08 01:08:26.591798774 -0400
++++ rb2/libavcodec/raw_pix_fmt_tags.h	2026-08-08 11:47:19.003315725 -0400
 @@ -310,6 +310,12 @@
      { AV_PIX_FMT_RGB565LE,        MKTAG( 3 ,  0 ,  0 ,  0 ) }, /* flipped RGB565LE */
      { AV_PIX_FMT_YUV444P,         MKTAG('Y', 'V', '2', '4') }, /* YUV444P, swapped UV */
@@ -2063,9 +2077,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/raw_pix_fmt_tags.h rb/libavcode
      { AV_PIX_FMT_NONE, 0 },
  };
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_buffers.c rb/libavcodec/v4l2_buffers.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_buffers.c rb2/libavcodec/v4l2_buffers.c
 --- ffmpeg-9.0/libavcodec/v4l2_buffers.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_buffers.c	2026-08-08 01:08:26.591905386 -0400
++++ rb2/libavcodec/v4l2_buffers.c	2026-08-08 11:47:19.003378251 -0400
 @@ -21,6 +21,7 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
@@ -3261,9 +3275,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_buffers.c rb/libavcodec/v4
  
      return 0;
  }
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_buffers.h rb/libavcodec/v4l2_buffers.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_buffers.h rb2/libavcodec/v4l2_buffers.h
 --- ffmpeg-9.0/libavcodec/v4l2_buffers.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_buffers.h	2026-08-08 01:08:26.592067213 -0400
++++ rb2/libavcodec/v4l2_buffers.h	2026-08-08 11:47:19.003548890 -0400
 @@ -28,31 +28,47 @@
  #include <stddef.h>
  #include <linux/videodev2.h>
@@ -3372,9 +3386,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_buffers.h rb/libavcodec/v4
 +
  
  #endif // AVCODEC_V4L2_BUFFERS_H
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_context.c rb/libavcodec/v4l2_context.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_context.c rb2/libavcodec/v4l2_context.c
 --- ffmpeg-9.0/libavcodec/v4l2_context.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_context.c	2026-08-08 01:08:26.592119643 -0400
++++ rb2/libavcodec/v4l2_context.c	2026-08-08 11:47:19.003607249 -0400
 @@ -28,11 +28,14 @@
  #include <fcntl.h>
  #include <poll.h>
@@ -4783,9 +4797,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_context.c rb/libavcodec/v4
 +    ff_mutex_destroy(&ctx->lock);
      return ret;
  }
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_context.h rb/libavcodec/v4l2_context.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_context.h rb2/libavcodec/v4l2_context.h
 --- ffmpeg-9.0/libavcodec/v4l2_context.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_context.h	2026-08-08 01:08:26.592320629 -0400
++++ rb2/libavcodec/v4l2_context.h	2026-08-08 11:47:19.003812001 -0400
 @@ -32,6 +32,8 @@
  #include "libavutil/rational.h"
  #include "codec_id.h"
@@ -4948,9 +4962,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_context.h rb/libavcodec/v4
 +}
 +
  #endif // AVCODEC_V4L2_CONTEXT_H
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_fmt.c rb/libavcodec/v4l2_fmt.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_fmt.c rb2/libavcodec/v4l2_fmt.c
 --- ffmpeg-9.0/libavcodec/v4l2_fmt.c	2023-11-09 18:38:51.000000000 -0500
-+++ rb/libavcodec/v4l2_fmt.c	2026-08-08 01:08:26.592351837 -0400
++++ rb2/libavcodec/v4l2_fmt.c	2026-08-08 11:47:19.003847615 -0400
 @@ -42,6 +42,14 @@
      { AV_FMT(RGB24),       AV_CODEC(RAWVIDEO),    V4L2_FMT(RGB24) },
      { AV_FMT(BGR0),        AV_CODEC(RAWVIDEO),    V4L2_FMT(BGR32) },
@@ -4966,9 +4980,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_fmt.c rb/libavcodec/v4l2_f
      { AV_FMT(GRAY8),       AV_CODEC(RAWVIDEO),    V4L2_FMT(GREY) },
      { AV_FMT(YUV420P),     AV_CODEC(RAWVIDEO),    V4L2_FMT(YUV420) },
      { AV_FMT(YUYV422),     AV_CODEC(RAWVIDEO),    V4L2_FMT(YUYV) },
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m.c rb/libavcodec/v4l2_m2m.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m.c rb2/libavcodec/v4l2_m2m.c
 --- ffmpeg-9.0/libavcodec/v4l2_m2m.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_m2m.c	2026-08-08 01:08:26.592383205 -0400
++++ rb2/libavcodec/v4l2_m2m.c	2026-08-08 11:47:19.003882428 -0400
 @@ -36,6 +36,15 @@
  #include "v4l2_context.h"
  #include "v4l2_fmt.h"
@@ -5133,9 +5147,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m.c rb/libavcodec/v4l2_m
  
      priv->context->frame = av_frame_alloc();
      if (!priv->context->frame) {
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_dec.c rb/libavcodec/v4l2_m2m_dec.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_dec.c rb2/libavcodec/v4l2_m2m_dec.c
 --- ffmpeg-9.0/libavcodec/v4l2_m2m_dec.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_m2m_dec.c	2026-08-08 01:08:26.592485170 -0400
++++ rb2/libavcodec/v4l2_m2m_dec.c	2026-08-08 11:55:19.603640459 -0400
 @@ -21,8 +21,15 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
@@ -6570,7 +6584,7 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_dec.c rb/libavcodec/v4
  #define M2MDEC_CLASS(NAME) \
      static const AVClass v4l2_m2m_ ## NAME ## _dec_class = { \
          .class_name = #NAME "_v4l2m2m_decoder", \
-@@ -250,11 +1420,17 @@
+@@ -250,11 +1420,14 @@
          .init           = v4l2_decode_init, \
          FF_CODEC_RECEIVE_FRAME_CB(v4l2_receive_frame), \
          .close          = v4l2_decode_close, \
@@ -6580,17 +6594,14 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_dec.c rb/libavcodec/v4
          .caps_internal  = FF_CODEC_CAP_NOT_INIT_THREADSAFE | \
                            FF_CODEC_CAP_INIT_CLEANUP, \
          .p.wrapper_name = "v4l2m2m", \
-+        .p.pix_fmts     = (const enum AVPixelFormat[]) { AV_PIX_FMT_DRM_PRIME, \
-+                                                         AV_PIX_FMT_NV12, \
-+                                                         AV_PIX_FMT_YUV420P, \
-+                                                         AV_PIX_FMT_NONE}, \
++        CODEC_PIXFMTS(AV_PIX_FMT_DRM_PRIME, AV_PIX_FMT_NV12, AV_PIX_FMT_YUV420P), \
 +        .hw_configs     = v4l2_m2m_hw_configs, \
      }
  
  M2MDEC(h264,  "H.264", AV_CODEC_ID_H264,       "h264_mp4toannexb");
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_enc.c rb/libavcodec/v4l2_m2m_enc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_enc.c rb2/libavcodec/v4l2_m2m_enc.c
 --- ffmpeg-9.0/libavcodec/v4l2_m2m_enc.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_m2m_enc.c	2026-08-08 01:08:26.592677924 -0400
++++ rb2/libavcodec/v4l2_m2m_enc.c	2026-08-08 11:47:19.004157347 -0400
 @@ -21,13 +21,17 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
@@ -7061,9 +7072,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m_enc.c rb/libavcodec/v4
  
  static const AVOption mpeg4_options[] = {
      V4L_M2M_CAPTURE_OPTS,
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m.h rb/libavcodec/v4l2_m2m.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m.h rb2/libavcodec/v4l2_m2m.h
 --- ffmpeg-9.0/libavcodec/v4l2_m2m.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavcodec/v4l2_m2m.h	2026-08-08 01:08:26.592431508 -0400
++++ rb2/libavcodec/v4l2_m2m.h	2026-08-08 11:47:19.004258121 -0400
 @@ -30,6 +30,7 @@
  #include <linux/videodev2.h>
  
@@ -7193,9 +7204,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_m2m.h rb/libavcodec/v4l2_m
 +
 +
  #endif /* AVCODEC_V4L2_M2M_H */
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_decode_q.c rb/libavcodec/v4l2_req_decode_q.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_decode_q.c rb2/libavcodec/v4l2_req_decode_q.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_decode_q.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_decode_q.c	2026-08-08 01:08:26.592762403 -0400
++++ rb2/libavcodec/v4l2_req_decode_q.c	2026-08-08 11:47:19.004274255 -0400
 @@ -0,0 +1,108 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -7305,9 +7316,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_decode_q.c rb/libavcod
 +}
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_decode_q.h rb/libavcodec/v4l2_req_decode_q.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_decode_q.h rb2/libavcodec/v4l2_req_decode_q.h
 --- ffmpeg-9.0/libavcodec/v4l2_req_decode_q.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_decode_q.h	2026-08-08 01:08:26.592772208 -0400
++++ rb2/libavcodec/v4l2_req_decode_q.h	2026-08-08 11:47:19.004308838 -0400
 @@ -0,0 +1,51 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -7360,9 +7371,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_decode_q.h rb/libavcod
 +
 +#endif
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_devscan.c rb/libavcodec/v4l2_req_devscan.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_devscan.c rb2/libavcodec/v4l2_req_devscan.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_devscan.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_devscan.c	2026-08-08 01:08:26.592791157 -0400
++++ rb2/libavcodec/v4l2_req_devscan.c	2026-08-08 11:47:19.004370051 -0400
 @@ -0,0 +1,474 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -7838,9 +7849,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_devscan.c rb/libavcode
 +    return ret;
 +}
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_devscan.h rb/libavcodec/v4l2_req_devscan.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_devscan.h rb2/libavcodec/v4l2_req_devscan.h
 --- ffmpeg-9.0/libavcodec/v4l2_req_devscan.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_devscan.h	2026-08-08 01:08:26.592857618 -0400
++++ rb2/libavcodec/v4l2_req_devscan.h	2026-08-08 11:47:19.004402320 -0400
 @@ -0,0 +1,47 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -7889,9 +7900,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_devscan.h rb/libavcode
 +void devscan_delete(struct devscan **const pScan);
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.c rb/libavcodec/v4l2_req_dmabufs.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.c rb2/libavcodec/v4l2_req_dmabufs.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_dmabufs.c	2026-08-08 01:08:26.592877829 -0400
++++ rb2/libavcodec/v4l2_req_dmabufs.c	2026-08-08 11:47:19.004456413 -0400
 @@ -0,0 +1,433 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -8326,9 +8337,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.c rb/libavcode
 +    return dmabufs_ctl_new2(&dmabuf_vidbuf_cached_fns);
 +}
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.h rb/libavcodec/v4l2_req_dmabufs.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.h rb2/libavcodec/v4l2_req_dmabufs.h
 --- ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_dmabufs.h	2026-08-08 01:08:26.592934355 -0400
++++ rb2/libavcodec/v4l2_req_dmabufs.h	2026-08-08 11:47:19.004493720 -0400
 @@ -0,0 +1,69 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -8399,9 +8410,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_dmabufs.h rb/libavcode
 +void dmabuf_free(struct dmabuf_h * dh);
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v1.c rb/libavcodec/v4l2_req_hevc_v1.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v1.c rb2/libavcodec/v4l2_req_hevc_v1.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_hevc_v1.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_hevc_v1.c	2026-08-08 01:08:26.592955057 -0400
++++ rb2/libavcodec/v4l2_req_hevc_v1.c	2026-08-08 11:47:19.004510605 -0400
 @@ -0,0 +1,27 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -8430,9 +8441,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v1.c rb/libavcode
 +#define HEVC_CTRLS_VERSION 1
 +#include "v4l2_req_hevc_vx.c"
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v2.c rb/libavcodec/v4l2_req_hevc_v2.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v2.c rb2/libavcodec/v4l2_req_hevc_v2.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_hevc_v2.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_hevc_v2.c	2026-08-08 01:08:26.592971371 -0400
++++ rb2/libavcodec/v4l2_req_hevc_v2.c	2026-08-08 11:47:19.004527802 -0400
 @@ -0,0 +1,27 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -8461,9 +8472,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v2.c rb/libavcode
 +#define HEVC_CTRLS_VERSION 2
 +#include "v4l2_req_hevc_vx.c"
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v3.c rb/libavcodec/v4l2_req_hevc_v3.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v3.c rb2/libavcodec/v4l2_req_hevc_v3.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_hevc_v3.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_hevc_v3.c	2026-08-08 01:08:26.592985323 -0400
++++ rb2/libavcodec/v4l2_req_hevc_v3.c	2026-08-08 11:47:19.004545709 -0400
 @@ -0,0 +1,27 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -8492,9 +8503,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v3.c rb/libavcode
 +#define HEVC_CTRLS_VERSION 3
 +#include "v4l2_req_hevc_vx.c"
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v4.c rb/libavcodec/v4l2_req_hevc_v4.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v4.c rb2/libavcodec/v4l2_req_hevc_v4.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_hevc_v4.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_hevc_v4.c	2026-08-08 01:08:26.593001287 -0400
++++ rb2/libavcodec/v4l2_req_hevc_v4.c	2026-08-08 11:47:19.004561823 -0400
 @@ -0,0 +1,27 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -8523,9 +8534,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_v4.c rb/libavcode
 +#define HEVC_CTRLS_VERSION 4
 +#include "v4l2_req_hevc_vx.c"
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_vx.c rb/libavcodec/v4l2_req_hevc_vx.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_vx.c rb2/libavcodec/v4l2_req_hevc_vx.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_hevc_vx.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_hevc_vx.c	2026-08-08 01:08:26.593017822 -0400
++++ rb2/libavcodec/v4l2_req_hevc_vx.c	2026-08-08 11:47:19.046194437 -0400
 @@ -0,0 +1,1479 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -9983,7 +9994,7 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_vx.c rb/libavcode
 +    frame->width = avctx->coded_width;
 +    frame->height = avctx->coded_height;
 +
-+    if ((rv = ff_attach_decode_data(frame)) != 0) {
++    if ((rv = ff_attach_decode_data(avctx, frame)) != 0) {
 +        av_log(avctx, AV_LOG_ERROR, "Failed to attach decode data to frame\n");
 +        av_frame_unref(frame);
 +        return rv;
@@ -10006,9 +10017,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_hevc_vx.c rb/libavcode
 +    .alloc_frame    = alloc_frame,
 +};
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_media.c rb/libavcodec/v4l2_req_media.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_media.c rb2/libavcodec/v4l2_req_media.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_media.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_media.c	2026-08-08 01:08:26.593225759 -0400
++++ rb2/libavcodec/v4l2_req_media.c	2026-08-08 11:47:19.004948733 -0400
 @@ -0,0 +1,1835 @@
 +/*
 + * Copyright (C) 2018 Paul Kocialkowski <paul.kocialkowski@bootlin.com>
@@ -11845,9 +11856,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_media.c rb/libavcodec/
 +
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_media.h rb/libavcodec/v4l2_req_media.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_media.h rb2/libavcodec/v4l2_req_media.h
 --- ffmpeg-9.0/libavcodec/v4l2_req_media.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_media.h	2026-08-08 01:08:26.593459445 -0400
++++ rb2/libavcodec/v4l2_req_media.h	2026-08-08 11:47:19.005041414 -0400
 @@ -0,0 +1,179 @@
 +/*
 +e.h
@@ -12028,9 +12039,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_media.h rb/libavcodec/
 +
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.c rb/libavcodec/v4l2_req_pollqueue.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.c rb2/libavcodec/v4l2_req_pollqueue.c
 --- ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_pollqueue.c	2026-08-08 01:08:26.593499667 -0400
++++ rb2/libavcodec/v4l2_req_pollqueue.c	2026-08-08 11:47:19.005095116 -0400
 @@ -0,0 +1,385 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -12417,9 +12428,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.c rb/libavco
 +
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.h rb/libavcodec/v4l2_req_pollqueue.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.h rb2/libavcodec/v4l2_req_pollqueue.h
 --- ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_pollqueue.h	2026-08-08 01:08:26.593551776 -0400
++++ rb2/libavcodec/v4l2_req_pollqueue.h	2026-08-08 11:47:19.005123479 -0400
 @@ -0,0 +1,42 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -12463,9 +12474,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_pollqueue.h rb/libavco
 +struct pollqueue * pollqueue_ref(struct pollqueue *const pq);
 +
 +#endif /* AVCODEC_V4L2_REQ_POLLQUEUE_H_ */
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_request_hevc.c rb/libavcodec/v4l2_request_hevc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_request_hevc.c rb2/libavcodec/v4l2_request_hevc.c
 --- ffmpeg-9.0/libavcodec/v4l2_request_hevc.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_request_hevc.c	2026-08-08 01:08:26.593587360 -0400
++++ rb2/libavcodec/v4l2_request_hevc.c	2026-08-08 11:47:19.005184121 -0400
 @@ -0,0 +1,437 @@
 +/*
 + * This file is part of FFmpeg.
@@ -12904,9 +12915,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_request_hevc.c rb/libavcod
 +    .frame_params   = ff_v4l2_request_frame_params,
 +    .caps_internal  = HWACCEL_CAP_ASYNC_SAFE | HWACCEL_CAP_THREAD_SAFE,
 +};
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_request_hevc.h rb/libavcodec/v4l2_request_hevc.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_request_hevc.h rb2/libavcodec/v4l2_request_hevc.h
 --- ffmpeg-9.0/libavcodec/v4l2_request_hevc.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_request_hevc.h	2026-08-08 01:08:26.593654182 -0400
++++ rb2/libavcodec/v4l2_request_hevc.h	2026-08-08 11:47:19.005227828 -0400
 @@ -0,0 +1,164 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -13072,9 +13083,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_request_hevc.h rb/libavcod
 +extern const v4l2_req_decode_fns V2(ff_v4l2_req_hevc, 4);
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_utils.h rb/libavcodec/v4l2_req_utils.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_utils.h rb2/libavcodec/v4l2_req_utils.h
 --- ffmpeg-9.0/libavcodec/v4l2_req_utils.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/v4l2_req_utils.h	2026-08-08 01:08:26.593571116 -0400
++++ rb2/libavcodec/v4l2_req_utils.h	2026-08-08 11:47:19.005250362 -0400
 @@ -0,0 +1,51 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -13127,9 +13138,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/v4l2_req_utils.h rb/libavcodec/
 +}
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/weak_link.c rb/libavcodec/weak_link.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/weak_link.c rb2/libavcodec/weak_link.c
 --- ffmpeg-9.0/libavcodec/weak_link.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/weak_link.c	2026-08-08 01:08:26.593689136 -0400
++++ rb2/libavcodec/weak_link.c	2026-08-08 11:47:19.005279396 -0400
 @@ -0,0 +1,127 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -13258,9 +13269,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/weak_link.c rb/libavcodec/weak_
 +}
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/weak_link.h rb/libavcodec/weak_link.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/weak_link.h rb2/libavcodec/weak_link.h
 --- ffmpeg-9.0/libavcodec/weak_link.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavcodec/weak_link.h	2026-08-08 01:08:26.593712171 -0400
++++ rb2/libavcodec/weak_link.h	2026-08-08 11:47:19.005300068 -0400
 @@ -0,0 +1,46 @@
 +/*
 +    Copyright (C) 2024  John Cox john.cox@raspberrypi.com
@@ -13308,9 +13319,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavcodec/weak_link.h rb/libavcodec/weak_
 +void ff_weak_link_unlock(struct ff_weak_link_client * c);
 +
 +#endif
-diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/alldevices.c rb/libavdevice/alldevices.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/alldevices.c rb2/libavdevice/alldevices.c
 --- ffmpeg-9.0/libavdevice/alldevices.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavdevice/alldevices.c	2026-08-08 01:08:26.593755236 -0400
++++ rb2/libavdevice/alldevices.c	2026-08-08 11:47:19.005323033 -0400
 @@ -53,6 +53,8 @@
  extern const FFInputFormat  ff_v4l2_demuxer;
  extern const FFOutputFormat ff_v4l2_muxer;
@@ -13320,9 +13331,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/alldevices.c rb/libavdevice/al
  extern const FFInputFormat  ff_xcbgrab_demuxer;
  extern const FFOutputFormat ff_xv_muxer;
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/drm_vout.c rb/libavdevice/drm_vout.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/drm_vout.c rb2/libavdevice/drm_vout.c
 --- ffmpeg-9.0/libavdevice/drm_vout.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavdevice/drm_vout.c	2026-08-08 01:08:26.593827346 -0400
++++ rb2/libavdevice/drm_vout.c	2026-08-08 11:47:19.005339949 -0400
 @@ -0,0 +1,684 @@
 +/*
 + * Copyright (c) 2020 John Cox for Raspberry Pi Trading
@@ -14008,9 +14019,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/drm_vout.c rb/libavdevice/drm_
 +    .deinit         = drm_vout_deinit,
 +};
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/egl_vout.c rb/libavdevice/egl_vout.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/egl_vout.c rb2/libavdevice/egl_vout.c
 --- ffmpeg-9.0/libavdevice/egl_vout.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavdevice/egl_vout.c	2026-08-08 01:08:26.593849049 -0400
++++ rb2/libavdevice/egl_vout.c	2026-08-08 11:47:19.005500924 -0400
 @@ -0,0 +1,784 @@
 +/*
 + * Copyright (c) 2020 John Cox for Raspberry Pi Trading
@@ -14796,9 +14807,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/egl_vout.c rb/libavdevice/egl_
 +    .deinit         = egl_vout_deinit,
 +};
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/Makefile rb/libavdevice/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/Makefile rb2/libavdevice/Makefile
 --- ffmpeg-9.0/libavdevice/Makefile	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavdevice/Makefile	2026-08-08 01:08:26.593739252 -0400
++++ rb2/libavdevice/Makefile	2026-08-08 11:47:19.005544280 -0400
 @@ -45,6 +45,8 @@
  OBJS-$(CONFIG_V4L2_INDEV)                += v4l2.o v4l2-common.o timefilter.o
  OBJS-$(CONFIG_V4L2_OUTDEV)               += v4l2enc.o v4l2-common.o
@@ -14808,9 +14819,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavdevice/Makefile rb/libavdevice/Makefi
  OBJS-$(CONFIG_XCBGRAB_INDEV)             += xcbgrab.o
  OBJS-$(CONFIG_XV_OUTDEV)                 += xv.o
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/allfilters.c rb/libavfilter/allfilters.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/allfilters.c rb2/libavfilter/allfilters.c
 --- ffmpeg-9.0/libavfilter/allfilters.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavfilter/allfilters.c	2026-08-08 01:08:26.594038809 -0400
++++ rb2/libavfilter/allfilters.c	2026-08-08 11:47:19.005575618 -0400
 @@ -253,6 +253,7 @@
  extern const FFFilter ff_vf_deflicker;
  extern const FFFilter ff_vf_deinterlace_qsv;
@@ -14835,9 +14846,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/allfilters.c rb/libavfilter/al
  extern const FFFilter ff_vf_unsharp;
  extern const FFFilter ff_vf_unsharp_opencl;
  extern const FFFilter ff_vf_untile;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersink.c rb/libavfilter/buffersink.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersink.c rb2/libavfilter/buffersink.c
 --- ffmpeg-9.0/libavfilter/buffersink.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavfilter/buffersink.c	2026-08-08 01:08:26.594084779 -0400
++++ rb2/libavfilter/buffersink.c	2026-08-08 11:47:19.005620115 -0400
 @@ -69,6 +69,11 @@
      unsigned          nb_channel_layouts;
  
@@ -14897,9 +14908,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersink.c rb/libavfilter/bu
      FILTER_QUERY_FUNC2(vsink_query_formats),
  };
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersink.h rb/libavfilter/buffersink.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersink.h rb2/libavfilter/buffersink.h
 --- ffmpeg-9.0/libavfilter/buffersink.h	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavfilter/buffersink.h	2026-08-08 01:08:26.594117288 -0400
++++ rb2/libavfilter/buffersink.h	2026-08-08 11:47:19.005653636 -0400
 @@ -165,6 +165,9 @@
   */
  int av_buffersink_get_samples(AVFilterContext *ctx, AVFrame *frame, int nb_samples);
@@ -14910,9 +14921,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersink.h rb/libavfilter/bu
  /**
   * @}
   */
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersrc.c rb/libavfilter/buffersrc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersrc.c rb2/libavfilter/buffersrc.c
 --- ffmpeg-9.0/libavfilter/buffersrc.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavfilter/buffersrc.c	2026-08-08 01:08:26.594146393 -0400
++++ rb2/libavfilter/buffersrc.c	2026-08-08 11:47:19.005688880 -0400
 @@ -228,7 +228,7 @@
  
          switch (ctx->outputs[0]->type) {
@@ -14922,9 +14933,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/buffersrc.c rb/libavfilter/buf
                                       frame->format, frame->colorspace,
                                       frame->color_range, frame->alpha_mode, frame->pts);
              break;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/Makefile rb/libavfilter/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/Makefile rb2/libavfilter/Makefile
 --- ffmpeg-9.0/libavfilter/Makefile	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavfilter/Makefile	2026-08-08 01:08:26.593970765 -0400
++++ rb2/libavfilter/Makefile	2026-08-08 11:47:19.005732787 -0400
 @@ -279,6 +279,7 @@
  OBJS-$(CONFIG_DEINTERLACE_D3D12_FILTER)      += vf_deinterlace_d3d12.o
  OBJS-$(CONFIG_DEINTERLACE_QSV_FILTER)        += vf_vpp_qsv.o
@@ -14941,9 +14952,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/Makefile rb/libavfilter/Makefi
  OBJS-$(CONFIG_UNSHARP_FILTER)                += vf_unsharp.o
  OBJS-$(CONFIG_UNSHARP_OPENCL_FILTER)         += vf_unsharp_opencl.o opencl.o \
                                                  opencl/unsharp.o
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_bwdif.c rb/libavfilter/vf_bwdif.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_bwdif.c rb2/libavfilter/vf_bwdif.c
 --- ffmpeg-9.0/libavfilter/vf_bwdif.c	2026-08-03 18:14:47.000000000 -0400
-+++ rb/libavfilter/vf_bwdif.c	2026-08-08 01:08:26.594180765 -0400
++++ rb2/libavfilter/vf_bwdif.c	2026-08-08 11:47:19.005777896 -0400
 @@ -124,19 +124,28 @@
      YADIFContext *yadif = &bwdif->yadif;
      ThreadData td = { .frame = dstpic, .parity = parity, .tff = tff };
@@ -14984,9 +14995,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_bwdif.c rb/libavfilter/vf_b
      AV_PIX_FMT_GBRP, AV_PIX_FMT_GBRP9, AV_PIX_FMT_GBRP10,
      AV_PIX_FMT_GBRP12, AV_PIX_FMT_GBRP14, AV_PIX_FMT_GBRP16,
      AV_PIX_FMT_GBRAP, AV_PIX_FMT_GBRAP16,
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_deinterlace_v4l2m2m.c rb/libavfilter/vf_deinterlace_v4l2m2m.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_deinterlace_v4l2m2m.c rb2/libavfilter/vf_deinterlace_v4l2m2m.c
 --- ffmpeg-9.0/libavfilter/vf_deinterlace_v4l2m2m.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavfilter/vf_deinterlace_v4l2m2m.c	2026-08-08 01:08:26.594392858 -0400
++++ rb2/libavfilter/vf_deinterlace_v4l2m2m.c	2026-08-08 11:47:19.005798317 -0400
 @@ -0,0 +1,2102 @@
 +/*
 + * This file is part of FFmpeg.
@@ -17090,9 +17101,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_deinterlace_v4l2m2m.c rb/li
 +    .activate       = deint_v4l2m2m_activate,
 +};
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_unsand.c rb/libavfilter/vf_unsand.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_unsand.c rb2/libavfilter/vf_unsand.c
 --- ffmpeg-9.0/libavfilter/vf_unsand.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavfilter/vf_unsand.c	2026-08-08 01:08:26.594453881 -0400
++++ rb2/libavfilter/vf_unsand.c	2026-08-08 11:47:19.006090261 -0400
 @@ -0,0 +1,227 @@
 +/*
 + * Copyright (c) 2007 Bobby Bingham
@@ -17321,9 +17332,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavfilter/vf_unsand.c rb/libavfilter/vf_
 +    FILTER_OUTPUTS(avfilter_vf_unsand_outputs),
 +};
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/allformats.c rb/libavformat/allformats.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/allformats.c rb2/libavformat/allformats.c
 --- ffmpeg-9.0/libavformat/allformats.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavformat/allformats.c	2026-08-08 01:08:26.594570710 -0400
++++ rb2/libavformat/allformats.c	2026-08-08 11:47:19.006125545 -0400
 @@ -127,6 +127,7 @@
  extern const FFInputFormat  ff_codec2raw_demuxer;
  extern const FFOutputFormat ff_codec2raw_muxer;
@@ -17332,9 +17343,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/allformats.c rb/libavformat/al
  extern const FFOutputFormat ff_crc_muxer;
  extern const FFInputFormat  ff_dash_demuxer;
  extern const FFOutputFormat ff_dash_muxer;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/conformenc.c rb/libavformat/conformenc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/conformenc.c rb2/libavformat/conformenc.c
 --- ffmpeg-9.0/libavformat/conformenc.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavformat/conformenc.c	2026-08-08 01:08:26.594641748 -0400
++++ rb2/libavformat/conformenc.c	2026-08-08 11:47:19.006152196 -0400
 @@ -0,0 +1,491 @@
 +/*
 + * Copyright (c) 2020 John Cox for Raspberry Pi Trading
@@ -17827,9 +17838,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/conformenc.c rb/libavformat/co
 +    .deinit         = conform_vout_deinit,
 +};
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/Makefile rb/libavformat/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/Makefile rb2/libavformat/Makefile
 --- ffmpeg-9.0/libavformat/Makefile	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavformat/Makefile	2026-08-08 01:08:26.594528455 -0400
++++ rb2/libavformat/Makefile	2026-08-08 11:47:19.006252999 -0400
 @@ -184,6 +184,7 @@
  OBJS-$(CONFIG_CODEC2RAW_DEMUXER)         += codec2.o pcm.o
  OBJS-$(CONFIG_CODEC2RAW_MUXER)           += rawenc.o
@@ -17838,9 +17849,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/Makefile rb/libavformat/Makefi
  OBJS-$(CONFIG_CRC_MUXER)                 += crcenc.o
  OBJS-$(CONFIG_DATA_DEMUXER)              += rawdec.o
  OBJS-$(CONFIG_DATA_MUXER)                += rawenc.o
-diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/matroskaenc.c rb/libavformat/matroskaenc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/matroskaenc.c rb2/libavformat/matroskaenc.c
 --- ffmpeg-9.0/libavformat/matroskaenc.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavformat/matroskaenc.c	2026-08-08 01:08:26.594771025 -0400
++++ rb2/libavformat/matroskaenc.c	2026-08-08 11:47:19.006394735 -0400
 @@ -87,6 +87,10 @@
  
  #define IS_WEBM(mkv) (CONFIG_WEBM_MUXER && CONFIG_MATROSKA_MUXER ? \
@@ -17909,9 +17920,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/matroskaenc.c rb/libavformat/m
          case AV_CODEC_ID_HEVC:
          case AV_CODEC_ID_VVC:
              if (((par->codec_id == AV_CODEC_ID_H264 && par->extradata_size > 0) ||
-diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/movenc.c rb/libavformat/movenc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/movenc.c rb2/libavformat/movenc.c
 --- ffmpeg-9.0/libavformat/movenc.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavformat/movenc.c	2026-08-08 01:08:26.595152487 -0400
++++ rb2/libavformat/movenc.c	2026-08-08 11:47:19.007172700 -0400
 @@ -7412,6 +7412,7 @@
      if (trk->par->codec_id == AV_CODEC_ID_MP4ALS ||
              trk->par->codec_id == AV_CODEC_ID_AAC ||
@@ -17920,9 +17931,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/movenc.c rb/libavformat/movenc
              trk->par->codec_id == AV_CODEC_ID_FLAC) {
          size_t side_size;
          uint8_t *side = av_packet_get_side_data(pkt, AV_PKT_DATA_NEW_EXTRADATA, &side_size);
-diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/rtpenc.c rb/libavformat/rtpenc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/rtpenc.c rb2/libavformat/rtpenc.c
 --- ffmpeg-9.0/libavformat/rtpenc.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavformat/rtpenc.c	2026-08-08 01:08:26.595460156 -0400
++++ rb2/libavformat/rtpenc.c	2026-08-08 11:47:19.007644479 -0400
 @@ -19,6 +19,7 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
@@ -17957,9 +17968,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavformat/rtpenc.c rb/libavformat/rtpenc
      case AV_CODEC_ID_H261:
          ff_rtp_send_h261(s1, pkt->data, size);
          break;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/Makefile rb/libavutil/aarch64/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/Makefile rb2/libavutil/aarch64/Makefile
 --- ffmpeg-9.0/libavutil/aarch64/Makefile	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/aarch64/Makefile	2026-08-08 01:08:26.595525806 -0400
++++ rb2/libavutil/aarch64/Makefile	2026-08-08 11:47:19.007681205 -0400
 @@ -10,5 +10,6 @@
  NEON-OBJS-$(CONFIG_PIXELUTILS) += aarch64/pixelutils_neon.o
  
@@ -17967,9 +17978,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/Makefile rb/libavutil/aa
 +             aarch64/rpi_sand_neon.o                                  \
  
  SME-OBJS += aarch64/cpu_sme.o                                         \
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.h rb/libavutil/aarch64/rpi_sand_neon.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.h rb2/libavutil/aarch64/rpi_sand_neon.h
 --- ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/aarch64/rpi_sand_neon.h	2026-08-08 01:08:26.595635884 -0400
++++ rb2/libavutil/aarch64/rpi_sand_neon.h	2026-08-08 11:47:19.007697860 -0400
 @@ -0,0 +1,61 @@
 +/*
 +Copyright (c) 2021 Michael Eiler
@@ -18032,9 +18043,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.h rb/libav
 +#endif
 +
 +#endif /* AVCODEC_SAND_NEON_H */
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.S rb/libavutil/aarch64/rpi_sand_neon.S
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.S rb2/libavutil/aarch64/rpi_sand_neon.S
 --- ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.S	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/aarch64/rpi_sand_neon.S	2026-08-08 01:08:26.595611226 -0400
++++ rb2/libavutil/aarch64/rpi_sand_neon.S	2026-08-08 11:47:19.007799064 -0400
 @@ -0,0 +1,672 @@
 +/*
 +Copyright (c) 2021 Michael Eiler
@@ -18708,17 +18719,17 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/aarch64/rpi_sand_neon.S rb/libav
 +
 +endfunc
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/Makefile rb/libavutil/arm/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/Makefile rb2/libavutil/arm/Makefile
 --- ffmpeg-9.0/libavutil/arm/Makefile	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/arm/Makefile	2026-08-08 01:08:26.595668934 -0400
++++ rb2/libavutil/arm/Makefile	2026-08-08 11:47:19.007836191 -0400
 @@ -8,3 +8,4 @@
  
  NEON-OBJS += arm/float_dsp_init_neon.o                                  \
               arm/float_dsp_neon.o                                       \
 +             arm/rpi_sand_neon.o                                        \
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/rpi_sand_neon.h rb/libavutil/arm/rpi_sand_neon.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/rpi_sand_neon.h rb2/libavutil/arm/rpi_sand_neon.h
 --- ffmpeg-9.0/libavutil/arm/rpi_sand_neon.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/arm/rpi_sand_neon.h	2026-08-08 01:08:26.595808346 -0400
++++ rb2/libavutil/arm/rpi_sand_neon.h	2026-08-08 11:47:19.007851825 -0400
 @@ -0,0 +1,110 @@
 +/*
 +Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
@@ -18830,9 +18841,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/rpi_sand_neon.h rb/libavutil
 +
 +#endif // AVUTIL_ARM_SAND_NEON_H
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/rpi_sand_neon.S rb/libavutil/arm/rpi_sand_neon.S
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/rpi_sand_neon.S rb2/libavutil/arm/rpi_sand_neon.S
 --- ffmpeg-9.0/libavutil/arm/rpi_sand_neon.S	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/arm/rpi_sand_neon.S	2026-08-08 01:08:26.595780394 -0400
++++ rb2/libavutil/arm/rpi_sand_neon.S	2026-08-08 11:47:19.007986019 -0400
 @@ -0,0 +1,925 @@
 +/*
 +Copyright (c) 2018 Raspberry Pi (Trading) Ltd.
@@ -19759,9 +19770,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/arm/rpi_sand_neon.S rb/libavutil
 +endfunc
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/frame.c rb/libavutil/frame.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/frame.c rb2/libavutil/frame.c
 --- ffmpeg-9.0/libavutil/frame.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/frame.c	2026-08-08 01:08:26.595867406 -0400
++++ rb2/libavutil/frame.c	2026-08-08 11:47:19.008049936 -0400
 @@ -16,6 +16,8 @@
   * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
   */
@@ -19794,9 +19805,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/frame.c rb/libavutil/frame.c
      desc = av_pix_fmt_desc_get(frame->format);
      if (!desc)
          return AVERROR_BUG;
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/frame.h rb/libavutil/frame.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/frame.h rb2/libavutil/frame.h
 --- ffmpeg-9.0/libavutil/frame.h	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/frame.h	2026-08-08 01:08:26.595931825 -0400
++++ rb2/libavutil/frame.h	2026-08-08 11:47:19.008108405 -0400
 @@ -1064,6 +1064,16 @@
   */
  const char *av_frame_side_data_name(enum AVFrameSideDataType type);
@@ -19814,9 +19825,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/frame.h rb/libavutil/frame.h
  /**
   * @return side data descriptor corresponding to a given side data type, NULL
   *         when not available.
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/hwcontext_drm.c rb/libavutil/hwcontext_drm.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/hwcontext_drm.c rb2/libavutil/hwcontext_drm.c
 --- ffmpeg-9.0/libavutil/hwcontext_drm.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/hwcontext_drm.c	2026-08-08 01:08:26.596043645 -0400
++++ rb2/libavutil/hwcontext_drm.c	2026-08-08 11:47:19.008160325 -0400
 @@ -21,6 +21,7 @@
  #include <fcntl.h>
  #include <sys/mman.h>
@@ -20014,9 +20025,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/hwcontext_drm.c rb/libavutil/hwc
  
      map = av_frame_alloc();
      if (!map)
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/hwcontext_vulkan.c rb/libavutil/hwcontext_vulkan.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/hwcontext_vulkan.c rb2/libavutil/hwcontext_vulkan.c
 --- ffmpeg-9.0/libavutil/hwcontext_vulkan.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/hwcontext_vulkan.c	2026-08-08 01:08:26.596240645 -0400
++++ rb2/libavutil/hwcontext_vulkan.c	2026-08-08 11:47:19.008321490 -0400
 @@ -72,6 +72,14 @@
  #define CHECK_CU(x) FF_CUDA_CHECK_DL(cuda_cu, cu, x)
  #endif
@@ -20032,9 +20043,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/hwcontext_vulkan.c rb/libavutil/
  typedef struct VulkanDeviceFeatures {
      VkPhysicalDeviceFeatures2 device;
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/Makefile rb/libavutil/Makefile
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/Makefile rb2/libavutil/Makefile
 --- ffmpeg-9.0/libavutil/Makefile	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/Makefile	2026-08-08 01:08:26.595497783 -0400
++++ rb2/libavutil/Makefile	2026-08-08 11:47:19.008472590 -0400
 @@ -82,6 +82,7 @@
            refstruct.h                                                   \
            replaygain.h                                                  \
@@ -20059,9 +20070,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/Makefile rb/libavutil/Makefile
  SKIPHEADERS-$(CONFIG_VAAPI)            += hwcontext_vaapi.h
  SKIPHEADERS-$(CONFIG_VIDEOTOOLBOX)     += hwcontext_videotoolbox.h
  SKIPHEADERS-$(CONFIG_VDPAU)            += hwcontext_vdpau.h
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/pixdesc.c rb/libavutil/pixdesc.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/pixdesc.c rb2/libavutil/pixdesc.c
 --- ffmpeg-9.0/libavutil/pixdesc.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/pixdesc.c	2026-08-08 01:08:26.596450485 -0400
++++ rb2/libavutil/pixdesc.c	2026-08-08 11:47:19.008568807 -0400
 @@ -3267,6 +3267,50 @@
          .name = "ohcodec",
          .flags = AV_PIX_FMT_FLAG_HWACCEL,
@@ -20113,9 +20124,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/pixdesc.c rb/libavutil/pixdesc.c
  };
  
  static const char * const color_range_names[] = {
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/pixfmt.h rb/libavutil/pixfmt.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/pixfmt.h rb2/libavutil/pixfmt.h
 --- ffmpeg-9.0/libavutil/pixfmt.h	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libavutil/pixfmt.h	2026-08-08 01:08:26.596565310 -0400
++++ rb2/libavutil/pixfmt.h	2026-08-08 11:47:19.008672475 -0400
 @@ -498,6 +498,14 @@
      AV_PIX_FMT_GBRP12MSBLE,    ///< planar GBR 4:4:4 36bpp, lowest bits zero, little-endian
  
@@ -20131,9 +20142,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/pixfmt.h rb/libavutil/pixfmt.h
  
      AV_PIX_FMT_NB         ///< number of pixel formats, DO NOT USE THIS if you want to link with shared libav* because the number of formats might differ between versions
  };
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fn_pw.c rb/libavutil/rpi_sand_fn_pw.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fn_pw.c rb2/libavutil/rpi_sand_fn_pw.c
 --- ffmpeg-9.0/libavutil/rpi_sand_fn_pw.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/rpi_sand_fn_pw.c	2026-08-08 01:08:26.596634185 -0400
++++ rb2/libavutil/rpi_sand_fn_pw.c	2026-08-08 11:47:19.008704894 -0400
 @@ -0,0 +1,227 @@
 +/*
 +Copyright (c) 2018 Raspberry Pi (Trading) Ltd.
@@ -20362,9 +20373,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fn_pw.c rb/libavutil/rp
 +#undef STRCAT
 +#undef FUNC
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fns.c rb/libavutil/rpi_sand_fns.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fns.c rb2/libavutil/rpi_sand_fns.c
 --- ffmpeg-9.0/libavutil/rpi_sand_fns.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/rpi_sand_fns.c	2026-08-08 01:08:26.596652433 -0400
++++ rb2/libavutil/rpi_sand_fns.c	2026-08-08 11:47:19.008801461 -0400
 @@ -0,0 +1,449 @@
 +/*
 +Copyright (c) 2018 Raspberry Pi (Trading) Ltd.
@@ -20815,9 +20826,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fns.c rb/libavutil/rpi_
 +
 +    return av_frame_copy_props(dst, src);
 +}
-diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fns.h rb/libavutil/rpi_sand_fns.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fns.h rb2/libavutil/rpi_sand_fns.h
 --- ffmpeg-9.0/libavutil/rpi_sand_fns.h	1969-12-31 19:00:00.000000000 -0500
-+++ rb/libavutil/rpi_sand_fns.h	2026-08-08 01:08:26.596723051 -0400
++++ rb2/libavutil/rpi_sand_fns.h	2026-08-08 11:47:19.008845148 -0400
 @@ -0,0 +1,157 @@
 +/*
 +Copyright (c) 2018 Raspberry Pi (Trading) Ltd.
@@ -20976,9 +20987,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libavutil/rpi_sand_fns.h rb/libavutil/rpi_
 +
 +#endif
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/aarch64/rgb2rgb.c rb/libswscale/aarch64/rgb2rgb.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/aarch64/rgb2rgb.c rb2/libswscale/aarch64/rgb2rgb.c
 --- ffmpeg-9.0/libswscale/aarch64/rgb2rgb.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libswscale/aarch64/rgb2rgb.c	2026-08-08 01:08:26.596779287 -0400
++++ rb2/libswscale/aarch64/rgb2rgb.c	2026-08-08 11:47:19.008879049 -0400
 @@ -70,6 +70,12 @@
  void ff_shuffle_bytes_2013_neon(const uint8_t *src, uint8_t *dst, int src_size);
  void ff_shuffle_bytes_2130_neon(const uint8_t *src, uint8_t *dst, int src_size);
@@ -21000,9 +21011,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/aarch64/rgb2rgb.c rb/libswscale
 +        ff_bgr24toyv12 = ff_bgr24toyv12_aarch64;
      }
  }
-diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/aarch64/rgb2rgb_neon.S rb/libswscale/aarch64/rgb2rgb_neon.S
+diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/aarch64/rgb2rgb_neon.S rb2/libswscale/aarch64/rgb2rgb_neon.S
 --- ffmpeg-9.0/libswscale/aarch64/rgb2rgb_neon.S	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libswscale/aarch64/rgb2rgb_neon.S	2026-08-08 01:08:26.596854451 -0400
++++ rb2/libswscale/aarch64/rgb2rgb_neon.S	2026-08-08 11:47:19.008955516 -0400
 @@ -950,3 +950,359 @@
  interleaved_yuv_to_planar uyvy, yuv420
  interleaved_yuv_to_planar yuyv, yuv422
@@ -21363,9 +21374,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/aarch64/rgb2rgb_neon.S rb/libsw
 +90:
 +        ret
 +endfunc
-diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb.c rb/libswscale/rgb2rgb.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb.c rb2/libswscale/rgb2rgb.c
 --- ffmpeg-9.0/libswscale/rgb2rgb.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libswscale/rgb2rgb.c	2026-08-08 01:08:26.596911849 -0400
++++ rb2/libswscale/rgb2rgb.c	2026-08-08 11:47:19.009015788 -0400
 @@ -83,6 +83,31 @@
                         int width, int height,
                         int lumStride, int chromStride, int srcStride,
@@ -21398,9 +21409,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb.c rb/libswscale/rgb2rgb
  void (*planar2x)(const uint8_t *src, uint8_t *dst, int width, int height,
                   int srcStride, int dstStride);
  void (*interleaveBytes)(const uint8_t *src1, const uint8_t *src2, uint8_t *dst,
-diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb.h rb/libswscale/rgb2rgb.h
+diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb.h rb2/libswscale/rgb2rgb.h
 --- ffmpeg-9.0/libswscale/rgb2rgb.h	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libswscale/rgb2rgb.h	2026-08-08 01:08:26.596938800 -0400
++++ rb2/libswscale/rgb2rgb.h	2026-08-08 11:47:19.009048167 -0400
 @@ -92,6 +92,9 @@
  void ff_rgb24toyv12_c(const uint8_t *src, uint8_t *ydst, uint8_t *udst,
                        uint8_t *vdst, int width, int height, int lumStride,
@@ -21438,9 +21449,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb.h rb/libswscale/rgb2rgb
  extern void (*planar2x)(const uint8_t *src, uint8_t *dst, int width, int height,
                          int srcStride, int dstStride);
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb_template.c rb/libswscale/rgb2rgb_template.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb_template.c rb2/libswscale/rgb2rgb_template.c
 --- ffmpeg-9.0/libswscale/rgb2rgb_template.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libswscale/rgb2rgb_template.c	2026-08-08 01:08:26.596984930 -0400
++++ rb2/libswscale/rgb2rgb_template.c	2026-08-08 11:47:19.009098554 -0400
 @@ -574,12 +574,55 @@
  }
  
@@ -21748,9 +21759,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/rgb2rgb_template.c rb/libswscal
      interleaveBytes    = interleaveBytes_c;
      deinterleaveBytes  = deinterleaveBytes_c;
  
-diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/swscale_unscaled.c rb/libswscale/swscale_unscaled.c
+diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/swscale_unscaled.c rb2/libswscale/swscale_unscaled.c
 --- ffmpeg-9.0/libswscale/swscale_unscaled.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/libswscale/swscale_unscaled.c	2026-08-08 01:08:26.597121638 -0400
++++ rb2/libswscale/swscale_unscaled.c	2026-08-08 11:47:19.009234441 -0400
 @@ -2076,10 +2076,95 @@
      return srcSliceH;
  }
@@ -21892,9 +21903,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/libswscale/swscale_unscaled.c rb/libswscal
  
      /* AYUV/VUYA/UYVA -> AYUV/VUYA/UYVA */
      if (isAYUV(srcFormat) && isAYUV(dstFormat) && findRgbConvFn(c))
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/BUILD.txt rb/pi-util/BUILD.txt
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/BUILD.txt rb2/pi-util/BUILD.txt
 --- ffmpeg-9.0/pi-util/BUILD.txt	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/BUILD.txt	2026-08-08 01:08:26.597218626 -0400
++++ rb2/pi-util/BUILD.txt	2026-08-08 11:47:19.009329716 -0400
 @@ -0,0 +1,67 @@
 +Building Pi FFmpeg
 +==================
@@ -21963,9 +21974,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/BUILD.txt rb/pi-util/BUILD.txt
 +progs as you can be sure you're not running old code which is unfortunately
 +easy to do otherwise.
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/clean_usr_libs.sh rb/pi-util/clean_usr_libs.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/clean_usr_libs.sh rb2/pi-util/clean_usr_libs.sh
 --- ffmpeg-9.0/pi-util/clean_usr_libs.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/clean_usr_libs.sh	2026-08-08 01:08:26.597272078 -0400
++++ rb2/pi-util/clean_usr_libs.sh	2026-08-08 11:47:19.009347813 -0400
 @@ -0,0 +1,42 @@
 +set -e
 +U=/usr/include/arm-linux-gnueabihf
@@ -22009,9 +22020,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/clean_usr_libs.sh rb/pi-util/clean
 +rm -f $U/libswresample.*
 +rm -f $U/libswscale.*
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_arm64_native.sh rb/pi-util/conf_arm64_native.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_arm64_native.sh rb2/pi-util/conf_arm64_native.sh
 --- ffmpeg-9.0/pi-util/conf_arm64_native.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/conf_arm64_native.sh	2026-08-08 01:08:26.597286610 -0400
++++ rb2/pi-util/conf_arm64_native.sh	2026-08-08 11:47:19.009365550 -0400
 @@ -0,0 +1,45 @@
 +echo "Configure for ARM64 native build"
 +
@@ -22058,9 +22069,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_arm64_native.sh rb/pi-util/co
 +
 +# gcc option for getting asm listing
 +# -Wa,-ahls
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.2016.csv rb/pi-util/conf_h265.2016.csv
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.2016.csv rb2/pi-util/conf_h265.2016.csv
 --- ffmpeg-9.0/pi-util/conf_h265.2016.csv	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/conf_h265.2016.csv	2026-08-08 01:08:26.597301863 -0400
++++ rb2/pi-util/conf_h265.2016.csv	2026-08-08 11:47:19.009438011 -0400
 @@ -0,0 +1,195 @@
 +1,HEVC_v1/AMP_A_Samsung_7,AMP_A_Samsung_7.bin,AMP_A_Samsung_7.md5,8
 +1,HEVC_v1/AMP_B_Samsung_7,AMP_B_Samsung_7.bin,AMP_B_Samsung_7.md5,8
@@ -22257,9 +22268,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.2016.csv rb/pi-util/conf
 +1,local/dblksao_cu16_mobile_344x280,dblksao_cu16_mobile_344x280.265,dblksao_cu16_mobile_344x280.md5,8
 +1,local/dblk_pu32_horses_832x448,dblk_pu32_horses_832x448.265,dblk_pu32_horses_832x448.md5,8
 +1,local/intra_pred_21_laps,intra_pred_21_laps.265,intra_pred_21_laps.md5,8
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.2016_HEVC_v1.csv rb/pi-util/conf_h265.2016_HEVC_v1.csv
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.2016_HEVC_v1.csv rb2/pi-util/conf_h265.2016_HEVC_v1.csv
 --- ffmpeg-9.0/pi-util/conf_h265.2016_HEVC_v1.csv	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/conf_h265.2016_HEVC_v1.csv	2026-08-08 01:08:26.597360202 -0400
++++ rb2/pi-util/conf_h265.2016_HEVC_v1.csv	2026-08-08 11:47:19.009484201 -0400
 @@ -0,0 +1,147 @@
 +1,AMP_A_Samsung_7,AMP_A_Samsung_7.bin,AMP_A_Samsung_7.md5
 +1,AMP_B_Samsung_7,AMP_B_Samsung_7.bin,AMP_B_Samsung_7.md5
@@ -22408,9 +22419,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.2016_HEVC_v1.csv rb/pi-u
 +1,WPP_E_ericsson_MAIN_2,WPP_E_ericsson_MAIN_2.bit,WPP_E_ericsson_MAIN_2_yuv.md5
 +1,WPP_F_ericsson_MAIN10_2,WPP_F_ericsson_MAIN10_2.bit,WPP_F_ericsson_MAIN10_yuv.md5
 +1,WPP_F_ericsson_MAIN_2,WPP_F_ericsson_MAIN_2.bit,WPP_F_ericsson_MAIN_2_yuv.md5
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.csv rb/pi-util/conf_h265.csv
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.csv rb2/pi-util/conf_h265.csv
 --- ffmpeg-9.0/pi-util/conf_h265.csv	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/conf_h265.csv	2026-08-08 01:08:26.597399562 -0400
++++ rb2/pi-util/conf_h265.csv	2026-08-08 11:47:19.009524142 -0400
 @@ -0,0 +1,144 @@
 +1,ADJUST_IPRED_ANGLE_A_RExt_Mitsubishi_1,ADJUST_IPRED_ANGLE_A_RExt_Mitsubishi_1.bit,ADJUST_IPRED_ANGLE_A_RExt_Mitsubishi_1.md5
 +1,AMP_A_Samsung_6,AMP_A_Samsung_6.bin,AMP_A_Samsung_6.md5
@@ -22556,9 +22567,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_h265.csv rb/pi-util/conf_h265
 +1,WPP_E_ericsson_MAIN_2,WPP_E_ericsson_MAIN_2.bit,WPP_E_ericsson_MAIN_2_yuv.md5
 +1,WPP_F_ericsson_MAIN10_2,WPP_F_ericsson_MAIN10_2.bit,WPP_F_ericsson_MAIN10_yuv.md5
 +1,WPP_F_ericsson_MAIN_2,WPP_F_ericsson_MAIN_2.bit,WPP_F_ericsson_MAIN_2_yuv.md5
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_native.sh rb/pi-util/conf_native.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_native.sh rb2/pi-util/conf_native.sh
 --- ffmpeg-9.0/pi-util/conf_native.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/conf_native.sh	2026-08-08 01:08:26.597441907 -0400
++++ rb2/pi-util/conf_native.sh	2026-08-08 11:47:19.009555259 -0400
 @@ -0,0 +1,135 @@
 +echo "Configure for native build"
 +
@@ -22695,9 +22706,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/conf_native.sh rb/pi-util/conf_nat
 +
 +# gcc option for getting asm listing
 +# -Wa,-ahls
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/ffconf.py rb/pi-util/ffconf.py
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/ffconf.py rb2/pi-util/ffconf.py
 --- ffmpeg-9.0/pi-util/ffconf.py	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/ffconf.py	2026-08-08 01:08:26.597467085 -0400
++++ rb2/pi-util/ffconf.py	2026-08-08 11:47:19.009597123 -0400
 @@ -0,0 +1,269 @@
 +#!/usr/bin/env python3
 +
@@ -22968,9 +22979,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/ffconf.py rb/pi-util/ffconf.py
 +        if doconf(csva, args.tests, args.test_root, args.vcodec, dectype, args) or (args.loop >= 0 and i > args.loop):
 +            break
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/ffperf.py rb/pi-util/ffperf.py
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/ffperf.py rb2/pi-util/ffperf.py
 --- ffmpeg-9.0/pi-util/ffperf.py	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/ffperf.py	2026-08-08 01:08:26.597510962 -0400
++++ rb2/pi-util/ffperf.py	2026-08-08 11:47:19.009639027 -0400
 @@ -0,0 +1,140 @@
 +#!/usr/bin/env python3
 +
@@ -23112,9 +23123,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/ffperf.py rb/pi-util/ffperf.py
 +if __name__ == '__main__':
 +    exit(main())
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/genpatch.sh rb/pi-util/genpatch.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/genpatch.sh rb2/pi-util/genpatch.sh
 --- ffmpeg-9.0/pi-util/genpatch.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/genpatch.sh	2026-08-08 01:08:26.597538254 -0400
++++ rb2/pi-util/genpatch.sh	2026-08-08 11:47:19.009660239 -0400
 @@ -0,0 +1,35 @@
 +set -e
 +
@@ -23151,9 +23162,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/genpatch.sh rb/pi-util/genpatch.sh
 +fi
 +echo Generating patch: $PATCHFILE
 +git diff n$VERSION -- > $PATCHFILE
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/make_array.py rb/pi-util/make_array.py
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/make_array.py rb2/pi-util/make_array.py
 --- ffmpeg-9.0/pi-util/make_array.py	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/make_array.py	2026-08-08 01:08:26.597551854 -0400
++++ rb2/pi-util/make_array.py	2026-08-08 11:47:19.009676364 -0400
 @@ -0,0 +1,23 @@
 +#!/usr/bin/env python
 +
@@ -23178,18 +23189,18 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/make_array.py rb/pi-util/make_arra
 +          print >>out, ' // %04x' % (i - 8)
 +    print >>out,'};'
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/mkinst.sh rb/pi-util/mkinst.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/mkinst.sh rb2/pi-util/mkinst.sh
 --- ffmpeg-9.0/pi-util/mkinst.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/mkinst.sh	2026-08-08 01:08:26.597566727 -0400
++++ rb2/pi-util/mkinst.sh	2026-08-08 11:47:19.009690195 -0400
 @@ -0,0 +1,5 @@
 +set -e
 +
 +make install
 +
 +cp -r install/* ../vlc/sysroot/raspian_stretch_pi1-sysroot/usr
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/NOTES.txt rb/pi-util/NOTES.txt
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/NOTES.txt rb2/pi-util/NOTES.txt
 --- ffmpeg-9.0/pi-util/NOTES.txt	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/NOTES.txt	2026-08-08 01:08:26.597230164 -0400
++++ rb2/pi-util/NOTES.txt	2026-08-08 11:47:19.009712689 -0400
 @@ -0,0 +1,69 @@
 +Notes on the hevc_rpi decoder & associated support code
 +-------------------------------------------------------
@@ -23260,9 +23271,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/NOTES.txt rb/pi-util/NOTES.txt
 +Display should be a proper device rather than a kludge in ffmpeg.c
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/patkodi.sh rb/pi-util/patkodi.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/patkodi.sh rb2/pi-util/patkodi.sh
 --- ffmpeg-9.0/pi-util/patkodi.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/patkodi.sh	2026-08-08 01:08:26.597577343 -0400
++++ rb2/pi-util/patkodi.sh	2026-08-08 11:47:19.009728123 -0400
 @@ -0,0 +1,9 @@
 +set -e
 +KODIBASE=/home/jc/rpi/kodi/xbmc
@@ -23273,9 +23284,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/patkodi.sh rb/pi-util/patkodi.sh
 +make -C $KODIBASE/build install
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/perfcmp.py rb/pi-util/perfcmp.py
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/perfcmp.py rb2/pi-util/perfcmp.py
 --- ffmpeg-9.0/pi-util/perfcmp.py	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/perfcmp.py	2026-08-08 01:08:26.597587979 -0400
++++ rb2/pi-util/perfcmp.py	2026-08-08 11:47:19.009754202 -0400
 @@ -0,0 +1,101 @@
 +#!/usr/bin/env python3
 +
@@ -23378,9 +23389,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/perfcmp.py rb/pi-util/perfcmp.py
 +if __name__ == '__main__':
 +    exit(main())
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/qem.sh rb/pi-util/qem.sh
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/qem.sh rb2/pi-util/qem.sh
 --- ffmpeg-9.0/pi-util/qem.sh	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/qem.sh	2026-08-08 01:08:26.597611185 -0400
++++ rb2/pi-util/qem.sh	2026-08-08 11:47:19.009768845 -0400
 @@ -0,0 +1,9 @@
 +TARGET_DIR=../src/eupton_vc4dev_2012a/software/vc4/DEV/applications/tutorials/user_shader_example_tex
 +QASM=python\ ../local/bin/qasm.py
@@ -23391,9 +23402,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/qem.sh rb/pi-util/qem.sh
 +$QASM -mc_c:$DST_BASE,$DST_BASE,$DST_BASE $SRC_FILE > $TARGET_DIR/$DST_BASE.c
 +$QASM -mc_h:$DST_BASE,$DST_BASE,$DST_BASE $SRC_FILE > $TARGET_DIR/$DST_BASE.h
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/testfilt.py rb/pi-util/testfilt.py
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/testfilt.py rb2/pi-util/testfilt.py
 --- ffmpeg-9.0/pi-util/testfilt.py	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/testfilt.py	2026-08-08 01:08:26.597622772 -0400
++++ rb2/pi-util/testfilt.py	2026-08-08 11:47:19.009791569 -0400
 @@ -0,0 +1,83 @@
 +#!/usr/bin/env python3
 +
@@ -23478,9 +23489,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/testfilt.py rb/pi-util/testfilt.py
 +#                                    "/home/jc/rpi/streams/jellyfish-3-mbps-hd-h264.mkv",
 +                                   "-c:v", "h264_v4l2m2m", "-b:v", "2M"], ".mkv",
 +            [valid_regex(r'Output stream #0:0 \(video\): 900 frames encoded; 900 packets muxed')])
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/TESTMESA.txt rb/pi-util/TESTMESA.txt
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/TESTMESA.txt rb2/pi-util/TESTMESA.txt
 --- ffmpeg-9.0/pi-util/TESTMESA.txt	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/TESTMESA.txt	2026-08-08 01:08:26.597250525 -0400
++++ rb2/pi-util/TESTMESA.txt	2026-08-08 11:47:19.009815165 -0400
 @@ -0,0 +1,82 @@
 +# Setup & Build instructions for testing Argon30 mesa support (on Pi4)
 +
@@ -23564,9 +23575,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/TESTMESA.txt rb/pi-util/TESTMESA.t
 +
 +
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/v3dusage.py rb/pi-util/v3dusage.py
+diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/v3dusage.py rb2/pi-util/v3dusage.py
 --- ffmpeg-9.0/pi-util/v3dusage.py	1969-12-31 19:00:00.000000000 -0500
-+++ rb/pi-util/v3dusage.py	2026-08-08 01:08:26.597640449 -0400
++++ rb2/pi-util/v3dusage.py	2026-08-08 11:47:19.009842216 -0400
 @@ -0,0 +1,128 @@
 +#!/usr/bin/env python
 +
@@ -23696,9 +23707,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/pi-util/v3dusage.py rb/pi-util/v3dusage.py
 +
 +    do_logparse(args.logfile)
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/checkasm/checkasm.c rb/tests/checkasm/checkasm.c
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/checkasm/checkasm.c rb2/tests/checkasm/checkasm.c
 --- ffmpeg-9.0/tests/checkasm/checkasm.c	2026-08-03 18:14:48.000000000 -0400
-+++ rb/tests/checkasm/checkasm.c	2026-08-08 01:08:26.597736576 -0400
++++ rb2/tests/checkasm/checkasm.c	2026-08-08 11:47:19.009873915 -0400
 @@ -312,6 +312,9 @@
          { "pixelutils",checkasm_check_pixelutils },
  #endif
@@ -23709,9 +23720,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/tests/checkasm/checkasm.c rb/tests/checkas
  #endif
      { NULL }
      /* NOTE: When adding a new test to this list here, it also needs to be
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/checkasm/rpi_sand.c rb/tests/checkasm/rpi_sand.c
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/checkasm/rpi_sand.c rb2/tests/checkasm/rpi_sand.c
 --- ffmpeg-9.0/tests/checkasm/rpi_sand.c	1969-12-31 19:00:00.000000000 -0500
-+++ rb/tests/checkasm/rpi_sand.c	2026-08-08 01:08:26.597805791 -0400
++++ rb2/tests/checkasm/rpi_sand.c	2026-08-08 11:47:19.009898152 -0400
 @@ -0,0 +1,122 @@
 +/*
 + * Copyright (c) 2023 John Cox
@@ -23835,9 +23846,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/tests/checkasm/rpi_sand.c rb/tests/checkas
 +    free(vbuf1);
 +}
 +
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/fate/checkasm.mak rb/tests/fate/checkasm.mak
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/fate/checkasm.mak rb2/tests/fate/checkasm.mak
 --- ffmpeg-9.0/tests/fate/checkasm.mak	2026-08-03 18:14:48.000000000 -0400
-+++ rb/tests/fate/checkasm.mak	2026-08-08 01:08:26.597829688 -0400
++++ rb2/tests/fate/checkasm.mak	2026-08-08 11:47:19.009939855 -0400
 @@ -52,6 +52,7 @@
                  fate-checkasm-pixelutils                                \
                  fate-checkasm-png                                       \
@@ -23846,9 +23857,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/tests/fate/checkasm.mak rb/tests/fate/chec
                  fate-checkasm-sbrdsp                                    \
                  fate-checkasm-rv34dsp                                   \
                  fate-checkasm-rv40dsp                                   \
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/fate/filter-video.mak rb/tests/fate/filter-video.mak
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/fate/filter-video.mak rb2/tests/fate/filter-video.mak
 --- ffmpeg-9.0/tests/fate/filter-video.mak	2026-08-03 18:14:48.000000000 -0400
-+++ rb/tests/fate/filter-video.mak	2026-08-08 01:08:26.597873234 -0400
++++ rb2/tests/fate/filter-video.mak	2026-08-08 11:47:19.009988589 -0400
 @@ -485,9 +485,9 @@
  fate-filter-drawvg-interpreter: libavfilter/tests/drawvg$(EXESUF)
  fate-filter-drawvg-interpreter: CMD = run libavfilter/tests/drawvg$(EXESUF) $(DRAWVG_SCRIPT_ALL)
@@ -23862,9 +23873,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/tests/fate/filter-video.mak rb/tests/fate/
  
  FATE_FILTER_SAMPLES-$(call FILTERFRAMECRC, TESTSRC2 FSYNC) += fate-filter-fsync-up fate-filter-fsync-down
  fate-filter-fsync-up: tests/data/maps/fsync-up
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/imgutils rb/tests/ref/fate/imgutils
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/imgutils rb2/tests/ref/fate/imgutils
 --- ffmpeg-9.0/tests/ref/fate/imgutils	2026-08-03 18:14:48.000000000 -0400
-+++ rb/tests/ref/fate/imgutils	2026-08-08 01:08:26.597930792 -0400
++++ rb2/tests/ref/fate/imgutils	2026-08-08 11:47:19.010054560 -0400
 @@ -306,6 +306,9 @@
  gbrp10msble     planes: 3, linesizes: 128 128 128   0, plane_sizes:  6144  6144  6144     0, plane_offsets:  6144  6144     0, total_size: 18432
  gbrp12msbbe     planes: 3, linesizes: 128 128 128   0, plane_sizes:  6144  6144  6144     0, plane_offsets:  6144  6144     0, total_size: 18432
@@ -23882,9 +23893,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/imgutils rb/tests/ref/fate/
 +sand128         total_size:   4608,  black_unknown_crc: 0xd00f6cc6,  black_tv_crc: 0xd00f6cc6,  black_pc_crc: 0x234969af
 +sand64_10       total_size:   9216,  black_unknown_crc: 0xee47624d,  black_tv_crc: 0xee47624d,  black_pc_crc: 0x7c6afe45
 +sand64_16       total_size:   9216,  black_unknown_crc: 0xfff85b60,  black_tv_crc: 0xfff85b60,  black_pc_crc: 0xc03cff93
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/source rb/tests/ref/fate/source
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/source rb2/tests/ref/fate/source
 --- ffmpeg-9.0/tests/ref/fate/source	2026-08-03 18:14:48.000000000 -0400
-+++ rb/tests/ref/fate/source	2026-08-08 01:08:26.597975400 -0400
++++ rb2/tests/ref/fate/source	2026-08-08 11:47:19.010097245 -0400
 @@ -1,5 +1,8 @@
  Files without standard license headers:
  libavcodec/file_open.c
@@ -23894,9 +23905,9 @@ diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/source rb/tests/ref/fate/so
  libavcodec/interplayacm.c
  libavcodec/log2_tab.c
  libavcodec/reverse.c
-diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/sws-pixdesc-query rb/tests/ref/fate/sws-pixdesc-query
+diff -urN '--exclude=.git' ffmpeg-9.0/tests/ref/fate/sws-pixdesc-query rb2/tests/ref/fate/sws-pixdesc-query
 --- ffmpeg-9.0/tests/ref/fate/sws-pixdesc-query	2026-08-03 18:14:48.000000000 -0400
-+++ rb/tests/ref/fate/sws-pixdesc-query	2026-08-08 01:08:26.598010013 -0400
++++ rb2/tests/ref/fate/sws-pixdesc-query	2026-08-08 11:47:19.010133500 -0400
 @@ -31,6 +31,7 @@
    rgbaf16le
    rgbf16be
