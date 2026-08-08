@@ -28,6 +28,7 @@ build_core() {
 }
 
 build_media() {
+  ./media-deps.sh # codecs + SRT + hwaccel headers, into the sysroot ffmpeg reads
   ./ffmpeg.sh
   ./fftw.sh
   ./portaudio.sh
