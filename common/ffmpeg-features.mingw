@@ -27,4 +27,10 @@
 --disable-securetransport
 --disable-videotoolbox
 
+# Same as Linux: xz is a core-stage build in the sysroot (MSYS/zlib.sh). SDK 36
+# had this via autodetection (its libavcodec.a has undefined lzma_stream_decoder),
+# so this is restoring it rather than adding it. Checked that mingw's static
+# liblzma links without -DLZMA_API_STATIC on the SDK toolchain.
+--enable-lzma
+
 --disable-response-files
