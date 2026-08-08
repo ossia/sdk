@@ -10,5 +10,9 @@ if [[ ! -d openssl-$OPENSSL_VERSION ]]; then
   if [[ ! -f openssl-$OPENSSL_VERSION.tar.gz ]]; then
     curl -ksSLOJ https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz
   fi
-  tar xaf openssl-$OPENSSL_VERSION.tar.gz
+  # -z, not -a: bsdtar rejects -a in extract mode outright on macOS 15
+  # ("Option -a is not permitted in mode -x"). macOS 26's bsdtar only warns,
+  # so this passed on the arm64 runner and failed on the Intel one. The asset
+  # is always .tar.gz, so name the decompressor.
+  tar xzf openssl-$OPENSSL_VERSION.tar.gz
 fi
