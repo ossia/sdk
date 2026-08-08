@@ -66,6 +66,64 @@ export LDFLAGS="${LDFLAGS:-} -arch $MEDIA_DEPS_ARCH"
 # as a -D cache variable and reads it from here.
 export CMAKE_OSX_ARCHITECTURES="$MEDIA_DEPS_ARCH"
 
+# CROSS-COMPILATION. The macOS runners are Apple Silicon, so the x86_64 leg is a
+# cross build. cmake handles that from CMAKE_OSX_ARCHITECTURES, but meson and
+# autotools do not: they probe the HOST machine and happily configure an arm64
+# build regardless of the -arch in $CFLAGS. dav1d then tries to assemble
+# src/arm/64/cdef.S for x86_64 and dies with "invalid instruction mnemonic
+# 'b.gt'". Not reproducible on a real Intel Mac, where the same build is native.
+MD_MESON_EXTRA_FLAGS=()
+MD_X264_EXTRA_FLAGS=()
+MD_VPX_EXTRA_FLAGS=()
+MD_LAME_EXTRA_FLAGS=()
+MD_SVTJPEGXS_EXTRA_FLAGS=()
+if [[ "$MEDIA_DEPS_ARCH" != "$(uname -m)" ]]; then
+  echo "== media-deps: cross-compiling $(uname -m) -> $MEDIA_DEPS_ARCH"
+  if [[ "$MEDIA_DEPS_ARCH" == "x86_64" ]]; then
+    _md_cpu_family=x86_64; _md_triple=x86_64-apple-darwin
+  else
+    _md_cpu_family=aarch64; _md_triple=aarch64-apple-darwin
+  fi
+  # meson only believes a cross file.
+  _md_cross="$PWD/meson-cross-$MEDIA_DEPS_ARCH.ini"
+  cat > "$_md_cross" <<EOF
+[binaries]
+c = '$CC'
+cpp = '$CXX'
+ar = 'ar'
+strip = 'strip'
+pkg-config = 'pkg-config'
+
+[host_machine]
+system = 'darwin'
+cpu_family = '$_md_cpu_family'
+cpu = '$MEDIA_DEPS_ARCH'
+endian = 'little'
+
+[built-in options]
+c_args = ['-arch', '$MEDIA_DEPS_ARCH']
+c_link_args = ['-arch', '$MEDIA_DEPS_ARCH']
+cpp_args = ['-arch', '$MEDIA_DEPS_ARCH']
+cpp_link_args = ['-arch', '$MEDIA_DEPS_ARCH']
+EOF
+  MD_MESON_EXTRA_FLAGS=(--cross-file "$_md_cross")
+  # SVT-JPEG-XS's SIMD sources are C intrinsics whose -mavx2/-mavx512vl come
+  # from a HOST compiler probe, so cross-compiling to x86_64 from arm64 the
+  # flags are never added and the AVX files fail to build. Force the C-only
+  # path; it is bit-exact with the SIMD build, just slower.
+  MD_SVTJPEGXS_EXTRA_FLAGS=(-DSVT_JPEGXS_ARCH_X86=FALSE)
+  MD_X264_EXTRA_FLAGS=(--host="$_md_triple" --cross-prefix=)
+  MD_LAME_EXTRA_FLAGS=(--host="$_md_triple")
+  # libvpx names its targets <arch>-darwin<N>-gcc; darwin24 is macOS 15, and its
+  # configure accepts a newer host than the target.
+  if [[ "$MEDIA_DEPS_ARCH" == "x86_64" ]]; then
+    MD_VPX_EXTRA_FLAGS=(--target=x86_64-darwin24-gcc)
+  else
+    MD_VPX_EXTRA_FLAGS=(--target=arm64-darwin24-gcc)
+  fi
+fi
+export MD_MESON_EXTRA_FLAGS MD_X264_EXTRA_FLAGS MD_VPX_EXTRA_FLAGS MD_LAME_EXTRA_FLAGS MD_SVTJPEGXS_EXTRA_FLAGS
+
 # libsrt must find the openssl we built, not a Homebrew one.
 export MD_SRT_EXTRA_FLAGS=(
   -DUSE_ENCLIB=openssl

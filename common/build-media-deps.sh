@@ -185,6 +185,7 @@ _md_build_amf_headers() {   # headers only; ffmpeg dlopens amfrt64.dll / libamfr
 _md_build_vulkan_headers() {   # headers only; ffmpeg dlopens the Vulkan loader
   _md_clone Vulkan-Headers "$VULKAN_HEADERS_VERSION" https://github.com/KhronosGroup/Vulkan-Headers
   _md_cmake_flags
+  rm -rf "$(_md_build_dir vulkan-headers)"
   cmake -S "$MEDIA_DEPS_SRC/Vulkan-Headers" -B "$(_md_build_dir vulkan-headers)" "${MD_CMAKE_FLAGS[@]}"
   cmake --install "$(_md_build_dir vulkan-headers)"
   # Vulkan-Headers ships no .pc. ffmpeg's probe is header-only
@@ -253,6 +254,7 @@ _md_build_x265() {
                                  https://bitbucket.org/multicoreware/x265_git.git
   _md_cmake_flags
   # x265's CMakeLists lives in source/, not at the repo root.
+  rm -rf "$(_md_build_dir x265)"
   cmake -S "$MEDIA_DEPS_SRC/x265/source" -B "$(_md_build_dir x265)" "${MD_CMAKE_FLAGS[@]}" \
     -DENABLE_SHARED=OFF -DENABLE_CLI=OFF -DENABLE_PIC=ON
   cmake --build "$(_md_build_dir x265)"
@@ -262,6 +264,7 @@ _md_build_x265() {
 _md_build_opus() {
   _md_clone opus "$OPUS_VERSION" https://github.com/xiph/opus
   _md_cmake_flags
+  rm -rf "$(_md_build_dir opus)"
   cmake -S "$MEDIA_DEPS_SRC/opus" -B "$(_md_build_dir opus)" "${MD_CMAKE_FLAGS[@]}" \
     -DOPUS_BUILD_PROGRAMS=OFF -DOPUS_BUILD_TESTING=OFF
   cmake --build "$(_md_build_dir opus)"
@@ -308,6 +311,7 @@ _md_build_webp() {
   _md_clone libwebp "$WEBP_VERSION" https://github.com/webmproject/libwebp \
                                   https://chromium.googlesource.com/webm/libwebp
   _md_cmake_flags
+  rm -rf "$(_md_build_dir webp)"
   cmake -S "$MEDIA_DEPS_SRC/libwebp" -B "$(_md_build_dir webp)" "${MD_CMAKE_FLAGS[@]}" \
     -DWEBP_BUILD_ANIM_UTILS=OFF -DWEBP_BUILD_CWEBP=OFF -DWEBP_BUILD_DWEBP=OFF \
     -DWEBP_BUILD_GIF2WEBP=OFF -DWEBP_BUILD_IMG2WEBP=OFF -DWEBP_BUILD_VWEBP=OFF \
@@ -323,6 +327,7 @@ _md_build_snappy() {
   # platforms ship the same snappy.
   _md_clone snappy "$SNAPPY_VERSION" https://github.com/jcelerier/snappy
   _md_cmake_flags
+  rm -rf "$(_md_build_dir snappy)"
   cmake -S "$MEDIA_DEPS_SRC/snappy" -B "$(_md_build_dir snappy)" "${MD_CMAKE_FLAGS[@]}" \
     -DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF -DSNAPPY_INSTALL=ON
   cmake --build "$(_md_build_dir snappy)"
@@ -351,8 +356,10 @@ _md_build_svtjpegxs() {   # JPEG XS encode+decode, native in ffmpeg 9 as libsvtj
   _md_clone SVT-JPEG-XS "$SVTJPEGXS_VERSION" https://github.com/ossia/SVT-JPEG-XS \
                                              https://github.com/OpenVisualCloud/SVT-JPEG-XS
   _md_cmake_flags
+  rm -rf "$(_md_build_dir svtjpegxs)"
   cmake -S "$MEDIA_DEPS_SRC/SVT-JPEG-XS" -B "$(_md_build_dir svtjpegxs)" "${MD_CMAKE_FLAGS[@]}" \
-    -DBUILD_APPS=OFF -DBUILD_TESTING=OFF
+    -DBUILD_APPS=OFF -DBUILD_TESTING=OFF \
+    ${MD_SVTJPEGXS_EXTRA_FLAGS:+"${MD_SVTJPEGXS_EXTRA_FLAGS[@]}"}
   cmake --build "$(_md_build_dir svtjpegxs)"
   cmake --install "$(_md_build_dir svtjpegxs)"
 }
@@ -382,6 +389,7 @@ _md_build_xml2() {
   # Everything off but the parser: ffmpeg only needs xmlCheckVersion and the
   # tree/reader API. Leaving zlib/lzma on would put -lz -llzma in libxml-2.0.pc
   # and make ffmpeg's --static pkg-config resolution depend on them.
+  rm -rf "$(_md_build_dir xml2)"
   cmake -S "$MEDIA_DEPS_SRC/libxml2" -B "$(_md_build_dir xml2)" "${MD_CMAKE_FLAGS[@]}" \
     -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_PROGRAMS=OFF \
     -DLIBXML2_WITH_ICONV=OFF -DLIBXML2_WITH_ICU=OFF \
@@ -394,6 +402,7 @@ _md_build_xml2() {
 _md_build_srt() {   # SRT ingress/egress. Encryption comes from the SDK's openssl.
   _md_clone srt "$SRT_VERSION" https://github.com/Haivision/srt
   _md_cmake_flags
+  rm -rf "$(_md_build_dir srt)"
   cmake -S "$MEDIA_DEPS_SRC/srt" -B "$(_md_build_dir srt)" "${MD_CMAKE_FLAGS[@]}" \
     -DENABLE_SHARED=OFF -DENABLE_STATIC=ON \
     -DENABLE_APPS=OFF -DENABLE_EXAMPLES=OFF -DENABLE_UNITTESTS=OFF \
