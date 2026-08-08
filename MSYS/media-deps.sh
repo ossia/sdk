@@ -40,11 +40,18 @@ if [[ $# -gt 0 ]]; then
 fi
 
 # libsrt must find the openssl built by openssl.sh, not a pacman one.
-export MD_SRT_EXTRA_FLAGS=(
-  -DUSE_ENCLIB=openssl
-  -DOPENSSL_ROOT_DIR="$INSTALL_PREFIX_CMAKE/openssl"
-  -DOPENSSL_USE_STATIC_LIBS=ON
-)
+# On Windows-on-ARM there is no openssl (OpenSSL has no mingw arm64 target), so
+# build SRT without encryption there rather than fail the leg. ffmpeg's own TLS
+# is schannel on Windows and is unaffected either way.
+if [[ "$TARGET_ARCH" == "x86_64" ]]; then
+  export MD_SRT_EXTRA_FLAGS=(
+    -DUSE_ENCLIB=openssl
+    -DOPENSSL_ROOT_DIR="$INSTALL_PREFIX_CMAKE/openssl"
+    -DOPENSSL_USE_STATIC_LIBS=ON
+  )
+else
+  export MD_SRT_EXTRA_FLAGS=( -DENABLE_ENCRYPTION=OFF )
+fi
 
 source ../common/build-media-deps.sh
 

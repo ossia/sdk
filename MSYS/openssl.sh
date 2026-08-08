@@ -16,13 +16,16 @@ if [[ -f "$INSTALL_PREFIX/openssl/lib/libssl.a" ]]; then
   exit 0
 fi
 
-# OpenSSL 3.5 ships no mingw target for Windows-on-ARM (Configurations/10-main.conf
-# has mingw and mingw64 only, both x86). CI builds the x86_64 leg only; fail
-# loudly rather than silently configuring an x86 target for an ARM build.
+# OpenSSL 3.5 ships no mingw target for Windows-on-ARM: Configurations/10-main.conf
+# has mingw and mingw64 only, both x86, and "mingw64" would configure x86_64
+# assembly into an ARM build. Skip it there rather than fail the leg -- the only
+# consumer is libsrt, and media-deps.sh builds it with -DENABLE_ENCRYPTION=OFF
+# on this arch. ffmpeg itself uses schannel on Windows and never wanted openssl.
 if [[ "$TARGET_ARCH" != "x86_64" ]]; then
-  echo "openssl.sh: no OpenSSL mingw target for $TARGET_ARCH; libsrt must be" >&2
-  echo "            built with -DENABLE_ENCRYPTION=OFF on this arch." >&2
-  exit 1
+  echo "openssl.sh: no OpenSSL mingw target for $TARGET_ARCH -- skipping." >&2
+  echo "            libsrt is built without encryption there (see media-deps.sh);" >&2
+  echo "            SRT still works, but passphrase-protected streams do not." >&2
+  exit 0
 fi
 
 (
