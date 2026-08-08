@@ -1,0 +1,6 @@
+# Codec recipes that only build on x86_64. Appended to common/media-deps-codecs
+# by <platform>/media-deps.sh on x86 targets.
+#
+# Empty for now: svtjpegxs used to be here, but ossia/SVT-JPEG-XS builds on
+# aarch64 as well. Kept so the per-arch append in <platform>/media-deps.sh has a
+# file to read.

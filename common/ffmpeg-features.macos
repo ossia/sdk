@@ -1,0 +1,22 @@
+# macOS-specific ffmpeg flags. Layered on top of common/ffmpeg-features.
+
+--enable-cross-compile
+
+# Apple's own hardware paths: VideoToolbox covers h264/hevc/prores/av1 decode
+# and encode on both Intel and Apple Silicon, so there is no NVIDIA/AMD/Vulkan
+# equivalent to enable here -- ffnvcodec and amf are x86/Windows-and-Linux only,
+# and Vulkan on macOS would mean shipping MoltenVK.
+--enable-avfoundation
+--enable-indev=avfoundation
+--enable-videotoolbox
+--enable-audiotoolbox
+
+# openssl (built by macOS/openssl.sh into $INSTALL_PREFIX/openssl), NOT
+# SecureTransport. SecureTransport is deprecated by Apple and, more concretely,
+# ffmpeg's dtls_protocol_deps_any is "openssl schannel gnutls mbedtls" -- it
+# does not include securetransport, so the whip muxer and srtp would be
+# unavailable on macOS without this. libsrt links the same openssl.
+--enable-openssl
+--disable-securetransport
+
+--disable-libxcb

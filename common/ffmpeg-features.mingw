@@ -1,0 +1,30 @@
+# Windows/MSYS-specific ffmpeg flags. Layered on top of common/ffmpeg-features.
+
+# Windows has the widest hardware coverage of any platform and all of it is
+# free: d3d11va/d3d12va/dxva2 and MediaFoundation are OS APIs, and ffnvcodec
+# (NVIDIA), amf (AMD) and vulkan are LoadLibrary-based. Nothing here adds an
+# import beyond the system DLLs score already links (see
+# score-plugin-media/CMakeLists.txt: evr, mf, mfplat, mfuuid, ...).
+# Intel QSV is still absent: libvpl links for real.
+--enable-dxva2
+--enable-d3d11va
+--enable-d3d12va
+--enable-mediafoundation
+--enable-ffnvcodec
+--enable-nvdec
+--enable-nvenc
+--enable-cuvid
+--enable-amf
+--enable-vulkan
+
+# schannel rather than openssl: it is a system SSP (-lsecur32 -lncrypt
+# -lcrypt32), so there is no extra library to build or ship, it validates
+# against the Windows certificate store users expect, and ffmpeg 9's
+# tls_schannel.c implements DTLS *and* the SRTP keying-material export -- so
+# https, rtmps and the whip muxer all work through it.
+--enable-schannel
+--disable-openssl
+--disable-securetransport
+--disable-videotoolbox
+
+--disable-response-files

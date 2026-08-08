@@ -1,0 +1,7 @@
+# ffmpeg flags that depend on the ISA rather than the OS. Layered on top of
+# common/ffmpeg-features.<platform> by ffmpeg_features <platform> aarch64.
+#
+# Intentionally near-empty: everything the desktop set enables is portable to
+# aarch64 EXCEPT libsvtjpegxs, which is x86-only upstream (see
+# common/ffmpeg-features.x86_64 for why). Nothing to add here yet -- the file
+# exists so ffmpeg_features has a layer to read for this arch.
