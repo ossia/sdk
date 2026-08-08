@@ -3,6 +3,12 @@
 
 --enable-pic
 
+# xz is a core-stage build in the sysroot (Linux/zlib.sh), so the lzma-compressed
+# TIFF decoder and the lzma matroska header path cost nothing. Per-platform and
+# not in the shared file because macOS ships liblzma but NOT lzma.h -- see
+# common/ffmpeg-features.macos.
+--enable-lzma
+
 # TLS from the core stage's static openssl. openssl >= 3.0 is Apache-2.0 and
 # GPL-compatible, which ffmpeg accepts only together with --enable-version3
 # (configure: "OpenSSL >=3.0.0 requires --enable-version3"); the shared file

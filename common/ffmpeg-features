@@ -56,6 +56,34 @@
 # Gates the dash and imf demuxers -- DASH playback needs it.
 --enable-libxml2
 
+# ------------------------------------------------- compression and text ---
+# Everything below is already built by the SDK itself and comes from it, never
+# from the build image: zlib-ng (ZLIB_COMPAT), bzip2, xz and freetype+harfbuzz
+# are core-stage builds in $INSTALL_PREFIX/sysroot on Linux and MSYS, and macOS
+# takes zlib/bzip2 from the system SDK, where they are OS libraries present on
+# every Mac.
+#
+# zlib is the load-bearing one, and leaving it to autodetection was how it got
+# lost: png_decoder/png_encoder (and apng) select inflate_wrapper /
+# deflate_wrapper, both gated on zlib, so WITHOUT IT FFMPEG HAS NO PNG CODEC AT
+# ALL. Verified against the shipped SDK 36 Windows libavcodec.a, which has
+# ff_png_decoder + an undefined `uncompress` because autodetect happened to pick
+# zlib up there; Linux and macOS already passed --disable-autodetect and so had
+# never had PNG. It also gives http/https its "Content-Encoding: gzip|deflate"
+# handling (libavformat/http.c, CONFIG_ZLIB) -- which matters now that network
+# is on -- plus EXR, deflate-compressed TIFF, flashsv/tscc/zmbv/rscc, the
+# compressed matroska and mov header paths, and (via zlib_gzip) ffmpeg's own
+# shader and resource compression.
+--enable-zlib
+# Matroska track headers may be bzip2-compressed.
+--enable-bzlib
+# drawtext. Both are required -- drawtext_filter_deps="libfreetype libharfbuzz"
+# -- and both are core-stage builds already: Qt links the very same static
+# archives, so this adds no new library to the SDK and no ODR risk.
+# No libfontconfig: the SDK does not build it (Linux/fontconfig.sh is disabled),
+# so drawtext takes fontfile= rather than font= by name.
+--enable-libfreetype
+--enable-libharfbuzz
+
 --disable-iconv
---disable-lzma
 --pkg-config-flags=--static

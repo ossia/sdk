@@ -8,7 +8,13 @@ source ../common/ffmpeg-features.sh
 # media-deps.sh installs the codecs and libsrt into $INSTALL_PREFIX, openssl.sh
 # into $INSTALL_PREFIX/openssl. common.sh pins PKG_CONFIG_LIBDIR at the former
 # to keep Homebrew out, so extend it rather than replacing it.
-export PKG_CONFIG_LIBDIR="$INSTALL_PREFIX/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib/pkgconfig"
+# freetype and harfbuzz (--enable-libfreetype/--enable-libharfbuzz, i.e.
+# drawtext) each get their OWN prefix on macOS -- unlike Linux and MSYS, where
+# freetype.sh installs into the shared sysroot -- so both have to be named here
+# or the probe falls back to whatever Homebrew has, which is exactly what
+# PKG_CONFIG_LIBDIR exists to prevent. freetype2.pc also Requires harfbuzz, so
+# neither one alone is enough.
+export PKG_CONFIG_LIBDIR="$INSTALL_PREFIX/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib/pkgconfig:$INSTALL_PREFIX/freetype/lib/pkgconfig:$INSTALL_PREFIX/harfbuzz/lib/pkgconfig"
 
 # Feature flags live in common/ffmpeg-features{,.macos}. Unquoted on purpose:
 # the output is word-split, exactly like $(cat qtfeatures) in qt.sh.

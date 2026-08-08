@@ -25,4 +25,12 @@
 --enable-openssl
 --disable-securetransport
 
+# zlib and bzlib come from the shared file and resolve against the macOS SDK's
+# own libz/libbz2 -- OS libraries, so no leak and nothing to ship. lzma is the
+# exception: the SDK has liblzma.tbd but NO lzma.h (checked on macOS 15 and 26),
+# so ffmpeg's `check_lib lzma lzma.h ...` cannot pass and, since the flag would
+# be an explicit request, configure would die. Linux and Windows get it from
+# their sysroot's xz.
+--disable-lzma
+
 --disable-libxcb

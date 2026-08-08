@@ -45,6 +45,10 @@ runs:
           common/clone-cmake.sh
           common/qtmodules
           common/qtfeatures
+          # The core stage runs `media-deps.sh webp` before qt.sh (qtfeatures
+          # says -system-webp), so the webp recipe is a core input even though
+          # every other recipe in this file belongs to the media stage.
+          common/build-media-deps.sh
         )
 
         case "$platform" in
@@ -83,8 +87,11 @@ runs:
 
         # Only the CORE version pins from versions.sh (NOT media ones). Keep this
         # list in sync with what the core stage actually builds.
+        # WEBP_VERSION is in here despite being a media dep: see the note on
+        # common/build-media-deps.sh above -- Qt is configured -system-webp, so
+        # the core genuinely contains libwebp.
         core_versions=$(grep -E \
-          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION)=' \
+          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION|WEBP_VERSION)=' \
           common/versions.sh | LC_ALL=C sort)
 
         hash=$( { printf '%s\n' "${files[@]}" | LC_ALL=C sort -u | xargs sha256sum; \
