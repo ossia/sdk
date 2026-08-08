@@ -10,6 +10,8 @@ STAGE="${STAGE:-full}"
 
 build_core() {
   ./freetype.sh
+  # Before qt.sh -- see the note in Linux/build-all.sh (-system-webp).
+  ./media-deps.sh webp
   ./qt.sh
   # ./fftw.sh
   ./llvm-libs.sh

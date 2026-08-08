@@ -25,6 +25,17 @@ fi
 export MEDIA_DEPS_PREFIX="$INSTALL_PREFIX/sysroot"
 export MEDIA_DEPS_PREFIX_CMAKE="$INSTALL_PREFIX_CMAKE/sysroot"
 
+# An explicit list on the command line overrides the default. The core stage
+# uses this to build just libwebp before qt.sh: qtimageformats compiles its
+# BUNDLED libwebp straight into QWebpPlugin unless -system-webp is configured,
+# and a statically linked score would then carry libwebp twice -- once from the
+# Qt plugin and once via libavcodec. Same symbols, two copies: an ODR violation
+# waiting to bite. Qt is a core-stage build, so the library has to exist before
+# it runs.
+if [[ $# -gt 0 ]]; then
+  MEDIA_DEPS_LIST="$*"
+fi
+
 source ../common/build-media-deps.sh
 
 build_media_deps
