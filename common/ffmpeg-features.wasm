@@ -1,0 +1,29 @@
+# WASM ffmpeg flags. SELF-CONTAINED -- common/ffmpeg-features is deliberately
+# NOT layered under this one (see common/ffmpeg-features.sh).
+#
+# Almost nothing from the desktop set applies: there are no sockets to speak of
+# under emscripten (ffmpeg's network code wants real BSD sockets, not the
+# WebSocket shim), no hardware video, and every external codec would be dead
+# weight in a payload the browser has to download. Size is the binding
+# constraint here, not features, so this stays close to the historical minimum
+# and only tracks the ffmpeg version bump.
+
+--target-os=none        # prevent any OS-specific configuration
+--arch=x86_32           # minimal architectural assumptions
+--enable-cross-compile
+--disable-x86asm
+--disable-inline-asm
+--disable-doc
+--disable-ffmpeg
+--disable-ffplay
+--disable-ffprobe
+--disable-debug
+--enable-gpl
+--enable-version3
+--disable-openssl
+--disable-securetransport
+--disable-network
+--disable-iconv
+--enable-protocols
+--disable-lzma
+--pkg-config-flags=--static

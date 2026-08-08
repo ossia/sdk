@@ -1,0 +1,57 @@
+# ffmpeg configure flags shared by every DESKTOP platform (linux, macos, mingw).
+# Read by <platform>/ffmpeg.sh the same way common/qtfeatures is read by qt.sh:
+#   ../ffmpeg-$FFMPEG_VERSION/configure $(ffmpeg_features linux) ...
+# ffmpeg_features (common/ffmpeg-features.sh) concatenates this file with
+# common/ffmpeg-features.<platform>, so a codec or protocol flag is changed in
+# ONE place rather than in three ffmpeg.sh scripts.
+#
+# Unlike common/qtfeatures this file supports "#" comments and blank lines; the
+# helper strips them. Nothing here may contain a shell variable or a space
+# inside a single argument -- the result is word-split, exactly like qtfeatures.
+# Anything that needs $CFLAGS / $INSTALL_PREFIX / --arch stays in ffmpeg.sh.
+#
+# WASM does NOT read this file: it shares almost none of it (no network, no
+# external codecs, no hardware). See common/ffmpeg-features.wasm.
+
+--enable-gpl
+--enable-version3
+--disable-doc
+--disable-ffmpeg
+--disable-ffplay
+--disable-debug
+
+# Never autodetect: it silently links whatever the build image happens to ship,
+# which is how a "runs everywhere" binary picks up a dependency nobody asked
+# for. Everything below is opted into explicitly.
+--disable-autodetect
+
+# ---------------------------------------------------------------- network ---
+# Gives udp/udplite, tcp, rtp/srtp, rtsp, rtmp, http/hls and -- via each
+# platform's TLS backend -- tls, dtls, https, rtmps and the whip muxer.
+# NB: there is no WHEP demuxer in ffmpeg (checked 9.0 and master); WebRTC
+# ingest is not available here.
+--enable-network
+--enable-protocols
+--enable-libsrt
+
+# ----------------------------------------------------------------- codecs ---
+--enable-libdav1d
+--enable-libx264
+--enable-libx265
+--enable-libopus
+# VP8/VP9 software encoding. Without it the webm muxer has no usable software
+# video encoder: ffmpeg decodes VP8/VP9 natively and dav1d covers AV1 decode,
+# but the only encoders left would be av1_nvenc/av1_amf/av1_vulkan, i.e.
+# hardware-only.
+--enable-libvpx
+--enable-libwebp
+# JPEG XS. Needs ossia/SVT-JPEG-XS (see common/versions.sh): upstream cannot
+# configure off x86.
+--enable-libsvtjpegxs
+# Hap DEcoding works without this (libavcodec carries its own snappy); Hap
+# ENcoding needs the real library.
+--enable-libsnappy
+
+--disable-iconv
+--disable-lzma
+--pkg-config-flags=--static

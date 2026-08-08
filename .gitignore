@@ -13,4 +13,12 @@
 !.github/
 !.github/**
 
+# The ffmpeg flag/codec lists are layered as <base>.<platform> and <base>.<arch>
+# (common/ffmpeg-features.sh reads them), so the names carry a dot and the `*.*`
+# rule above would swallow them -- exactly like it already would for
+# Linux/common/qtfeatures.release. Without these, CI fails with
+# "ffmpeg_features: missing common/ffmpeg-features.linux".
+!common/ffmpeg-features.*
+!common/media-deps-codecs.*
+
 
