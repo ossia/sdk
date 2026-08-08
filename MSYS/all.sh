@@ -30,6 +30,7 @@ build_core() {
 }
 
 build_media() {
+  ./openssl.sh    # libsrt's encryption only; ffmpeg uses schannel here
   ./media-deps.sh # codecs + SRT + hwaccel headers, into the sysroot ffmpeg reads
   ./ffmpeg.sh
   ./fftw.sh

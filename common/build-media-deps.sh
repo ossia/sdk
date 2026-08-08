@@ -33,6 +33,20 @@ source ../common/versions.sh
 
 _md_msg() { echo "== media-deps: $*"; }
 
+# The prefix in the form the NATIVE toolchain understands. On MSYS the shell
+# path (/c/...) is meaningless to the mingw binaries: x264's `make install`
+# copies the archive fine and then dies in llvm-ranlib.exe with "unable to load
+# '/c/.../libx264.a'". cmake gets this via MEDIA_DEPS_PREFIX_CMAKE already;
+# autotools recipes need it too. Identical to MEDIA_DEPS_PREFIX everywhere else.
+_md_native_prefix() { echo "${MEDIA_DEPS_PREFIX_CMAKE:-$MEDIA_DEPS_PREFIX}"; }
+
+# Any path in the form the native toolchain understands. cygpath -m yields
+# "d:/tmp/..." on MSYS; everywhere else the path is already native and this is
+# an echo.
+_md_native_path() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else echo "$1"; fi
+}
+
 # Marker files, not "is the .a there" probes: several of these install multiple
 # artifacts and a half-finished build would otherwise look complete.
 _md_done()      { [[ -f "$MEDIA_DEPS_PREFIX/.media-deps/$1" ]]; }
@@ -44,7 +58,16 @@ _md_clone() {  # name ref url [url...]
   local name=$1 ref=$2; shift 2
   local urls=("$@")
 
-  if [[ ! -d "$MEDIA_DEPS_SRC/$name" ]]; then
+  # Test for a real repository, not just the directory. A leftover empty or
+  # half-cloned dir would otherwise make this skip the clone and then fail in
+  # the checkout with "not a git repository" -- and stay wedged on every later
+  # run. Easy to hit on Windows, where `rm -rf` routinely empties a directory
+  # but cannot remove it while something still holds a handle.
+  if [[ -d "$MEDIA_DEPS_SRC/$name" && ! -d "$MEDIA_DEPS_SRC/$name/.git" ]]; then
+    echo "media-deps: $name: directory exists but is not a git clone, replacing it" >&2
+    rm -rf "${MEDIA_DEPS_SRC:?}/$name"
+  fi
+  if [[ ! -d "$MEDIA_DEPS_SRC/$name/.git" ]]; then
     # Try each URL in turn. code.videolan.org hosts both dav1d and x264 and has
     # gone down for hours at a time (observed 2026-08-08 from two continents),
     # which is enough to take out every platform's media build at once.
@@ -94,6 +117,11 @@ _md_cmake_flags() {
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5
     -DCMAKE_INSTALL_PREFIX="${MEDIA_DEPS_PREFIX_CMAKE:-$MEDIA_DEPS_PREFIX}"
+    # Pin the libdir. CMake defaults to lib64 on RedHat-family distros, which
+    # would scatter the prefix -- cmake deps in sysroot/lib64, meson/autotools
+    # ones in sysroot/lib -- and ffmpeg then fails with "opus not found using
+    # pkg-config" because only one of the two is on PKG_CONFIG_PATH.
+    -DCMAKE_INSTALL_LIBDIR=lib
     ${CMAKE_ADDITIONAL_FLAGS:-}
   )
 }
@@ -171,7 +199,7 @@ _md_build_x264() {
     # ./configure on the same tree finishes fine). There is nothing to clean on
     # a fresh clone anyway, and this needs no make at all.
     rm -f config.mak config.h x264_config.h x264.pc x264.def
-    ./configure --prefix="$MEDIA_DEPS_PREFIX" \
+    ./configure --prefix="$(_md_native_prefix)" \
       --enable-static --enable-pic --disable-cli \
       --disable-opencl --disable-avs --disable-swscale --disable-lavf --disable-ffms \
       ${MD_X264_EXTRA_FLAGS:+"${MD_X264_EXTRA_FLAGS[@]}"}
@@ -207,9 +235,21 @@ _md_build_vpx() {
   # webm are av1_nvenc / av1_amf / av1_vulkan, i.e. hardware-only.
   _md_clone libvpx "$VPX_VERSION" https://github.com/webmproject/libvpx \
                                 https://chromium.googlesource.com/webm/libvpx
+  # Out-of-tree, but configure must be reached by a NATIVE path. libvpx bakes
+  # the source path into the generated Makefile, and build/make/configure.sh
+  # canonicalises a relative "." to $(pwd) -- so an in-tree build does not help:
+  # either way the path is the MSYS form (/d/tmp/...) and the native
+  # mingw32-make then fails with "No rule to make target '/d/.../libs.mk'".
+  # libvpx refuses an out-of-tree build when the SOURCE tree still holds a
+  # previous configuration ("source directory already configured; run 'make
+  # distclean' there first"), so clear those artefacts rather than running its
+  # distclean -- the runners keep the source dir between runs, and on MSYS
+  # invoking make over this Makefile is what wedged x264.
+  rm -f "$MEDIA_DEPS_SRC"/libvpx/{config.mk,config.log,libvpx.pc,vpx_config.h,vpx_config.asm,vpx_version.h} \
+        "$MEDIA_DEPS_SRC"/libvpx/{vpx_scale_rtcd.h,vpx_dsp_rtcd.h,vp8_rtcd.h,vp9_rtcd.h} 2>/dev/null || true
   rm -rf vpx-build; mkdir -p vpx-build
   ( cd vpx-build
-    "$MEDIA_DEPS_SRC/libvpx/configure" --prefix="$MEDIA_DEPS_PREFIX" \
+    "$(_md_native_path "$MEDIA_DEPS_SRC/libvpx")/configure" --prefix="$(_md_native_prefix)" \
       --enable-static --disable-shared --enable-pic \
       --enable-vp8 --enable-vp9 --disable-examples --disable-tools \
       --disable-docs --disable-unit-tests --enable-vp9-highbitdepth \
@@ -300,7 +340,13 @@ build_media_deps() {
   for dep in $list; do
     if _md_done "$dep"; then _md_msg "$dep already built"; continue; fi
     _md_msg "building $dep"
-    "_md_build_$dep"
+    if ! "_md_build_$dep"; then
+      # Explicit, because relying on `set -e` here has twice let a failed recipe
+      # through and left ffmpeg to fail much later with a confusing
+      # "<codec> not found using pkg-config".
+      echo "media-deps: FAILED to build '$dep'" >&2
+      return 1
+    fi
     _md_mark_done "$dep"
   done
 

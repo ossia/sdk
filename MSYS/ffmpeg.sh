@@ -7,7 +7,13 @@ source ../common/ffmpeg-features.sh
 (
 cd ffmpeg-$FFMPEG_VERSION
 rm -f VERSION
-export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig"
+# openssl.sh's prefix has to be here too, even though ffmpeg itself uses
+# schannel: srt.pc carries "Requires.private: openssl libcrypto", and with
+# --pkg-config-flags=--static pkg-config refuses srt outright when it cannot
+# resolve those ("srt >= 1.3.0 not found using pkg-config").
+# lib AND lib64: openssl defaults to lib64 on the mingw64 target, and
+# openssl.sh only started pinning --libdir=lib after that bit us.
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib64/pkgconfig"
 export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 export CFLAGS="-isystem $INSTALL_PREFIX_CMAKE/sysroot/include $CFLAGS $ARCHFLAGS"
 export LDFLAGS="-L$INSTALL_PREFIX_CMAKE/sysroot/lib $LDFLAGS"
