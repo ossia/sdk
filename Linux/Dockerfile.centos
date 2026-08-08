@@ -15,6 +15,7 @@ RUN yum -y install \
     meson \
     xcb-util libxcb-devel libX11-devel libXrender-devel libXi-devel  dbus-devel glib2-devel mesa-libGL-devel  \
     nasm libxkbcommon-x11-devel \
+    glslang spirv-headers-devel \
     alsa-lib-devel \
     bzip2-devel \
     dbus-devel \

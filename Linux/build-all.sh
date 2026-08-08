@@ -12,12 +12,17 @@ build_core() {
   ./zlib.sh
   ./openssl.sh
   ./freetype.sh
+  # Before qt.sh: qtimageformats compiles its bundled libwebp into QWebpPlugin
+  # unless -system-webp (common/qtfeatures) is set, which would put a second
+  # copy of libwebp in every statically linked score alongside libavcodec's.
+  ./media-deps.sh webp
   ./qt.sh
   # ./fontconfig.sh
 }
 
 build_media() {
   ./faust.sh      # needs llvm-config from the core's $INSTALL_PREFIX/llvm
+  ./media-deps.sh # codecs + SRT + hwaccel headers, into the sysroot ffmpeg reads
   ./ffmpeg.sh
   ./fftw.sh
   ./sdl.sh

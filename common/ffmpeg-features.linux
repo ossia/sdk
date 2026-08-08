@@ -1,0 +1,34 @@
+# Linux-specific ffmpeg flags. Layered on top of common/ffmpeg-features.
+# See that file for the format rules (no variables, no spaces within an arg).
+
+--enable-pic
+
+# TLS from the core stage's static openssl. openssl >= 3.0 is Apache-2.0 and
+# GPL-compatible, which ffmpeg accepts only together with --enable-version3
+# (configure: "OpenSSL >=3.0.0 requires --enable-version3"); the shared file
+# passes it. This is what turns on tls + dtls, and with them https, rtmps,
+# srtp and the whip muxer.
+--enable-openssl
+--disable-securetransport
+
+# ------------------------------------------------- hardware acceleration ---
+# All of these are dlopen-only: media-deps.sh installs headers, and ffmpeg
+# loads libcuda / libnvcuvid / libnvidia-encode (NVIDIA), libamfrt64.so (AMD)
+# and libvulkan.so.1 at runtime, degrading to software when they are absent.
+# EXTRALIBS stays empty and `ldd` on the result is unchanged -- verify that
+# after any change here, it is the whole reason these are safe to ship.
+#
+# Deliberately absent: vaapi (links libva.so.2) and Intel libvpl/QSV (links
+# libvpl.so). Both are real link-time dependencies and would break "runs on
+# every machine". Intel hardware is covered by Vulkan Video via Mesa ANV.
+--enable-ffnvcodec
+--enable-nvdec
+--enable-nvenc
+--enable-cuvid
+--enable-amf
+--enable-vulkan
+
+--disable-libxcb
+--disable-libxcb-shm
+--disable-libxcb-xfixes
+--disable-alsa

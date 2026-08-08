@@ -24,10 +24,14 @@ build_core() {
   ./freetype.sh
   ./llvm-deps.sh
   ./llvm.sh
+  # Before qt.sh -- see the note in Linux/build-all.sh (-system-webp).
+  ./media-deps.sh webp
   ./qt.sh
 }
 
 build_media() {
+  ./openssl.sh    # libsrt's encryption only; ffmpeg uses schannel here
+  ./media-deps.sh # codecs + SRT + hwaccel headers, into the sysroot ffmpeg reads
   ./ffmpeg.sh
   ./fftw.sh
   ./portaudio.sh

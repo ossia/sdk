@@ -10,12 +10,16 @@ STAGE="${STAGE:-full}"
 
 build_core() {
   ./freetype.sh
+  # Before qt.sh -- see the note in Linux/build-all.sh (-system-webp).
+  ./media-deps.sh webp
   ./qt.sh
   # ./fftw.sh
   ./llvm-libs.sh
 }
 
 build_media() {
+  ./openssl.sh    # ffmpeg tls+dtls (whip/srtp) and libsrt encryption
+  ./media-deps.sh # codecs + SRT, into $INSTALL_PREFIX
   ./ffmpeg.sh
   # ./sndfile.sh
   # ./portaudio.sh

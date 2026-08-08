@@ -1,0 +1,21 @@
+# The codec / protocol libraries every desktop platform builds, in dependency
+# order. Same idea as common/ffmpeg-features: one place to add or drop a codec.
+#
+# Recipes live in common/build-media-deps.sh; each name here must match an
+# _md_build_<name> function there.
+#
+# The hardware-acceleration HEADER packages (nvcodec_headers, amf_headers,
+# vulkan_headers) are NOT here -- which of them apply differs per platform
+# (none on macOS; vulkan comes from pacman on MSYS), so each
+# <platform>/media-deps.sh prepends its own.
+
+dav1d
+x264
+x265
+opus
+vpx
+webp
+srt
+svtjpegxs
+mp3lame
+xml2
