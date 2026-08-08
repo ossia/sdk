@@ -18,6 +18,7 @@ build_core() {
 
 build_media() {
   ./faust.sh      # needs llvm-config from the core's $INSTALL_PREFIX/llvm
+  ./media-deps.sh # codecs + SRT + hwaccel headers, into the sysroot ffmpeg reads
   ./ffmpeg.sh
   ./fftw.sh
   ./sdl.sh

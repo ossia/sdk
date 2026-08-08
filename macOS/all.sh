@@ -16,6 +16,8 @@ build_core() {
 }
 
 build_media() {
+  ./openssl.sh    # ffmpeg tls+dtls (whip/srtp) and libsrt encryption
+  ./media-deps.sh # codecs + SRT, into $INSTALL_PREFIX
   ./ffmpeg.sh
   # ./sndfile.sh
   # ./portaudio.sh
