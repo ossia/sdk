@@ -337,6 +337,28 @@ _md_build_webp() {
   cmake --install "$(_md_build_dir webp)"
 }
 
+_md_build_libjpeg() {
+  # NOT for ffmpeg -- it has its own MJPEG codec and never links libjpeg. This
+  # exists because two other things in the SDK need one, and a static score must
+  # not end up with two:
+  #  - Qt bundles libjpeg unless -system-libjpeg is configured, same story as
+  #    libwebp (see _md_build_webp).
+  #  - ffmpeg's libv4l2 probe on aarch64 Linux drags in -ljpeg through
+  #    libv4l2.pc's Libs.private once --pkg-config-flags=--static is on.
+  # So this is a CORE-stage build on every platform, like webp, and Qt is
+  # pointed at it.
+  _md_clone libjpeg-turbo "$LIBJPEGTURBO_VERSION" https://github.com/libjpeg-turbo/libjpeg-turbo
+  _md_cmake_flags
+  rm -rf "$(_md_build_dir libjpeg)"
+  # WITH_TURBOJPEG=OFF: the TurboJPEG wrapper API is a second library nobody
+  # here uses -- Qt and libv4l2 both want the classic libjpeg v6b API.
+  cmake -S "$MEDIA_DEPS_SRC/libjpeg-turbo" -B "$(_md_build_dir libjpeg)" "${MD_CMAKE_FLAGS[@]}" \
+    -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DWITH_TURBOJPEG=OFF \
+    ${MD_LIBJPEG_EXTRA_FLAGS:+"${MD_LIBJPEG_EXTRA_FLAGS[@]}"}
+  cmake --build "$(_md_build_dir libjpeg)"
+  cmake --install "$(_md_build_dir libjpeg)"
+}
+
 _md_build_snappy() {
   # Hap encoding (ffmpeg's --enable-libsnappy). Linux and MSYS already build
   # snappy in their CORE stage via zlib.sh; macOS has no equivalent, so it is a

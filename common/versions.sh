@@ -33,6 +33,16 @@ export VPX_VERSION=v1.16.0
 # Also what qtimageformats' webp plugin wants; see the note in
 # common/build-media-deps.sh about -system-webp vs Qt's bundled copy.
 export WEBP_VERSION=v1.6.0
+# libjpeg. Two consumers, and they have to agree on ONE copy:
+#  - Qt bundles a libjpeg unless configured -system-libjpeg (common/qtfeatures),
+#    exactly like the libwebp situation above.
+#  - ffmpeg's --enable-libv4l2 on aarch64 Linux: libv4l2.pc's Libs.private is
+#    "-lv4l2 -lpthread -lv4lconvert -lrt -lm -ljpeg", and with
+#    --pkg-config-flags=--static (which our own static .pc files require) that
+#    -ljpeg has to resolve against something. Against the build image's libjpeg
+#    it would be a host leak; against ours it is just another SDK library.
+# Building it ourselves is what lets both point at the same archive.
+export LIBJPEGTURBO_VERSION=3.2.0
 # MP3 encoding: ffmpeg ships no native MP3 encoder at all. SourceForge is lame's
 # only home, so the tarball is mirrored on the ossia sdk36 release
 # (sha256 ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e).

@@ -32,6 +32,15 @@ declare -a FFMPEG_LOCAL_FLAGS=(
 declare -a FFMPEG_AARCH64_FLAGS=(
   --arch=aarch64
   --cpu=$GCC_CPU
+  # libv4l2 needs libjpeg, and the SDK now builds one (see LIBJPEGTURBO_VERSION
+  # in common/versions.sh). The shared flag file passes --pkg-config-flags
+  # =--static -- our own static .pc files require it, srt.pc alone has
+  # "Requires.private: openssl libcrypto" -- and static resolution expands
+  # libv4l2.pc to "-lv4l2 -lpthread -lv4lconvert -lrt -lm -ljpeg". The build
+  # image has libv4l-devel but no jpeg devel, so configure used to die here with
+  # "ERROR: libv4l2 not found using pkg-config" behind "cannot find -ljpeg".
+  # -L$INSTALL_PREFIX/sysroot/lib comes first in --extra-ldflags, so -ljpeg now
+  # resolves to OUR libjpeg.a rather than to whatever the distro happens to ship.
   --enable-libv4l2
   --enable-v4l2-m2m
   --enable-sand
