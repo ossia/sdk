@@ -48,6 +48,9 @@ if [[ "$TARGET_ARCH" == "x86_64" ]]; then
     -DUSE_ENCLIB=openssl
     -DOPENSSL_ROOT_DIR="$INSTALL_PREFIX_CMAKE/openssl"
     -DOPENSSL_USE_STATIC_LIBS=ON
+    # srt 1.5.6 renamed the flag and warns on the old one; pass both so the
+    # recipe works either side of that rename.
+    -DSRT_USE_OPENSSL_STATIC_LIBS=ON
   )
 else
   export MD_SRT_EXTRA_FLAGS=( -DENABLE_ENCRYPTION=OFF )

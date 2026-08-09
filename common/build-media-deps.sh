@@ -47,6 +47,12 @@ _md_native_path() {
   if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else echo "$1"; fi
 }
 
+# The make to drive the autotools-style recipes with. MSYS/common.sh exports
+# $MAKE=mingw32-make, and the Windows CI runner has NO plain `make` in PATH at
+# all -- hardcoding one is what made the media stage die on its first
+# dependency. Unset on Linux and macOS, where plain make is the right answer.
+_md_make() { "${MAKE:-make}" "$@"; }
+
 # Build directory for a dep. $MD_BUILD_TAG keeps configurations apart: macOS
 # builds the whole set once per architecture slice, and a shared build dir there
 # is silently wrong -- cmake reads CFLAGS from the environment only on the FIRST
@@ -169,7 +175,18 @@ _md_cmake_flags() {
 # --------------------------------------------------------------- hwaccel ----
 _md_build_nvcodec_headers() {   # headers only; ffmpeg dlopens the driver libraries
   _md_clone nv-codec-headers "$NVCODEC_VERSION" https://github.com/FFmpeg/nv-codec-headers
-  make -C "$MEDIA_DEPS_SRC/nv-codec-headers" PREFIX="$MEDIA_DEPS_PREFIX" install
+  # Done by hand rather than via upstream's `make install`. Its Makefile is four
+  # lines of sed + install(1), but calling make here meant depending on a `make`
+  # in PATH, and the Windows CI runner has only mingw32-make -- the media stage
+  # died on its very first dependency with "make: command not found". Copying
+  # the headers directly needs no build tool at all, on any platform.
+  local src="$MEDIA_DEPS_SRC/nv-codec-headers"
+  mkdir -p "$MEDIA_DEPS_PREFIX/include/ffnvcodec" "$MEDIA_DEPS_PREFIX/lib/pkgconfig"
+  cp "$src"/include/ffnvcodec/*.h "$MEDIA_DEPS_PREFIX/include/ffnvcodec/"
+  # Same substitution the Makefile does, including its cygpath step on Windows:
+  # the .pc is read by the native pkg-config, which cannot follow an MSYS path.
+  sed -e "s#@@PREFIX@@#$(_md_native_path "$(_md_native_prefix)")#" \
+    "$src/ffnvcodec.pc.in" > "$MEDIA_DEPS_PREFIX/lib/pkgconfig/ffnvcodec.pc"
 }
 
 _md_build_amf_headers() {   # headers only; ffmpeg dlopens amfrt64.dll / libamfrt64.so
@@ -244,8 +261,8 @@ _md_build_x264() {
       --enable-static --enable-pic --disable-cli \
       --disable-opencl --disable-avs --disable-swscale --disable-lavf --disable-ffms \
       ${MD_X264_EXTRA_FLAGS:+"${MD_X264_EXTRA_FLAGS[@]}"}
-    make -j"$NPROC"
-    make install )
+    _md_make -j"$NPROC"
+    _md_make install )
 }
 
 _md_build_x265() {
@@ -297,8 +314,8 @@ _md_build_vpx() {
       --enable-vp8 --enable-vp9 --disable-examples --disable-tools \
       --disable-docs --disable-unit-tests --enable-vp9-highbitdepth \
       ${MD_VPX_EXTRA_FLAGS:+"${MD_VPX_EXTRA_FLAGS[@]}"}
-    make -j"$NPROC"
-    make install )
+    _md_make -j"$NPROC"
+    _md_make install )
 }
 
 _md_build_webp() {
@@ -376,8 +393,8 @@ _md_build_mp3lame() {
     ./configure --prefix="$(_md_native_prefix)" \
       --enable-static --disable-shared --disable-frontend --disable-gtktest --with-pic \
       ${MD_LAME_EXTRA_FLAGS:+"${MD_LAME_EXTRA_FLAGS[@]}"}
-    make -j"$NPROC"
-    make install )
+    _md_make -j"$NPROC"
+    _md_make install )
 }
 
 _md_build_xml2() {
