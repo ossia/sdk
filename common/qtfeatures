@@ -75,7 +75,7 @@
 -no-syslog
 -no-tslib
 -opensource
--qt-libjpeg
+-system-libjpeg
 -qt-libpng
 -system-webp
 -qt-pcre

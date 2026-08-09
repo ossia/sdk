@@ -25,7 +25,7 @@ build_core() {
   ./llvm-deps.sh
   ./llvm.sh
   # Before qt.sh -- see the note in Linux/build-all.sh (-system-webp).
-  ./media-deps.sh webp
+  ./media-deps.sh libjpeg webp
   ./qt.sh
 }
 

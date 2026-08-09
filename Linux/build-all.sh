@@ -15,7 +15,7 @@ build_core() {
   # Before qt.sh: qtimageformats compiles its bundled libwebp into QWebpPlugin
   # unless -system-webp (common/qtfeatures) is set, which would put a second
   # copy of libwebp in every statically linked score alongside libavcodec's.
-  ./media-deps.sh webp
+  ./media-deps.sh libjpeg webp
   ./qt.sh
   # ./fontconfig.sh
 }
