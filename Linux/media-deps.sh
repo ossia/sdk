@@ -30,6 +30,25 @@ if [[ $# -gt 0 ]]; then
   MEDIA_DEPS_LIST="$*"
 fi
 
+# libsrt must find the openssl the CORE stage built, exactly as on macOS and
+# MSYS -- Linux was the one platform missing this and it was the first thing to
+# fail once the media stage actually ran in CI: srt's CMakeLists does an
+# unconditional find_package(OpenSSL) and the build container has no system
+# openssl-devel, so it died with "Could NOT find OpenSSL ... (missing:
+# OPENSSL_CRYPTO_LIBRARY OPENSSL_INCLUDE_DIR)".
+#
+# lib AND lib64: Linux/openssl.sh passes no --libdir, so OpenSSL picks, and it
+# picks lib64 on this container. Same reason ffmpeg.sh names both.
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/openssl/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
+export MD_SRT_EXTRA_FLAGS=(
+  -DUSE_ENCLIB=openssl
+  -DOPENSSL_ROOT_DIR="$INSTALL_PREFIX/openssl"
+  -DOPENSSL_USE_STATIC_LIBS=ON
+  # srt 1.5.6 renamed the flag and warns on the old one; pass both so the
+  # recipe works either side of that rename.
+  -DSRT_USE_OPENSSL_STATIC_LIBS=ON
+)
+
 source ../common/build-media-deps.sh
 
 build_media_deps
