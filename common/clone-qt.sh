@@ -66,16 +66,18 @@ git init -q qt
     git config user.email "you@example.com"
     git config user.name "Your Name"
 
+    # qt5.git moves its submodule pointers in batches, so its qtbase trails the
+    # 6.12 branch by up to a week -- long enough that fixes we no longer need to
+    # carry are still missing from it. Take the branch commit instead.
+    git fetch $SDK_FETCH_DEPTH origin "$QTBASE_VERSION"
+    git checkout -q FETCH_HEAD
+
     # The 658xxx changes were abandoned in favour of dev-targeted rewrites; the
     # old refs still resolve, so a stale one builds silently instead of failing.
-    # qarraydata: prevent a -fsanitize=integer warning
-    qt_pick qtbase refs/changes/00/757200/1
-    # qhash: same, for the hash functions themselves
+    # qhash: prevent a -fsanitize=integer warning in the hash functions
     qt_pick qtbase refs/changes/05/757205/2
     # Enable exports on static builds
     qt_pick qtbase refs/changes/66/658066/2
-    # link to brotlicommon
-    qt_pick qtbase refs/changes/02/757202/1
     # qfsm disable sorting
     qt_pick qtbase refs/changes/07/757207/1
     # qsimd.cpp: add missing stdlib.h for getenv -- merged upstream (6.11/dev), now in 6.12.0
@@ -83,19 +85,6 @@ git init -q qt
     qt_pick qtbase refs/changes/04/686804/2
     # win32 Font api clash
     qt_pick qtbase refs/changes/05/686805/2
-
-    # These three were in-place perl rewrites until they went upstream; they are
-    # ordinary picks now, so nothing here edits Qt sources with a regex any more.
-    # QTipLabel::styleSheetParentDestroyed() unguarded (-no-feature-style-stylesheet)
-    qt_pick qtbase refs/changes/16/757216/1
-    # windows.graphics.display.interop.h is Windows-SDK-only, mingw-w64 lacks it
-    qt_pick qtbase refs/changes/17/757217/1
-    # .symver version nodes are undefined in a static link, lld rejects them
-    qt_pick qtbase refs/changes/18/757218/1
-
-    # macos crashes when a QNSView outlives its QCocoaWindow (screen off/on,
-    # embedding hosts). Supersedes the old 729289 pick.
-    qt_pick qtbase refs/changes/09/757209/3
     # QRhiVulkan: swapchain recreated with a stale extent on resize
     qt_pick qtbase refs/changes/71/726771/3
   )

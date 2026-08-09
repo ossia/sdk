@@ -89,6 +89,9 @@ export OPENSSL_VERSION=3.5.7
 # into a shallow clone, which is what clone-qt.sh and WASM/qt-deps.sh rely on.
 # To bump: take the current tip of https://github.com/qt/qt5 refs/heads/6.12.
 export QT_VERSION=0538193fa5704dd2725e5ee01f59e72cfd66ac84
+# qtbase is checked out at its own 6.12 commit on top of that, ahead of the
+# pointer the super-repo carries; see clone-qt.sh. Move the two together.
+export QTBASE_VERSION=6f66fb256b2aca74ddb534e58c3e7fe88bbbdf95
 export CMAKE_VERSION_SHORT=4.3
 export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14
