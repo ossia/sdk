@@ -39,6 +39,23 @@ if [[ $# -gt 0 ]]; then
   MEDIA_DEPS_LIST="$*"
 fi
 
+# opus on Windows-on-ARM. Its CMake turns OPUS_PRESUME_NEON on automatically
+# only when CMAKE_SYSTEM_PROCESSOR matches "aarch64" (cmake/OpusConfig.cmake);
+# Windows reports "ARM64", so the check misses and opus falls back to RUNTIME
+# NEON detection instead -- for which celt/arm/armcpu.c has no implementation on
+# mingw/ARM, and the build stops on its #error: "Configured to use ARM asm but
+# no CPU detection method available for your platform."
+#
+# Linux aarch64 matches the regex and macOS has a working detection method, so
+# this is Windows-ARM only. Intrinsics off rather than half-configured: keeping
+# NEON would mean hand-defining OPUS_ARM_MAY_HAVE_NEON_INTR alongside
+# PRESUME_NEON, a combination upstream ships on no platform. Opus is cheap next
+# to video decoding and this is our least performance-critical target, so the
+# supported, tested configuration wins. Revisit if opus fixes the regex.
+if [[ "$TARGET_ARCH" != "x86_64" ]]; then
+  export MD_OPUS_EXTRA_FLAGS=( -DOPUS_DISABLE_INTRINSICS=ON )
+fi
+
 # libsrt must find the openssl built by openssl.sh, not a pacman one.
 # On Windows-on-ARM there is no openssl (OpenSSL has no mingw arm64 target), so
 # build SRT without encryption there rather than fail the leg. ffmpeg's own TLS
