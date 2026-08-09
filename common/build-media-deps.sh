@@ -283,7 +283,8 @@ _md_build_opus() {
   _md_cmake_flags
   rm -rf "$(_md_build_dir opus)"
   cmake -S "$MEDIA_DEPS_SRC/opus" -B "$(_md_build_dir opus)" "${MD_CMAKE_FLAGS[@]}" \
-    -DOPUS_BUILD_PROGRAMS=OFF -DOPUS_BUILD_TESTING=OFF
+    -DOPUS_BUILD_PROGRAMS=OFF -DOPUS_BUILD_TESTING=OFF \
+    ${MD_OPUS_EXTRA_FLAGS:+"${MD_OPUS_EXTRA_FLAGS[@]}"}
   cmake --build "$(_md_build_dir opus)"
   cmake --install "$(_md_build_dir opus)"
 }
