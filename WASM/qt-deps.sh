@@ -13,5 +13,11 @@ if [[ ! -d qt ]]; then
     git fetch $SDK_CLONE_DEPTH origin "$QT_VERSION"
     git checkout -q FETCH_HEAD
     git submodule update --init --recursive $SDK_CLONE_DEPTH $(cat "$SDK_ROOT/common/qtmodules")
+    # Same qtbase as the other platforms; see clone-qt.sh.
+    (
+      cd qtbase
+      git fetch $SDK_FETCH_DEPTH origin "$QTBASE_VERSION"
+      git checkout -q FETCH_HEAD
+    )
   )
 fi
