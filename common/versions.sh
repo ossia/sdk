@@ -26,7 +26,7 @@ export OPENSSL_VERSION=3.5.7
 # build reproducible; github.com and code.qt.io both allow fetching one directly
 # into a shallow clone, which is what clone-qt.sh and WASM/qt-deps.sh rely on.
 # To bump: take the current tip of https://github.com/qt/qt5 refs/heads/6.12.
-export QT_VERSION=02761a0550f53096f48e394cd8824c96b78eaa3d
+export QT_VERSION=0538193fa5704dd2725e5ee01f59e72cfd66ac84
 export CMAKE_VERSION_SHORT=4.3
 export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14

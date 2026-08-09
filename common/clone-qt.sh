@@ -74,12 +74,8 @@ git init -q qt
     qt_pick qtbase refs/changes/05/757205/2
     # Enable exports on static builds
     qt_pick qtbase refs/changes/66/658066/2
-    # missing qstringlist include
-    qt_pick qtbase refs/changes/01/757201/1
     # link to brotlicommon
     qt_pick qtbase refs/changes/02/757202/1
-    # stylesheet missing include
-    qt_pick qtbase refs/changes/03/757203/1
     # qfsm disable sorting
     qt_pick qtbase refs/changes/07/757207/1
     # qsimd.cpp: add missing stdlib.h for getenv -- merged upstream (6.11/dev), now in 6.12.0
@@ -97,8 +93,6 @@ git init -q qt
     # .symver version nodes are undefined in a static link, lld rejects them
     qt_pick qtbase refs/changes/18/757218/1
 
-    # macos iconengine protection -- merged to dev, drop this once it reaches 6.12
-    qt_pick qtbase refs/changes/10/723510/7
     # macos crashes when a QNSView outlives its QCocoaWindow (screen off/on,
     # embedding hosts). Supersedes the old 729289 pick.
     qt_pick qtbase refs/changes/09/757209/3
@@ -114,22 +108,6 @@ git init -q qt
     qt_pick qtdeclarative refs/changes/68/464668/2
     # masm: PATH_MAX used with no limits.h in scope
     qt_pick qtdeclarative refs/changes/04/757204/1
-  )
-
-  (
-    cd qtshadertools
-    git config user.email "you@example.com"
-    git config user.name "Your Name"
-    qt_pick qtshadertools refs/changes/63/464663/4
-  )
-
-  (
-    cd qtquick3d
-    git config user.email "you@example.com"
-    git config user.name "Your Name"
-    # openxr missing iterator -- already present in 6.12.0-beta1 (vendored OpenXR updated upstream)
-    # QSSGLightmapBaker: add missing QGuiApplication include
-    qt_pick qtquick3d refs/changes/07/686807/2
   )
 
   (
