@@ -27,9 +27,12 @@ export FFMPEG_ARM64_FLAGS=(
  --cpu=$CPU_TARGET
  --prefix=$INSTALL_PREFIX/ffmpeg
  --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC  -arch arm64 "
- --cxx="$CXX"
+ # -arch on --cxx too, not just --cc: ffmpeg links the programs with $CXX as
+ # soon as a C++ dependency is in the mix (x265 is C++), so a --cxx without an
+ # arch links for the HOST. See the x86_64 block below, where that is fatal.
+ --cxx="$CXX -arch arm64"
  --extra-cflags="$CFLAGS_NOARCH -I$INSTALL_PREFIX/include"
- --extra-ldflags="$CFLAGS_NOARCH -L$INSTALL_PREFIX/lib"
+ --extra-ldflags="$CFLAGS_NOARCH -arch arm64 -L$INSTALL_PREFIX/lib"
 )
 
 # ONE x86_64 pass, not the old x86_64 + x86_64h pair.
@@ -56,9 +59,17 @@ export FFMPEG_X86_64_FLAGS=(
  --cpu=$CPU_TARGET
  --prefix=$INSTALL_PREFIX/ffmpeg
  --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC  -arch x86_64 "
- --cxx="$CXX"
+ # -arch on --cxx as well. Everything compiled through --cc was x86_64, but the
+ # PROGRAMS (ffprobe) link through $CXX because x265 drags in C++ -- and with a
+ # bare $CXX that link targets the host. On the Apple Silicon runners the x86_64
+ # leg is a cross build, so ld tried to make an arm64 ffprobe out of x86_64
+ # objects: "ignoring file libavcodec.a(...): found architecture 'x86_64',
+ # required architecture 'arm64'" for every member, then "Undefined symbols for
+ # architecture arm64: _main". Invisible on a real Intel Mac, where host and
+ # target agree.
+ --cxx="$CXX -arch x86_64"
  --extra-cflags="$CFLAGS_NOARCH -I$INSTALL_PREFIX/include"
- --extra-ldflags="$CFLAGS_NOARCH -L$INSTALL_PREFIX/lib"
+ --extra-ldflags="$CFLAGS_NOARCH -arch x86_64 -L$INSTALL_PREFIX/lib"
 )
 
 # Plain array copy, not `declare -n`: macOS ships bash 3.2, which has no

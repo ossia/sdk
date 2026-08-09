@@ -16,6 +16,35 @@ cd ffmpeg-build
 # into the sysroot; openssl comes from the core stage.
 export PKG_CONFIG_PATH="$INSTALL_PREFIX/sysroot/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib/pkgconfig:$INSTALL_PREFIX/openssl/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
 
+# Sanitised copy of the DISTRO's libdrm.pc, ahead of the real one.
+#
+# almalinux's libdrm.pc carries "Requires.private: valgrind" (libdrm is built
+# with valgrind annotations), so with --pkg-config-flags=--static -- which our
+# own static .pc files require -- pkg-config answers
+#   -ldrm -L/usr/lib64/valgrind -lcoregrind-amd64-linux -lvex-amd64-linux -lgcc
+# and the probe dies on "cannot find -lcoregrind-amd64-linux". ffmpeg's libdrm
+# check is soft, so libdrm was silently disabled and the RPi patch then failed
+# the build with "ERROR: v4l2-request requires --enable-libdrm" -- i.e. no
+# hardware HEVC decoding on Raspberry Pi and friends. Reproduced in an
+# almalinux:9 container.
+#
+# We link libdrm.so dynamically, so its static private deps are meaningless to
+# us; dropping the line is exactly right and changes nothing else. This is a
+# throwaway file in the build tree, NOT in the sysroot: nothing about it reaches
+# the shipped SDK, and it does not touch the core dirs the media stage must
+# leave alone (see .github/sysroot-guard.sh).
+# Installing valgrind-devel instead would have "worked" and been much worse:
+# --static would then bake -L/usr/lib64/valgrind -lcoregrind... into
+# libavutil's EXTRALIBS, and every consumer would inherit it.
+if drm_pcdir=$(pkg-config --variable=pcfiledir libdrm 2>/dev/null) \
+   && [[ -f "$drm_pcdir/libdrm.pc" ]]; then
+  mkdir -p pkgconfig-overrides
+  sed -e 's/^Requires\.private:.*valgrind.*$/Requires.private:/' \
+    "$drm_pcdir/libdrm.pc" > pkgconfig-overrides/libdrm.pc
+  export PKG_CONFIG_PATH="$PWD/pkgconfig-overrides:$PKG_CONFIG_PATH"
+  echo "ffmpeg.sh: shadowing $drm_pcdir/libdrm.pc without its valgrind Requires.private"
+fi
+
 # Only what genuinely varies per build lives here; the feature flags are in
 # common/ffmpeg-features{,.linux}.
 declare -a FFMPEG_LOCAL_FLAGS=(
