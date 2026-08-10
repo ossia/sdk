@@ -25,20 +25,26 @@ if [[ -z "${TARGET_ARCH:-}" ]]; then
   fi
 fi
 
+# TARGET_ARCH is Apple's spelling (arm64), SDK_ARCH the one every SDK artifact
+# is named with (aarch64) -- same split as MSYS/common.sh. Consumers fetch
+# sdk-macOS-$SDK_ARCH.tar.xz and install it into /opt/ossia-sdk-$SDK_ARCH, so
+# the two must never drift apart.
 if [[ "$TARGET_ARCH" == "arm64" ]]; then
+  export SDK_ARCH=aarch64
   export CPU_TARGET="apple-m1"
   export CPUFLAGS=" -mcpu=$CPU_TARGET -arch arm64 "
-  export INSTALL_PREFIX=/opt/ossia-sdk-aarch64
   export LLVM_ARCH=AArch64
   export CMAKE_OSX_ARCHITECTURES=arm64
 else
   #??2025-03: apple silicon still does not support x86_64h and some instruction sets such as f16c and rdrand
+  export SDK_ARCH=x86_64
   export CPU_TARGET="x86-64-v2"
   export CPUFLAGS=" -mtune=cascadelake -arch x86_64 -arch x86_64h "
-  export INSTALL_PREFIX=/opt/ossia-sdk-x86_64
   export LLVM_ARCH=X86
   export CMAKE_OSX_ARCHITECTURES="x86_64;x86_64h"
 fi
+
+export INSTALL_PREFIX=/opt/ossia-sdk-$SDK_ARCH
 
 if [[ -f "$INSTALL_PREFIX/llvm/bin/clang" ]]; then
   export CC=$INSTALL_PREFIX/llvm/bin/clang

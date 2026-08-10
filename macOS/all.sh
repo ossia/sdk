@@ -63,5 +63,7 @@ else
   # media/full: the whole merged prefix is the shippable SDK. xz (not gzip) for
   # a smaller artifact and format uniformity with the Linux SDK. NB: consumers
   # fetch this by name -- the extension change must be mirrored downstream.
-  XZ_OPT='-T0 -9' tar caf sdk-macOS-$TARGET_ARCH.tar.xz $INSTALL_PREFIX
+  # $SDK_ARCH, not $TARGET_ARCH: score fetches sdk-macOS-aarch64.tar.xz, the same
+  # spelling as the Linux/mingw assets and as /opt/ossia-sdk-aarch64.
+  XZ_OPT='-T0 -9' tar caf sdk-macOS-$SDK_ARCH.tar.xz $INSTALL_PREFIX
 fi
