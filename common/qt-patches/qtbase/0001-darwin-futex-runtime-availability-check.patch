@@ -1,0 +1,77 @@
+diff --git a/src/corelib/thread/qfutex_mac_p.h b/src/corelib/thread/qfutex_mac_p.h
+index 1a41130f..0ce992f5 100644
+--- a/src/corelib/thread/qfutex_mac_p.h
++++ b/src/corelib/thread/qfutex_mac_p.h
+@@ -22,13 +22,42 @@
+ 
+ #include <os/os_sync_wait_on_address.h>
+ 
+-#define QT_ALWAYS_USE_FUTEX
++// os_sync_wait_on_address() and friends are macOS 14.4 / iOS 17.4 and later.
++// When the deployment target is older they are weak-imported and resolve to
++// NULL at runtime on an older OS: the call then branches to address 0, which
++// is a SIGSEGV at 0x0 on the first contended QMutex. Only claim the futex is
++// unconditionally present when the deployment target guarantees the API;
++// otherwise check the (weak) symbols at runtime, exactly as the __ulock_*
++// backend did before 6.12. Every QtFutex user -- qmutex.cpp, qsemaphore.cpp,
++// qlatch.cpp, qatomicwait.cpp -- already gates on futexAvailable(), and
++// dropping QT_ALWAYS_USE_FUTEX keeps their non-futex fallbacks compiled in.
++// Keep the condition in sync with QBasicMutex::FutexAlwaysAvailable (qmutex.h).
++#if !defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) \
++    || __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 140400
++#  define QT_DARWIN_FUTEX_ALWAYS_AVAILABLE
++#  define QT_ALWAYS_USE_FUTEX
++#endif
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// Referencing/calling a weak-imported symbol below its introduced version is
++// the whole point here; the runtime check above is the guard clang asks for.
++QT_WARNING_PUSH
++QT_WARNING_DISABLE_CLANG("-Wunguarded-availability-new")
++
+ namespace QtDarwinFutex {
+ 
++#if defined(QT_DARWIN_FUTEX_ALWAYS_AVAILABLE)
+ constexpr bool futexAvailable() { return true; }
++#else
++/*not constexpr*/ inline bool futexAvailable()
++{
++    return os_sync_wait_on_address != nullptr
++            && os_sync_wait_on_address_with_timeout != nullptr
++            && os_sync_wake_by_address_all != nullptr
++            && os_sync_wake_by_address_any != nullptr;
++}
++#endif
+ 
+ template <typename Atomic>
+ inline void futexWait(Atomic &futex, typename Atomic::Type expectedValue)
+@@ -69,6 +98,8 @@ inline void futexWakeOne(Atomic &futex)
+ }
+ } //namespace QtDarwinFutex
+ 
++QT_WARNING_POP
++
+ namespace QtFutex = QtDarwinFutex;
+ 
+ QT_END_NAMESPACE
+diff --git a/src/corelib/thread/qmutex.h b/src/corelib/thread/qmutex.h
+index f76cc48e..8bce2c9a 100644
+--- a/src/corelib/thread/qmutex.h
++++ b/src/corelib/thread/qmutex.h
+@@ -25,7 +25,14 @@ class QT6_ONLY(Q_CORE_EXPORT) QBasicMutex
+     Q_DISABLE_COPY_MOVE(QBasicMutex)
+ protected:
+     static constexpr bool FutexAlwaysAvailable =
+-#if defined(Q_OS_FREEBSD) || defined(Q_OS_LINUX) || defined(Q_OS_WIN) || defined(Q_OS_APPLE) // these platforms use futex
++#if defined(Q_OS_FREEBSD) || defined(Q_OS_LINUX) || defined(Q_OS_WIN) // these platforms use futex
++            true
++// On Apple the futex is only *guaranteed* when the deployment target reaches
++// os_sync_wait_on_address() (macOS 14.4 / iOS 17.4). Below that it is still used, but
++// decided at runtime by futexAvailable(), so it is not "always" available.
++// Keep in sync with QT_ALWAYS_USE_FUTEX in qfutex_mac_p.h.
++#elif defined(Q_OS_APPLE) && !(defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) \
++                               && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 140400)
+             true
+ #else
+             false

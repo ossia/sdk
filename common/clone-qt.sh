@@ -45,6 +45,35 @@ qt_pick() {
   return 1
 }
 
+# Apply the local patches we carry for a module, from common/qt-patches/<repo>/.
+# These are the fixes that have no Gerrit change to qt_pick -- either not yet
+# submitted upstream, or submitted and not yet merged. Applied after the picks
+# so they land on top of them.
+#
+# Same tolerance as qt_pick: a patch already present in the tree (it landed
+# upstream and we have not removed the file yet) is success, not failure --
+# otherwise every Qt bump would break the build at a random patch. A patch that
+# neither applies nor is already applied is a real conflict and does fail.
+qt_apply_local() {
+  local repo=$1
+  local dir="$SDK_COMMON_ROOT/common/qt-patches/$repo"
+  [[ -d "$dir" ]] || return 0
+
+  local p
+  for p in "$dir"/*.patch; do
+    [[ -e "$p" ]] || continue     # nullglob is not set; skip the literal glob
+    if git apply --check "$p" 2>/dev/null; then
+      git apply "$p"
+      echo "clone-qt: applied $(basename "$p") to $repo"
+    elif git apply --reverse --check "$p" 2>/dev/null; then
+      echo "clone-qt: $(basename "$p") already present in $repo, skipping"
+    else
+      echo "clone-qt: $(basename "$p") does not apply to $repo at $QT_VERSION" >&2
+      return 1
+    fi
+  done
+}
+
 if [[ ! -d qt ]]; then
 # $QT_VERSION is a super-repo SHA, so this cannot be `clone -b`: that only takes
 # a branch or tag name. Fetch the commit directly instead -- allowed by both
@@ -87,6 +116,8 @@ git init -q qt
     qt_pick qtbase refs/changes/05/686805/2
     # QRhiVulkan: swapchain recreated with a stale extent on resize
     qt_pick qtbase refs/changes/71/726771/3
+
+    qt_apply_local qtbase
   )
 
   (
