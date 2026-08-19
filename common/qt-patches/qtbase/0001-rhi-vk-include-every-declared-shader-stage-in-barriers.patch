@@ -1,0 +1,539 @@
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Wed, 19 Aug 2026 00:00:00 +0200
+Subject: [PATCH] rhi: vk: include every declared shader stage in resource barriers
+
+QRhiPassResourceTracker collapsed a shader resource binding's stage flags
+to a single stage ("pick the earlier stage (as this is going to be
+dstAccessMask)"), so a binding declared VertexStage | FragmentStage
+produced a barrier with dstStageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT
+alone.
+
+That is not sufficient. Per the Vulkan spec, "Synchronization and Cache
+Control" / "Pipeline Stages":
+
+    If a synchronization command includes a destination stage mask, its
+    second synchronization scope only includes execution of the pipeline
+    stages specified in that mask and any logically later stages. Its
+    second access scope only includes memory accesses performed by
+    pipeline stages explicitly specified in the destination stage mask.
+
+    NOTE: access scopes do not interact with the logically earlier or
+    later stages for either scope - only the stages the application
+    specifies are considered part of each access scope.
+
+The logically-later expansion therefore buys ordering, not visibility: a
+write made available by the barrier is never made visible to a fragment
+shader read, because FRAGMENT_SHADER is not in the second access scope.
+Synchronization validation reports this as
+
+    SYNC-HAZARD-READ-AFTER-WRITE ... vkCmdDraw(): Hazard READ_AFTER_WRITE
+    for VkImageView ..., usage: SYNC_FRAGMENT_SHADER_SHADER_SAMPLED_READ,
+    prior_usage: SYNC_IMAGE_LAYOUT_TRANSITION, write_barriers:
+    SYNC_VERTEX_SHADER_SHADER_SAMPLED_READ|...
+
+for every draw that samples a render-target texture through a binding
+visible to both the vertex and the fragment stage - the common case for
+any renderer that declares one visibility mask for all of its samplers.
+
+The collapse is also unsound in a way no ordering argument covers: stage
+ordering is defined per pipeline type, so for a VertexStage | ComputeStage
+binding COMPUTE_SHADER is neither explicitly specified nor logically later
+than VERTEX_SHADER, and drops out of both scopes.
+
+Turn BufferStage/TextureStage into flag types and carry the full set
+through the tracker, so dstStageMask/dstAccessMask name every stage the
+binding declares. Stages are unioned rather than minimised when a resource
+is registered twice in a pass; a superset of the second access scope is
+always correct.
+
+Measured on the ossia/score Vulkan render engine (241-test gfx suite,
+NVIDIA 610.57.04, VK_LAYER_KHRONOS_validation with synchronization
+validation enabled): SYNC-HAZARD-READ-AFTER-WRITE 707 -> 0, with no
+change to any other validation message and no test-result change.
+---
+diff --git a/src/gui/rhi/qrhi.cpp b/src/gui/rhi/qrhi.cpp
+index b751fca5b0a..0f0240acff4 100644
+--- a/src/gui/rhi/qrhi.cpp
++++ b/src/gui/rhi/qrhi.cpp
+@@ -12083,13 +12083,7 @@ void QRhiPassResourceTracker::reset()
+     m_textures.clear();
+ }
+ 
+-static inline QRhiPassResourceTracker::BufferStage earlierStage(QRhiPassResourceTracker::BufferStage a,
+-                                                                QRhiPassResourceTracker::BufferStage b)
+-{
+-    return QRhiPassResourceTracker::BufferStage(qMin(int(a), int(b)));
+-}
+-
+-void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAccess *access, BufferStage *stage,
++void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAccess *access, BufferStages *stage,
+                                              const UsageState &state)
+ {
+     auto it = m_buffers.find(buf);
+@@ -12102,7 +12096,7 @@ void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAc
+             return;
+         }
+         if (b.stage != *stage) {
+-            b.stage = earlierStage(b.stage, *stage);
++            b.stage |= *stage;
+             *stage = b.stage;
+         }
+         return;
+@@ -12116,12 +12110,6 @@ void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAc
+     m_buffers.insert(buf, b);
+ }
+ 
+-static inline QRhiPassResourceTracker::TextureStage earlierStage(QRhiPassResourceTracker::TextureStage a,
+-                                                                 QRhiPassResourceTracker::TextureStage b)
+-{
+-    return QRhiPassResourceTracker::TextureStage(qMin(int(a), int(b)));
+-}
+-
+ static inline bool isImageLoadStore(QRhiPassResourceTracker::TextureAccess access)
+ {
+     return access == QRhiPassResourceTracker::TexStorageLoad
+@@ -12129,7 +12117,7 @@ static inline bool isImageLoadStore(QRhiPassResourceTracker::TextureAccess acces
+             || access == QRhiPassResourceTracker::TexStorageLoadStore;
+ }
+ 
+-void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *access, TextureStage *stage,
++void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *access, TextureStages *stage,
+                                               const UsageState &state)
+ {
+     auto it = m_textures.find(tex);
+@@ -12150,7 +12138,7 @@ void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *a
+             }
+         }
+         if (t.stage != *stage) {
+-            t.stage = earlierStage(t.stage, *stage);
++            t.stage |= *stage;
+             *stage = t.stage;
+         }
+         return;
+@@ -12163,42 +12151,55 @@ void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *a
+     m_textures.insert(tex, t);
+ }
+ 
+-QRhiPassResourceTracker::BufferStage QRhiPassResourceTracker::toPassTrackerBufferStage(QRhiShaderResourceBinding::StageFlags stages)
++QRhiPassResourceTracker::BufferStages QRhiPassResourceTracker::toPassTrackerBufferStages(QRhiShaderResourceBinding::StageFlags stages)
+ {
+-    // pick the earlier stage (as this is going to be dstAccessMask)
++    // All declared stages have to be carried over, not just the earliest one:
++    // this ends up in dstStageMask/dstAccessMask, and the second access scope
++    // of a barrier covers only the stages that are explicitly specified.
++    // Logically later stages are part of the second synchronization scope, but
++    // not of the second access scope, so a write would never be made visible
++    // to them.
++    QRhiPassResourceTracker::BufferStages result;
+     if (stages.testFlag(QRhiShaderResourceBinding::VertexStage))
+-        return QRhiPassResourceTracker::BufVertexStage;
++        result |= QRhiPassResourceTracker::BufVertexStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::TessellationControlStage))
+-        return QRhiPassResourceTracker::BufTCStage;
++        result |= QRhiPassResourceTracker::BufTCStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::TessellationEvaluationStage))
+-        return QRhiPassResourceTracker::BufTEStage;
++        result |= QRhiPassResourceTracker::BufTEStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::FragmentStage))
+-        return QRhiPassResourceTracker::BufFragmentStage;
++        result |= QRhiPassResourceTracker::BufFragmentStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::ComputeStage))
+-        return QRhiPassResourceTracker::BufComputeStage;
++        result |= QRhiPassResourceTracker::BufComputeStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::GeometryStage))
+-        return QRhiPassResourceTracker::BufGeometryStage;
++        result |= QRhiPassResourceTracker::BufGeometryStage;
++
++    if (Q_UNLIKELY(!result))
++        Q_UNREACHABLE_RETURN(QRhiPassResourceTracker::BufVertexStage);
+ 
+-    Q_UNREACHABLE_RETURN(QRhiPassResourceTracker::BufVertexStage);
++    return result;
+ }
+ 
+-QRhiPassResourceTracker::TextureStage QRhiPassResourceTracker::toPassTrackerTextureStage(QRhiShaderResourceBinding::StageFlags stages)
++QRhiPassResourceTracker::TextureStages QRhiPassResourceTracker::toPassTrackerTextureStages(QRhiShaderResourceBinding::StageFlags stages)
+ {
+-    // pick the earlier stage (as this is going to be dstAccessMask)
++    // See toPassTrackerBufferStages().
++    QRhiPassResourceTracker::TextureStages result;
+     if (stages.testFlag(QRhiShaderResourceBinding::VertexStage))
+-        return QRhiPassResourceTracker::TexVertexStage;
++        result |= QRhiPassResourceTracker::TexVertexStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::TessellationControlStage))
+-        return QRhiPassResourceTracker::TexTCStage;
++        result |= QRhiPassResourceTracker::TexTCStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::TessellationEvaluationStage))
+-        return QRhiPassResourceTracker::TexTEStage;
++        result |= QRhiPassResourceTracker::TexTEStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::FragmentStage))
+-        return QRhiPassResourceTracker::TexFragmentStage;
++        result |= QRhiPassResourceTracker::TexFragmentStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::ComputeStage))
+-        return QRhiPassResourceTracker::TexComputeStage;
++        result |= QRhiPassResourceTracker::TexComputeStage;
+     if (stages.testFlag(QRhiShaderResourceBinding::GeometryStage))
+-        return QRhiPassResourceTracker::TexGeometryStage;
++        result |= QRhiPassResourceTracker::TexGeometryStage;
+ 
+-    Q_UNREACHABLE_RETURN(QRhiPassResourceTracker::TexVertexStage);
++    if (Q_UNLIKELY(!result))
++        Q_UNREACHABLE_RETURN(QRhiPassResourceTracker::TexVertexStage);
++
++    return result;
+ }
+ 
+ QSize QRhiImplementation::clampedSubResourceUploadSize(QSize size, QPoint dstPos, int level, QSize textureSizeAtLevelZero, bool warn)
+diff --git a/src/gui/rhi/qrhi_p.h b/src/gui/rhi/qrhi_p.h
+index b61c4b1bd4e..d595783d62a 100644
+--- a/src/gui/rhi/qrhi_p.h
++++ b/src/gui/rhi/qrhi_p.h
+@@ -686,15 +686,16 @@ public:
+     };
+ 
+     enum BufferStage {
+-        BufIndirectDrawStage,
+-        BufVertexInputStage,
+-        BufVertexStage,
+-        BufTCStage,
+-        BufTEStage,
+-        BufFragmentStage,
+-        BufComputeStage,
+-        BufGeometryStage
++        BufIndirectDrawStage = 1 << 0,
++        BufVertexInputStage = 1 << 1,
++        BufVertexStage = 1 << 2,
++        BufTCStage = 1 << 3,
++        BufTEStage = 1 << 4,
++        BufFragmentStage = 1 << 5,
++        BufComputeStage = 1 << 6,
++        BufGeometryStage = 1 << 7
+     };
++    Q_DECLARE_FLAGS(BufferStages, BufferStage)
+ 
+     enum BufferAccess {
+         BufIndirectDraw,
+@@ -706,19 +707,20 @@ public:
+         BufStorageLoadStore
+     };
+ 
+-    void registerBuffer(QRhiBuffer *buf, int slot, BufferAccess *access, BufferStage *stage,
++    void registerBuffer(QRhiBuffer *buf, int slot, BufferAccess *access, BufferStages *stage,
+                         const UsageState &state);
+ 
+     enum TextureStage {
+-        TexVertexStage,
+-        TexTCStage,
+-        TexTEStage,
+-        TexFragmentStage,
+-        TexColorOutputStage,
+-        TexDepthOutputStage,
+-        TexComputeStage,
+-        TexGeometryStage
++        TexVertexStage = 1 << 0,
++        TexTCStage = 1 << 1,
++        TexTEStage = 1 << 2,
++        TexFragmentStage = 1 << 3,
++        TexColorOutputStage = 1 << 4,
++        TexDepthOutputStage = 1 << 5,
++        TexComputeStage = 1 << 6,
++        TexGeometryStage = 1 << 7
+     };
++    Q_DECLARE_FLAGS(TextureStages, TextureStage)
+ 
+     enum TextureAccess {
+         TexSample,
+@@ -730,13 +732,13 @@ public:
+         TexShadingRate
+     };
+ 
+-    void registerTexture(QRhiTexture *tex, TextureAccess *access, TextureStage *stage,
++    void registerTexture(QRhiTexture *tex, TextureAccess *access, TextureStages *stage,
+                          const UsageState &state);
+ 
+     struct Buffer {
+         int slot;
+         BufferAccess access;
+-        BufferStage stage;
++        BufferStages stage;
+         UsageState stateAtPassBegin;
+     };
+ 
+@@ -744,20 +746,23 @@ public:
+ 
+     struct Texture {
+         TextureAccess access;
+-        TextureStage stage;
++        TextureStages stage;
+         UsageState stateAtPassBegin;
+     };
+ 
+     const QVarLengthFlatMap<QRhiTexture *, Texture, 12> &textures() const { return m_textures; }
+ 
+-    static BufferStage toPassTrackerBufferStage(QRhiShaderResourceBinding::StageFlags stages);
+-    static TextureStage toPassTrackerTextureStage(QRhiShaderResourceBinding::StageFlags stages);
++    static BufferStages toPassTrackerBufferStages(QRhiShaderResourceBinding::StageFlags stages);
++    static TextureStages toPassTrackerTextureStages(QRhiShaderResourceBinding::StageFlags stages);
+ 
+ private:
+     QVarLengthFlatMap<QRhiBuffer *, Buffer, 12> m_buffers;
+     QVarLengthFlatMap<QRhiTexture *, Texture, 12> m_textures;
+ };
+ 
++Q_DECLARE_OPERATORS_FOR_FLAGS(QRhiPassResourceTracker::BufferStages)
++Q_DECLARE_OPERATORS_FOR_FLAGS(QRhiPassResourceTracker::TextureStages)
++
+ Q_DECLARE_TYPEINFO(QRhiPassResourceTracker::Buffer, Q_RELOCATABLE_TYPE);
+ Q_DECLARE_TYPEINFO(QRhiPassResourceTracker::Texture, Q_RELOCATABLE_TYPE);
+ 
+diff --git a/src/gui/rhi/qrhigles2.cpp b/src/gui/rhi/qrhigles2.cpp
+index 7113e7d63c1..77178c2be2d 100644
+--- a/src/gui/rhi/qrhigles2.cpp
++++ b/src/gui/rhi/qrhigles2.cpp
+@@ -2051,7 +2051,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+                     trackedRegisterTexture(&passResTracker,
+                                            texD,
+                                            QRhiPassResourceTracker::TexSample,
+-                                           QRhiPassResourceTracker::toPassTrackerTextureStage(b->stage));
++                                           QRhiPassResourceTracker::toPassTrackerTextureStages(b->stage));
+                 }
+                 break;
+             case QRhiShaderResourceBinding::ImageLoad:
+@@ -2068,7 +2068,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+                 else
+                     access = QRhiPassResourceTracker::TexStorageLoadStore;
+                 trackedRegisterTexture(&passResTracker, texD, access,
+-                                       QRhiPassResourceTracker::toPassTrackerTextureStage(b->stage));
++                                       QRhiPassResourceTracker::toPassTrackerTextureStages(b->stage));
+             }
+                 break;
+             case QRhiShaderResourceBinding::BufferLoad:
+@@ -2085,7 +2085,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+                 else
+                     access = QRhiPassResourceTracker::BufStorageLoadStore;
+                 trackedRegisterBuffer(&passResTracker, bufD, access,
+-                                      QRhiPassResourceTracker::toPassTrackerBufferStage(b->stage));
++                                      QRhiPassResourceTracker::toPassTrackerBufferStages(b->stage));
+             }
+                 break;
+             default:
+@@ -3285,7 +3285,7 @@ static inline QRhiPassResourceTracker::UsageState toPassTrackerUsageState(const
+ void QRhiGles2::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+                                       QGles2Buffer *bufD,
+                                       QRhiPassResourceTracker::BufferAccess access,
+-                                      QRhiPassResourceTracker::BufferStage stage)
++                                      QRhiPassResourceTracker::BufferStages stage)
+ {
+     QGles2Buffer::UsageState &u(bufD->usageState);
+     passResTracker->registerBuffer(bufD, 0, &access, &stage, toPassTrackerUsageState(u));
+@@ -3295,7 +3295,7 @@ void QRhiGles2::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+ void QRhiGles2::trackedRegisterTexture(QRhiPassResourceTracker *passResTracker,
+                                        QGles2Texture *texD,
+                                        QRhiPassResourceTracker::TextureAccess access,
+-                                       QRhiPassResourceTracker::TextureStage stage)
++                                       QRhiPassResourceTracker::TextureStages stage)
+ {
+     QGles2Texture::UsageState &u(texD->usageState);
+     passResTracker->registerTexture(texD, &access, &stage, toPassTrackerUsageState(u));
+diff --git a/src/gui/rhi/qrhigles2_p.h b/src/gui/rhi/qrhigles2_p.h
+index 2a261cf5838..38c890639b8 100644
+--- a/src/gui/rhi/qrhigles2_p.h
++++ b/src/gui/rhi/qrhigles2_p.h
+@@ -916,11 +916,11 @@ public:
+     void trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+                                QGles2Buffer *bufD,
+                                QRhiPassResourceTracker::BufferAccess access,
+-                               QRhiPassResourceTracker::BufferStage stage);
++                               QRhiPassResourceTracker::BufferStages stage);
+     void trackedRegisterTexture(QRhiPassResourceTracker *passResTracker,
+                                 QGles2Texture *texD,
+                                 QRhiPassResourceTracker::TextureAccess access,
+-                                QRhiPassResourceTracker::TextureStage stage);
++                                QRhiPassResourceTracker::TextureStages stage);
+     void executeCommandBuffer(QRhiCommandBuffer *cb);
+     void executeBindGraphicsPipeline(QGles2CommandBuffer *cbD, QGles2GraphicsPipeline *psD);
+     void bindCombinedSampler(QGles2CommandBuffer *cbD, QGles2Texture *texD, QGles2Sampler *samplerD,
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index b4df1519409..7287274b754 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -5219,30 +5219,30 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::BufferAccess acc
+     return 0;
+ }
+ 
+-static inline VkPipelineStageFlags toVkPipelineStage(QRhiPassResourceTracker::BufferStage stage)
+-{
+-    switch (stage) {
+-    case QRhiPassResourceTracker::BufIndirectDrawStage:
+-        return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+-    case QRhiPassResourceTracker::BufVertexInputStage:
+-        return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+-    case QRhiPassResourceTracker::BufVertexStage:
+-        return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+-    case QRhiPassResourceTracker::BufTCStage:
+-        return VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+-    case QRhiPassResourceTracker::BufTEStage:
+-        return VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+-    case QRhiPassResourceTracker::BufFragmentStage:
+-        return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+-    case QRhiPassResourceTracker::BufComputeStage:
+-        return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+-    case QRhiPassResourceTracker::BufGeometryStage:
+-        return VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+-    default:
++static inline VkPipelineStageFlags toVkPipelineStage(QRhiPassResourceTracker::BufferStages stages)
++{
++    VkPipelineStageFlags s = 0;
++    if (stages.testFlag(QRhiPassResourceTracker::BufIndirectDrawStage))
++        s |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufVertexInputStage))
++        s |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufVertexStage))
++        s |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufTCStage))
++        s |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufTEStage))
++        s |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufFragmentStage))
++        s |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufComputeStage))
++        s |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::BufGeometryStage))
++        s |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
++
++    if (Q_UNLIKELY(!s))
+         Q_UNREACHABLE();
+-        break;
+-    }
+-    return 0;
++
++    return s;
+ }
+ 
+ static inline QVkBuffer::UsageState toVkBufferUsageState(QRhiPassResourceTracker::UsageState usage)
+@@ -5303,30 +5303,30 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::TextureAccess ac
+     return 0;
+ }
+ 
+-static inline VkPipelineStageFlags toVkPipelineStage(QRhiPassResourceTracker::TextureStage stage)
+-{
+-    switch (stage) {
+-    case QRhiPassResourceTracker::TexVertexStage:
+-        return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+-    case QRhiPassResourceTracker::TexTCStage:
+-        return VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+-    case QRhiPassResourceTracker::TexTEStage:
+-        return VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+-    case QRhiPassResourceTracker::TexFragmentStage:
+-        return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+-    case QRhiPassResourceTracker::TexColorOutputStage:
+-        return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+-    case QRhiPassResourceTracker::TexDepthOutputStage:
+-        return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+-    case QRhiPassResourceTracker::TexComputeStage:
+-        return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+-    case QRhiPassResourceTracker::TexGeometryStage:
+-        return VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+-    default:
++static inline VkPipelineStageFlags toVkPipelineStage(QRhiPassResourceTracker::TextureStages stages)
++{
++    VkPipelineStageFlags s = 0;
++    if (stages.testFlag(QRhiPassResourceTracker::TexVertexStage))
++        s |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexTCStage))
++        s |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexTEStage))
++        s |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexFragmentStage))
++        s |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexColorOutputStage))
++        s |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexDepthOutputStage))
++        s |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexComputeStage))
++        s |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
++    if (stages.testFlag(QRhiPassResourceTracker::TexGeometryStage))
++        s |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
++
++    if (Q_UNLIKELY(!s))
+         Q_UNREACHABLE();
+-        break;
+-    }
+-    return 0;
++
++    return s;
+ }
+ 
+ static inline QVkTexture::UsageState toVkTextureUsageState(QRhiPassResourceTracker::UsageState usage)
+@@ -5342,7 +5342,7 @@ void QRhiVulkan::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+                                        QVkBuffer *bufD,
+                                        int slot,
+                                        QRhiPassResourceTracker::BufferAccess access,
+-                                       QRhiPassResourceTracker::BufferStage stage)
++                                       QRhiPassResourceTracker::BufferStages stage)
+ {
+     QVkBuffer::UsageState &u(bufD->usageState[slot]);
+     const VkAccessFlags newAccess = toVkAccess(access);
+@@ -5359,7 +5359,7 @@ void QRhiVulkan::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+ void QRhiVulkan::trackedRegisterTexture(QRhiPassResourceTracker *passResTracker,
+                                         QVkTexture *texD,
+                                         QRhiPassResourceTracker::TextureAccess access,
+-                                        QRhiPassResourceTracker::TextureStage stage)
++                                        QRhiPassResourceTracker::TextureStages stage)
+ {
+     QVkTexture::UsageState &u(texD->usageState);
+     const VkAccessFlags newAccess = toVkAccess(access);
+@@ -5975,7 +5975,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+             bufD->lastActiveFrameSlot = currentFrameSlot;
+             trackedRegisterBuffer(&passResTracker, bufD, bufD->m_type == QRhiBuffer::Dynamic ? currentFrameSlot : 0,
+                                   QRhiPassResourceTracker::BufUniformRead,
+-                                  QRhiPassResourceTracker::toPassTrackerBufferStage(b->stage));
++                                  QRhiPassResourceTracker::toPassTrackerBufferStages(b->stage));
+ 
+             // Check both the "local" id (the generation counter) and the
+             // global id. The latter is relevant when a newly allocated
+@@ -6010,7 +6010,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+                     texD->lastActiveFrameSlot = currentFrameSlot;
+                     trackedRegisterTexture(&passResTracker, texD,
+                                            QRhiPassResourceTracker::TexSample,
+-                                           QRhiPassResourceTracker::toPassTrackerTextureStage(b->stage));
++                                           QRhiPassResourceTracker::toPassTrackerTextureStages(b->stage));
+                 }
+                 if (samplerD)
+                     samplerD->lastActiveFrameSlot = currentFrameSlot;
+@@ -6048,7 +6048,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+             else
+                 access = QRhiPassResourceTracker::TexStorageLoadStore;
+ 
+-            const auto stage = QRhiPassResourceTracker::toPassTrackerTextureStage(b->stage);
++            const auto stage = QRhiPassResourceTracker::toPassTrackerTextureStages(b->stage);
+             const auto prevAccess = passResTracker.textures().find(texD);
+             if (prevAccess != passResTracker.textures().end()) {
+                 const QRhiPassResourceTracker::Texture &tex = prevAccess->second;
+@@ -6091,7 +6091,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+             else
+                 access = QRhiPassResourceTracker::BufStorageLoadStore;
+ 
+-            const auto stage = QRhiPassResourceTracker::toPassTrackerBufferStage(b->stage);
++            const auto stage = QRhiPassResourceTracker::toPassTrackerBufferStages(b->stage);
+             const auto prevAccess = passResTracker.buffers().find(bufD);
+             if (prevAccess != passResTracker.buffers().end()) {
+                 const QRhiPassResourceTracker::Buffer &buf = prevAccess->second;
+diff --git a/src/gui/rhi/qrhivulkan_p.h b/src/gui/rhi/qrhivulkan_p.h
+index 951722ed190..f8f5861081d 100644
+--- a/src/gui/rhi/qrhivulkan_p.h
++++ b/src/gui/rhi/qrhivulkan_p.h
+@@ -899,11 +899,11 @@ public:
+                                QVkBuffer *bufD,
+                                int slot,
+                                QRhiPassResourceTracker::BufferAccess access,
+-                               QRhiPassResourceTracker::BufferStage stage);
++                               QRhiPassResourceTracker::BufferStages stage);
+     void trackedRegisterTexture(QRhiPassResourceTracker *passResTracker,
+                                 QVkTexture *texD,
+                                 QRhiPassResourceTracker::TextureAccess access,
+-                                QRhiPassResourceTracker::TextureStage stage);
++                                QRhiPassResourceTracker::TextureStages stage);
+     void recordTransitionPassResources(QVkCommandBuffer *cbD, const QRhiPassResourceTracker &tracker);
+     void activateTextureRenderTarget(QVkCommandBuffer *cbD, QVkTextureRenderTarget *rtD);
+     void executeDeferredReleases(bool forced = false);
