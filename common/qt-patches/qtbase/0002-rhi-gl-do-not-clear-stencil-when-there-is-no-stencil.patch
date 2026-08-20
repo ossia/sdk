@@ -1,0 +1,94 @@
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Wed, 19 Aug 2026 22:30:00 -0400
+Subject: [PATCH] rhi: gl: do not clear stencil when the attachment has none
+
+QRhiGles2::beginPass() unconditionally adds GL_STENCIL_BUFFER_BIT to the
+glClear mask whenever the render target has a depth-stencil attachment:
+
+    if (rtD->dsAttCount && wantsDsClear)
+        clearCmd.args.clear.mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+
+But a QRhiTextureRenderTarget's depth attachment does not have to carry
+stencil. QRhiTextureRenderTargetDescription::setDepthTexture() accepts
+QRhiTexture::D16, D24 and D32F, and QGles2TextureRenderTarget::create()
+already knows the difference: it only calls glFramebufferTexture2D() /
+glFramebufferTextureLayer() for GL_STENCIL_ATTACHMENT when
+isStencilSupportingFormat() says so. So for a D32F depth texture the FBO
+has a depth attachment and no stencil attachment, and every beginPass()
+that clears asks the driver to clear a buffer that is not there.
+
+That is a no-op per the GL spec, but it is a diagnosable one, and drivers
+that implement KHR_debug thoroughly report it. On NVIDIA:
+
+    GL_DEBUG_TYPE_OTHER, GL_DEBUG_SEVERITY_LOW, API source:
+    "Usage warning: glClear() called with GL_STENCIL_BUFFER_BIT, but
+     there is no stencil buffer. Operation will have no effect."
+
+Measured on the ossia/score OpenGL render engine, whose intermediate
+render targets use a D32F depth texture (reverse-Z: a fixed-point D24 has
+strictly worse precision under a reversed depth range): 620 such messages
+across the 53-test gfx suite, one per pass per frame, drowning out the
+rest of the debug output.
+
+Record whether the depth-stencil attachment actually has a stencil buffer
+when the FBO is built - mirroring the conditions that decide whether
+GL_STENCIL_ATTACHMENT is attached at all - and mask the clear bit on it.
+The default is true, so the swapchain path (whose depth-stencil is always
+a packed-format renderbuffer) and the renderbuffer attachment path are
+unchanged.
+
+No behaviour change: clearing a buffer that does not exist has no effect
+by definition, so this only removes the request.
+---
+--- a/src/gui/rhi/qrhigles2.cpp
++++ b/src/gui/rhi/qrhigles2.cpp
+@@ -5020,8 +5020,11 @@
+     clearCmd.args.clear.mask = 0;
+     if (rtD->colorAttCount && wantsColorClear)
+         clearCmd.args.clear.mask |= GL_COLOR_BUFFER_BIT;
+-    if (rtD->dsAttCount && wantsDsClear)
+-        clearCmd.args.clear.mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
++    if (rtD->dsAttCount && wantsDsClear) {
++        clearCmd.args.clear.mask |= GL_DEPTH_BUFFER_BIT;
++        if (rtD->dsHasStencil)
++            clearCmd.args.clear.mask |= GL_STENCIL_BUFFER_BIT;
++    }
+     clearCmd.args.clear.c[0] = colorClearValue.redF();
+     clearCmd.args.clear.c[1] = colorClearValue.greenF();
+     clearCmd.args.clear.c[2] = colorClearValue.blueF();
+@@ -6575,6 +6578,7 @@
+     if (hasDepthStencil) {
+         if (m_desc.depthStencilBuffer()) {
+             QGles2RenderBuffer *depthRbD = QRHI_RES(QGles2RenderBuffer, m_desc.depthStencilBuffer());
++            d.dsHasStencil = true;
+             if (rhiD->caps.needsDepthStencilCombinedAttach) {
+                 rhiD->f->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER,
+                                                    depthRbD->renderbuffer);
+@@ -6596,6 +6600,7 @@
+             }
+         } else {
+             QGles2Texture *depthTexD = QRHI_RES(QGles2Texture, m_desc.depthTexture());
++            d.dsHasStencil = rhiD->isStencilSupportingFormat(depthTexD->format());
+             if (multiViewCount < 2) {
+                 if (depthTexD->samples > 1 && rhiD->caps.glesMultisampleRenderToTexture && m_desc.depthResolveTexture()) {
+                     // Special path for GLES and
+@@ -6666,6 +6671,9 @@
+                                                                               multiViewCount);
+                         }
+                     } else {
++                        // The throwaway texture is D24S8 regardless of the
++                        // format requested for the depth attachment.
++                        d.dsHasStencil = true;
+                         if (!nonMsaaThrowawayDepthTexture) {
+                             rhiD->f->glGenTextures(1, &nonMsaaThrowawayDepthTexture);
+                             rhiD->f->glBindTexture(GL_TEXTURE_2D_ARRAY, nonMsaaThrowawayDepthTexture);
+--- a/src/gui/rhi/qrhigles2_p.h
++++ b/src/gui/rhi/qrhigles2_p.h
+@@ -185,6 +185,7 @@
+     int sampleCount = 1;
+     int colorAttCount = 0;
+     int dsAttCount = 0;
++    bool dsHasStencil = true;
+     bool srgbUpdateAndBlend = false;
+     QRhiRenderTargetAttachmentTracker::ResIdList currentResIdList;
+     std::optional<QRhiSwapChain::StereoTargetBuffer> stereoTarget;
