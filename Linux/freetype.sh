@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 source ./common.sh clang
 source ./common/clone-freetype.sh
@@ -26,6 +26,10 @@ cmake --build freetype-build --target install/strip
 # 2. Build harfbuzz
 
 (
+  # HarfBuzz promotes -Wunused to an error in hb.hh. Clang 23 expanded that
+  # group to include -Wunused-template, exposing intentionally dormant generic
+  # overloads. Use HarfBuzz's supported escape hatch for its internal pragmas.
+  export CXXFLAGS="$CXXFLAGS -DHB_NO_PRAGMA_GCC_DIAGNOSTIC_ERROR"
   cd harfbuzz
   export LIBRARY_PATH=$INSTALL_PREFIX/sysroot
   export PKG_CONFIG_PATH=$INSTALL_PREFIX/sysroot/lib64/pkgconfig

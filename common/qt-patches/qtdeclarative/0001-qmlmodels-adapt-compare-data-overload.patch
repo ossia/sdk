@@ -1,0 +1,20 @@
+From: ossia SDK maintainers
+Date: Thu, 27 Aug 2026 00:00:00 +0000
+Subject: [PATCH] qmlmodels: adapt to QAbstractItemModel compareData overloads
+
+qtbase 99c5eee57f8 replaced the nullable QCollator pointer overload with
+separate overloads taking no collator or a QCollator reference. Keep
+QQmlSortFilterProxyModel's nullable internal API and dispatch accordingly.
+---
+diff --git a/src/qmlmodels/sfpm/qqmlsortfilterproxymodel.cpp b/src/qmlmodels/sfpm/qqmlsortfilterproxymodel.cpp
+--- a/src/qmlmodels/sfpm/qqmlsortfilterproxymodel.cpp
++++ b/src/qmlmodels/sfpm/qqmlsortfilterproxymodel.cpp
+@@ -832,6 +832,7 @@ Qt::weak_ordering QQmlSortFilterProxyModel::compareData(const QVariant &lhs, con
+                                                         const QCollator *collator)
+ {
+-    return QAbstractItemModel::compareData(lhs, rhs, collator);
++    return collator ? QAbstractItemModel::compareData(lhs, rhs, *collator)
++                    : QAbstractItemModel::compareData(lhs, rhs);
+ }
+ 
+ /*!

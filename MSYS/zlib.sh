@@ -70,6 +70,7 @@ cmake -S xz -B xz-build \
  -DBUILD_TESTING=0 \
  -DCREATE_XZ_SYMLINKS=0 \
  -DCREATE_LZMA_SYMLINKS=0 \
+ -DXZ_NLS=OFF \
  -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
 
 cmake --build xz-build --config Release 

@@ -21,9 +21,10 @@
 !common/ffmpeg-features.*
 !common/media-deps-codecs.*
 
-# Same trap for the local Qt patches clone-qt.sh's qt_apply_local applies:
-# `*.*` swallows *.patch, and an unversioned patch fails silently -- the fix is
-# simply absent from every CI build, with nothing in the log to say so.
+# Same trap for local source patches: `*.*` swallows *.patch, and an
+# unversioned patch fails silently with nothing in the CI log to identify it.
 !common/qt-patches/**
+!common/faust-patches/**
+!common/ysfx-patches/**
 
 

@@ -8,9 +8,12 @@ mkdir -p llvm-build-3
 cd llvm-build-3
 # set PATH=/opt/score-sdk/llvm/bin:$PATH
 
+# LLVM 23 enables library PCH reuse. Clang cannot emit one PCH for the x86_64
+# and x86_64h slices passed together, so disable PCH for this multi-arch build.
 xcrun --sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk cmake -Wno-dev \
  -GNinja \
  -DCMAKE_BUILD_TYPE=Release \
+ -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
  -DBUILD_SHARED_LIBS=0 \
  -DLLVM_INCLUDE_TOOLS=1 \
  -DLLVM_BUILD_TOOLS=1 \

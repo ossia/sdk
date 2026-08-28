@@ -11,7 +11,11 @@ if [[ ! -d llvm ]]; then
     # default-branch-then-checkout behaviour for local development.
     git clone $SDK_CLONE_DEPTH ${SDK_CLONE_DEPTH:+-b "$LLVM_VERSION"} https://github.com/llvm/llvm-project.git llvm
     cd llvm
-    git checkout $LLVM_VERSION
+    # `clone -b` already checked a shallow clone out. A second checkout races
+    # git 2.55's clone-time background index maintenance on Windows ARM.
+    if [[ -z "${SDK_CLONE_DEPTH:-}" ]]; then
+        git checkout "$LLVM_VERSION"
+    fi
 
     # Apply our LLVM patches (JITLink COFF fix for the score JIT, etc.).
     for p in "$LLVM_PATCHES_DIR"/*.patch; do

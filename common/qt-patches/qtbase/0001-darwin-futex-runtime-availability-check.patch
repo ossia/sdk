@@ -1,5 +1,28 @@
+diff --git a/src/corelib/CMakeLists.txt b/src/corelib/CMakeLists.txt
+index 5ab8f300759..f8931836bc6 100644
+--- a/src/corelib/CMakeLists.txt
++++ b/src/corelib/CMakeLists.txt
+@@ -864,6 +864,7 @@ qt_internal_extend_target(Core CONDITION QT_FEATURE_thread AND UNIX
+ qt_internal_extend_target(Core CONDITION APPLE AND QT_FEATURE_thread
+     SOURCES
+         thread/qfutex_mac_p.h
++        thread/qmutex_mac.cpp
+ )
+ 
+ qt_internal_extend_target(Core CONDITION QT_FEATURE_thread AND UNIX AND NOT APPLE AND NOT LINUX
+@@ -1628,8 +1629,9 @@ qt_internal_extend_target(Core CONDITION QT_FEATURE_ctf
+         tracing
+ )
+ 
+-# This file is included by qmutex.cpp
++# These files are included by qmutex.cpp
+ set_source_files_properties(
++    thread/qmutex_mac.cpp
+     thread/qmutex_unix.cpp
+     PROPERTIES HEADER_FILE_ONLY ON)
+ 
 diff --git a/src/corelib/thread/qfutex_mac_p.h b/src/corelib/thread/qfutex_mac_p.h
-index 1a41130f..0ce992f5 100644
+index 1a41130f874..0ce992f5ab4 100644
 --- a/src/corelib/thread/qfutex_mac_p.h
 +++ b/src/corelib/thread/qfutex_mac_p.h
 @@ -22,13 +22,42 @@
@@ -55,8 +78,21 @@ index 1a41130f..0ce992f5 100644
  namespace QtFutex = QtDarwinFutex;
  
  QT_END_NAMESPACE
+diff --git a/src/corelib/thread/qmutex.cpp b/src/corelib/thread/qmutex.cpp
+index 5f920224b7d..85532884963 100644
+--- a/src/corelib/thread/qmutex.cpp
++++ b/src/corelib/thread/qmutex.cpp
+@@ -950,6 +950,8 @@ QT_END_NAMESPACE
+ 
+ #if defined(QT_ALWAYS_USE_FUTEX)
+ // nothing
++#elif defined(Q_OS_DARWIN)
++#  include "qmutex_mac.cpp"
+ #else
+ #  include "qmutex_unix.cpp"
+ #endif
 diff --git a/src/corelib/thread/qmutex.h b/src/corelib/thread/qmutex.h
-index f76cc48e..8bce2c9a 100644
+index f76cc48e8d4..8bce2c9afbf 100644
 --- a/src/corelib/thread/qmutex.h
 +++ b/src/corelib/thread/qmutex.h
 @@ -25,7 +25,14 @@ class QT6_ONLY(Q_CORE_EXPORT) QBasicMutex
@@ -75,3 +111,90 @@ index f76cc48e..8bce2c9a 100644
              true
  #else
              false
+diff --git a/src/corelib/thread/qmutex_mac.cpp b/src/corelib/thread/qmutex_mac.cpp
+new file mode 100644
+index 00000000000..968611a397e
+--- /dev/null
++++ b/src/corelib/thread/qmutex_mac.cpp
+@@ -0,0 +1,55 @@
++// Copyright (C) 2016 The Qt Company Ltd.
++// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
++// Qt-Security score:significant reason:default
++
++#include "qplatformdefs.h"
++#include "qmutex.h"
++#include "qmutex_p.h"
++
++#include "private/qcore_unix_p.h"
++
++#include <mach/mach.h>
++#include <mach/task.h>
++
++#include <errno.h>
++
++QT_BEGIN_NAMESPACE
++
++QMutexPrivate::QMutexPrivate()
++{
++    kern_return_t r = semaphore_create(mach_task_self(), &mach_semaphore, SYNC_POLICY_FIFO, 0);
++    if (r != KERN_SUCCESS)
++        qWarning("QMutex: failed to create semaphore, error %d", r);
++}
++
++QMutexPrivate::~QMutexPrivate()
++{
++    kern_return_t r = semaphore_destroy(mach_task_self(), mach_semaphore);
++    if (r != KERN_SUCCESS)
++        qWarning("QMutex: failed to destroy semaphore, error %d", r);
++}
++
++bool QMutexPrivate::wait(QDeadlineTimer timeout)
++{
++    kern_return_t r;
++    if (timeout.isForever()) {
++        do {
++            r = semaphore_wait(mach_semaphore);
++        } while (r == KERN_ABORTED);
++        Q_ASSERT(r == KERN_SUCCESS);
++    } else {
++        timespec tv = durationToTimespec(timeout.remainingTimeAsDuration());
++        mach_timespec_t ts;
++        ts.tv_nsec = tv.tv_nsec;
++        ts.tv_sec = tv.tv_sec;
++        r = semaphore_timedwait(mach_semaphore, ts);
++    }
++    return r == KERN_SUCCESS;
++}
++
++void QMutexPrivate::wakeUp() noexcept
++{
++    semaphore_signal(mach_semaphore);
++}
++
++QT_END_NAMESPACE
+diff --git a/src/corelib/thread/qmutex_p.h b/src/corelib/thread/qmutex_p.h
+index de04ba681c3..e35619535d8 100644
+--- a/src/corelib/thread/qmutex_p.h
++++ b/src/corelib/thread/qmutex_p.h
+@@ -26,7 +26,9 @@
+ 
+ #include "qplatformdefs.h" // _POSIX_VERSION
+ 
+-#if defined(Q_OS_UNIX)
++#if defined(Q_OS_DARWIN)
++#  include <mach/semaphore.h>
++#elif defined(Q_OS_UNIX)
+ #  include <semaphore.h>
+ #endif
+ 
+@@ -82,7 +84,9 @@ public:
+     void derefWaiters(int value) noexcept;
+ 
+     //platform specific stuff
+-#if defined(Q_OS_UNIX)
++#if defined(Q_OS_DARWIN)
++    semaphore_t mach_semaphore;
++#elif defined(Q_OS_UNIX)
+     sem_t semaphore;
+ #endif
+ };

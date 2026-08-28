@@ -45,6 +45,8 @@ runs:
           common/clone-cmake.sh
           common/qtmodules
           common/qtfeatures
+          common/patches/*.patch
+          common/qt-patches/*/*.patch
           # The core stage runs `media-deps.sh libjpeg webp` before qt.sh
           # (qtfeatures says -system-libjpeg and -system-webp), so those two
           # recipes are core inputs even though every other recipe in this file
@@ -76,15 +78,14 @@ runs:
           *) echo "core-hash: unknown platform '$platform'" >&2; exit 1 ;;
         esac
 
-        # Hash existing files only (a renamed/removed input still changes the
-        # hash via the surviving files + the list itself). Sort for determinism.
+        # Hash existing files only. Globbed patch inputs expand above; any
+        # unmatched literal is filtered here. Sort for determinism.
         files=()
         for f in "${common_files[@]}" "${plat_files[@]}"; do
           [[ -f "$f" ]] && files+=("$f")
         done
-        # NB: common/patches/ currently holds only media patches (ffmpeg), so it
-        # is intentionally NOT folded in here — it belongs to the media hash.
-        # Qt patches live inside common/clone-qt.sh, which is already hashed.
+        # common/patches/ffmpeg remains excluded because the glob above is
+        # intentionally non-recursive; those patches belong to the media hash.
 
         # Only the CORE version pins from versions.sh (NOT media ones). Keep this
         # list in sync with what the core stage actually builds.
@@ -92,7 +93,7 @@ runs:
         # media deps: Qt is configured -system-webp and -system-libjpeg, so the
         # core genuinely contains both. See the note on build-media-deps.sh above.
         core_versions=$(grep -E \
-          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION|WEBP_VERSION|LIBJPEGTURBO_VERSION)=' \
+          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|QTBASE_VERSION|QTSHADERTOOLS_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION|WEBP_VERSION|LIBJPEGTURBO_VERSION)=' \
           common/versions.sh | LC_ALL=C sort)
 
         hash=$( { printf '%s\n' "${files[@]}" | LC_ALL=C sort -u | xargs sha256sum; \

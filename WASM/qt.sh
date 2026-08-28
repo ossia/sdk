@@ -10,6 +10,7 @@ mkdir -p qt6-build-host
   cd qt6-build-host
   ../qt/configure \
      -skip qtwayland \
+     -skip qtconnectivity \
      -skip qtserialport \
      -skip qtmultimedia \
      -skip qtquick3d \
@@ -45,6 +46,7 @@ mkdir -p qt6-build-static
   # for the (audio-focused) wasm SDK.
   ../qt/configure \
      -skip qtwayland \
+     -skip qtconnectivity \
      -skip qtserialport \
      -skip qtmultimedia \
      -skip qtquick3d \

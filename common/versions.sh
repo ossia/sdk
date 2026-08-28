@@ -80,18 +80,20 @@ export FAUST_VERSION=2e20dde10938821e68395f5e25e8414c6767f13e
 #        the compiler recurses until its stack is gone. Intermittent, and it hit
 #        223 of the 296 faust examples on libc++ (macOS, MSYS/CLANG64, WASM).
 export FAUST_PRS="1281"
-export LLVM_MINGW_VERSION=20260616
-export LLVM_VERSION=llvmorg-22.1.8
+export LLVM_MINGW_VERSION=20260826
+export LLVM_VERSION=llvmorg-23.1.0
 export OPENSSL_VERSION=3.5.7
-# qt5.git super-repo commit, not a tag: v6.12.0-beta1 is two months and 1171
-# commits behind the 6.12 branch. A full SHA rather than a branch name keeps the
-# build reproducible; github.com and code.qt.io both allow fetching one directly
-# into a shallow clone, which is what clone-qt.sh and WASM/qt-deps.sh rely on.
+# qt5.git super-repo commit, not a tag: use the current 6.12 branch tip.
+# A full SHA rather than a branch name keeps the build reproducible; github.com
+# and code.qt.io both allow fetching one directly into a shallow clone, which
+# is what clone-qt.sh and WASM/qt-deps.sh rely on.
 # To bump: take the current tip of https://github.com/qt/qt5 refs/heads/6.12.
-export QT_VERSION=0538193fa5704dd2725e5ee01f59e72cfd66ac84
-# qtbase is checked out at its own 6.12 commit on top of that, ahead of the
-# pointer the super-repo carries; see clone-qt.sh. Move the two together.
-export QTBASE_VERSION=6f66fb256b2aca74ddb534e58c3e7fe88bbbdf95
+export QT_VERSION=7b72c15f61f860c0fe6f67a92d550cd1556f57de
+# qtbase and qtshadertools are checked out at their own 6.12 branch tips on top
+# of that, ahead of the pointers the super-repo carries; see clone-qt.sh. Move
+# all three together.
+export QTBASE_VERSION=baceb73610fab8725bcad5724e25935beef08699
+export QTSHADERTOOLS_VERSION=84c76c3695808bd6677df31278b38c095320d5f5
 export CMAKE_VERSION_SHORT=4.3
 export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14

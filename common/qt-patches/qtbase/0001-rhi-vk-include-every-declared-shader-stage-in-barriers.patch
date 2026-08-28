@@ -52,10 +52,10 @@ validation enabled): SYNC-HAZARD-READ-AFTER-WRITE 707 -> 0, with no
 change to any other validation message and no test-result change.
 ---
 diff --git a/src/gui/rhi/qrhi.cpp b/src/gui/rhi/qrhi.cpp
-index b751fca5b0a..0f0240acff4 100644
+index 69367623c9a..e5075d08839 100644
 --- a/src/gui/rhi/qrhi.cpp
 +++ b/src/gui/rhi/qrhi.cpp
-@@ -12083,13 +12083,7 @@ void QRhiPassResourceTracker::reset()
+@@ -12242,13 +12242,7 @@ void QRhiPassResourceTracker::reset()
      m_textures.clear();
  }
  
@@ -70,7 +70,7 @@ index b751fca5b0a..0f0240acff4 100644
                                               const UsageState &state)
  {
      auto it = m_buffers.find(buf);
-@@ -12102,7 +12096,7 @@ void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAc
+@@ -12261,7 +12255,7 @@ void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAc
              return;
          }
          if (b.stage != *stage) {
@@ -79,7 +79,7 @@ index b751fca5b0a..0f0240acff4 100644
              *stage = b.stage;
          }
          return;
-@@ -12116,12 +12110,6 @@ void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAc
+@@ -12275,12 +12269,6 @@ void QRhiPassResourceTracker::registerBuffer(QRhiBuffer *buf, int slot, BufferAc
      m_buffers.insert(buf, b);
  }
  
@@ -92,7 +92,7 @@ index b751fca5b0a..0f0240acff4 100644
  static inline bool isImageLoadStore(QRhiPassResourceTracker::TextureAccess access)
  {
      return access == QRhiPassResourceTracker::TexStorageLoad
-@@ -12129,7 +12117,7 @@ static inline bool isImageLoadStore(QRhiPassResourceTracker::TextureAccess acces
+@@ -12288,7 +12276,7 @@ static inline bool isImageLoadStore(QRhiPassResourceTracker::TextureAccess acces
              || access == QRhiPassResourceTracker::TexStorageLoadStore;
  }
  
@@ -101,7 +101,7 @@ index b751fca5b0a..0f0240acff4 100644
                                                const UsageState &state)
  {
      auto it = m_textures.find(tex);
-@@ -12150,7 +12138,7 @@ void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *a
+@@ -12309,7 +12297,7 @@ void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *a
              }
          }
          if (t.stage != *stage) {
@@ -110,7 +110,7 @@ index b751fca5b0a..0f0240acff4 100644
              *stage = t.stage;
          }
          return;
-@@ -12163,42 +12151,55 @@ void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *a
+@@ -12322,42 +12310,55 @@ void QRhiPassResourceTracker::registerTexture(QRhiTexture *tex, TextureAccess *a
      m_textures.insert(tex, t);
  }
  
@@ -185,10 +185,10 @@ index b751fca5b0a..0f0240acff4 100644
  
  QSize QRhiImplementation::clampedSubResourceUploadSize(QSize size, QPoint dstPos, int level, QSize textureSizeAtLevelZero, bool warn)
 diff --git a/src/gui/rhi/qrhi_p.h b/src/gui/rhi/qrhi_p.h
-index b61c4b1bd4e..d595783d62a 100644
+index 9bd87d144d6..4429e2c64e4 100644
 --- a/src/gui/rhi/qrhi_p.h
 +++ b/src/gui/rhi/qrhi_p.h
-@@ -686,15 +686,16 @@ public:
+@@ -696,15 +696,16 @@ public:
      };
  
      enum BufferStage {
@@ -213,7 +213,7 @@ index b61c4b1bd4e..d595783d62a 100644
  
      enum BufferAccess {
          BufIndirectDraw,
-@@ -706,19 +707,20 @@ public:
+@@ -716,19 +717,20 @@ public:
          BufStorageLoadStore
      };
  
@@ -243,7 +243,7 @@ index b61c4b1bd4e..d595783d62a 100644
  
      enum TextureAccess {
          TexSample,
-@@ -730,13 +732,13 @@ public:
+@@ -740,13 +742,13 @@ public:
          TexShadingRate
      };
  
@@ -259,7 +259,7 @@ index b61c4b1bd4e..d595783d62a 100644
          UsageState stateAtPassBegin;
      };
  
-@@ -744,20 +746,23 @@ public:
+@@ -754,20 +756,23 @@ public:
  
      struct Texture {
          TextureAccess access;
@@ -287,10 +287,10 @@ index b61c4b1bd4e..d595783d62a 100644
  Q_DECLARE_TYPEINFO(QRhiPassResourceTracker::Texture, Q_RELOCATABLE_TYPE);
  
 diff --git a/src/gui/rhi/qrhigles2.cpp b/src/gui/rhi/qrhigles2.cpp
-index 7113e7d63c1..77178c2be2d 100644
+index e06b41ac9fb..720225c9f67 100644
 --- a/src/gui/rhi/qrhigles2.cpp
 +++ b/src/gui/rhi/qrhigles2.cpp
-@@ -2051,7 +2051,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+@@ -2102,7 +2102,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
                      trackedRegisterTexture(&passResTracker,
                                             texD,
                                             QRhiPassResourceTracker::TexSample,
@@ -299,7 +299,7 @@ index 7113e7d63c1..77178c2be2d 100644
                  }
                  break;
              case QRhiShaderResourceBinding::ImageLoad:
-@@ -2068,7 +2068,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+@@ -2119,7 +2119,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
                  else
                      access = QRhiPassResourceTracker::TexStorageLoadStore;
                  trackedRegisterTexture(&passResTracker, texD, access,
@@ -308,7 +308,7 @@ index 7113e7d63c1..77178c2be2d 100644
              }
                  break;
              case QRhiShaderResourceBinding::BufferLoad:
-@@ -2085,7 +2085,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+@@ -2136,7 +2136,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
                  else
                      access = QRhiPassResourceTracker::BufStorageLoadStore;
                  trackedRegisterBuffer(&passResTracker, bufD, access,
@@ -317,7 +317,7 @@ index 7113e7d63c1..77178c2be2d 100644
              }
                  break;
              default:
-@@ -3285,7 +3285,7 @@ static inline QRhiPassResourceTracker::UsageState toPassTrackerUsageState(const
+@@ -3427,7 +3427,7 @@ static inline QRhiPassResourceTracker::UsageState toPassTrackerUsageState(const
  void QRhiGles2::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
                                        QGles2Buffer *bufD,
                                        QRhiPassResourceTracker::BufferAccess access,
@@ -326,7 +326,7 @@ index 7113e7d63c1..77178c2be2d 100644
  {
      QGles2Buffer::UsageState &u(bufD->usageState);
      passResTracker->registerBuffer(bufD, 0, &access, &stage, toPassTrackerUsageState(u));
-@@ -3295,7 +3295,7 @@ void QRhiGles2::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+@@ -3437,7 +3437,7 @@ void QRhiGles2::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
  void QRhiGles2::trackedRegisterTexture(QRhiPassResourceTracker *passResTracker,
                                         QGles2Texture *texD,
                                         QRhiPassResourceTracker::TextureAccess access,
@@ -336,10 +336,10 @@ index 7113e7d63c1..77178c2be2d 100644
      QGles2Texture::UsageState &u(texD->usageState);
      passResTracker->registerTexture(texD, &access, &stage, toPassTrackerUsageState(u));
 diff --git a/src/gui/rhi/qrhigles2_p.h b/src/gui/rhi/qrhigles2_p.h
-index 2a261cf5838..38c890639b8 100644
+index 9121a348c32..75f37772b5f 100644
 --- a/src/gui/rhi/qrhigles2_p.h
 +++ b/src/gui/rhi/qrhigles2_p.h
-@@ -916,11 +916,11 @@ public:
+@@ -954,11 +954,11 @@ public:
      void trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
                                 QGles2Buffer *bufD,
                                 QRhiPassResourceTracker::BufferAccess access,
@@ -350,14 +350,14 @@ index 2a261cf5838..38c890639b8 100644
                                  QRhiPassResourceTracker::TextureAccess access,
 -                                QRhiPassResourceTracker::TextureStage stage);
 +                                QRhiPassResourceTracker::TextureStages stage);
+     GLbitfield barriersForNextDispatch(QGles2CommandBuffer *cbD);
      void executeCommandBuffer(QRhiCommandBuffer *cb);
      void executeBindGraphicsPipeline(QGles2CommandBuffer *cbD, QGles2GraphicsPipeline *psD);
-     void bindCombinedSampler(QGles2CommandBuffer *cbD, QGles2Texture *texD, QGles2Sampler *samplerD,
 diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
-index b4df1519409..7287274b754 100644
+index 0b31306b824..8f6b498bce8 100644
 --- a/src/gui/rhi/qrhivulkan.cpp
 +++ b/src/gui/rhi/qrhivulkan.cpp
-@@ -5219,30 +5219,30 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::BufferAccess acc
+@@ -5483,30 +5483,30 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::BufferAccess acc
      return 0;
  }
  
@@ -411,7 +411,7 @@ index b4df1519409..7287274b754 100644
  }
  
  static inline QVkBuffer::UsageState toVkBufferUsageState(QRhiPassResourceTracker::UsageState usage)
-@@ -5303,30 +5303,30 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::TextureAccess ac
+@@ -5567,30 +5567,30 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::TextureAccess ac
      return 0;
  }
  
@@ -465,7 +465,7 @@ index b4df1519409..7287274b754 100644
  }
  
  static inline QVkTexture::UsageState toVkTextureUsageState(QRhiPassResourceTracker::UsageState usage)
-@@ -5342,7 +5342,7 @@ void QRhiVulkan::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+@@ -5606,7 +5606,7 @@ void QRhiVulkan::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
                                         QVkBuffer *bufD,
                                         int slot,
                                         QRhiPassResourceTracker::BufferAccess access,
@@ -474,7 +474,7 @@ index b4df1519409..7287274b754 100644
  {
      QVkBuffer::UsageState &u(bufD->usageState[slot]);
      const VkAccessFlags newAccess = toVkAccess(access);
-@@ -5359,7 +5359,7 @@ void QRhiVulkan::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
+@@ -5623,7 +5623,7 @@ void QRhiVulkan::trackedRegisterBuffer(QRhiPassResourceTracker *passResTracker,
  void QRhiVulkan::trackedRegisterTexture(QRhiPassResourceTracker *passResTracker,
                                          QVkTexture *texD,
                                          QRhiPassResourceTracker::TextureAccess access,
@@ -483,7 +483,7 @@ index b4df1519409..7287274b754 100644
  {
      QVkTexture::UsageState &u(texD->usageState);
      const VkAccessFlags newAccess = toVkAccess(access);
-@@ -5975,7 +5975,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+@@ -6243,7 +6243,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
              bufD->lastActiveFrameSlot = currentFrameSlot;
              trackedRegisterBuffer(&passResTracker, bufD, bufD->m_type == QRhiBuffer::Dynamic ? currentFrameSlot : 0,
                                    QRhiPassResourceTracker::BufUniformRead,
@@ -492,7 +492,7 @@ index b4df1519409..7287274b754 100644
  
              // Check both the "local" id (the generation counter) and the
              // global id. The latter is relevant when a newly allocated
-@@ -6010,7 +6010,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+@@ -6278,7 +6278,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
                      texD->lastActiveFrameSlot = currentFrameSlot;
                      trackedRegisterTexture(&passResTracker, texD,
                                             QRhiPassResourceTracker::TexSample,
@@ -501,7 +501,7 @@ index b4df1519409..7287274b754 100644
                  }
                  if (samplerD)
                      samplerD->lastActiveFrameSlot = currentFrameSlot;
-@@ -6048,7 +6048,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+@@ -6316,7 +6316,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
              else
                  access = QRhiPassResourceTracker::TexStorageLoadStore;
  
@@ -510,7 +510,7 @@ index b4df1519409..7287274b754 100644
              const auto prevAccess = passResTracker.textures().find(texD);
              if (prevAccess != passResTracker.textures().end()) {
                  const QRhiPassResourceTracker::Texture &tex = prevAccess->second;
-@@ -6091,7 +6091,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+@@ -6359,7 +6359,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
              else
                  access = QRhiPassResourceTracker::BufStorageLoadStore;
  
@@ -520,10 +520,10 @@ index b4df1519409..7287274b754 100644
              if (prevAccess != passResTracker.buffers().end()) {
                  const QRhiPassResourceTracker::Buffer &buf = prevAccess->second;
 diff --git a/src/gui/rhi/qrhivulkan_p.h b/src/gui/rhi/qrhivulkan_p.h
-index 951722ed190..f8f5861081d 100644
+index 7ec02adfdaa..838aa3465ad 100644
 --- a/src/gui/rhi/qrhivulkan_p.h
 +++ b/src/gui/rhi/qrhivulkan_p.h
-@@ -899,11 +899,11 @@ public:
+@@ -934,11 +934,11 @@ public:
                                 QVkBuffer *bufD,
                                 int slot,
                                 QRhiPassResourceTracker::BufferAccess access,
@@ -534,6 +534,6 @@ index 951722ed190..f8f5861081d 100644
                                  QRhiPassResourceTracker::TextureAccess access,
 -                                QRhiPassResourceTracker::TextureStage stage);
 +                                QRhiPassResourceTracker::TextureStages stage);
-     void recordTransitionPassResources(QVkCommandBuffer *cbD, const QRhiPassResourceTracker &tracker);
-     void activateTextureRenderTarget(QVkCommandBuffer *cbD, QVkTextureRenderTarget *rtD);
-     void executeDeferredReleases(bool forced = false);
+     void collectComputeBarriers(QVkCommandBuffer *cbD,
+                                 QVarLengthArray<VkImageMemoryBarrier, 8> *imageBarriers,
+                                 QVarLengthArray<VkBufferMemoryBarrier, 8> *bufferBarriers);

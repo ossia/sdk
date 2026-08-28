@@ -1,0 +1,19 @@
+diff --git a/cmake/modulecppexports.h.in b/cmake/modulecppexports.h.in
+index b1cdfd7d778..f6710b4f62e 100644
+--- a/cmake/modulecppexports.h.in
++++ b/cmake/modulecppexports.h.in
+@@ -8,7 +8,13 @@
+ #include <QtCore/qtconfigmacros.h> // Q_@module_define_infix@_EXPORT
+ #include <QtCore/qtdeprecationmarkers.h> // QT_IF_DEPRECATED_SINCE
+ 
+-#if @QT_DO_EXPORT_SYMBOLS@
++#if defined(QT_SHARED) || !defined(QT_STATIC)
++#  if defined(QT_BUILD_@module_define_infix@_LIB)
++#    define Q_@module_define_infix@_EXPORT Q_DECL_EXPORT
++#  else
++#    define Q_@module_define_infix@_EXPORT Q_DECL_IMPORT
++#  endif
++#elif @QT_DO_EXPORT_SYMBOLS@
+ #  if defined(QT_BUILD_@module_define_infix@_LIB)
+ #    define Q_@module_define_infix@_EXPORT Q_DECL_EXPORT
+ #  else
