@@ -109,15 +109,47 @@ git init -q qt
     qt_pick qtbase refs/changes/66/658066/2
     # qfsm disable sorting
     qt_pick qtbase refs/changes/07/757207/1
-    # qsimd.cpp: add missing stdlib.h for getenv -- merged upstream (6.11/dev), now in 6.12.0
     # win32 fontdatabase unity build fix
     qt_pick qtbase refs/changes/04/686804/2
-    # win32 Font api clash
-    qt_pick qtbase refs/changes/05/686805/2
     # QRhiVulkan: swapchain recreated with a stale extent on resize
     qt_pick qtbase refs/changes/71/726771/3
 
+    # RHI changes merged to dev but not present in the pinned 6.12 branch. Keep
+    # their dev dependency order: the Metal indirect-count implementation builds
+    # on the indirect APIs and render-pass preservation fixes.
+    # rhi: Add support for dispatch indirect
+    qt_pick qtbase refs/changes/11/738611/16
+    # rhi: Add support for multi draw count indirect
+    qt_pick qtbase refs/changes/12/738612/19
+    # rhi: gl: Implement base instance support
+    qt_pick qtbase refs/changes/67/761467/9
+    # rhi: metal: Preserve per-pass state when interrupting the render pass
+    qt_pick qtbase refs/changes/97/761497/9
+    # rhi: metal: Keep attachment contents when interrupting the render pass
+    qt_pick qtbase refs/changes/90/761490/10
+    # rhi: Implement DrawIndirectCount for Metal, add NoTransientBacking
+    qt_pick qtbase refs/changes/69/761469/12
+    # rhi: metal: Disable ICB usage when the shader uses textures
+    qt_pick qtbase refs/changes/41/763541/4
+    # rhi: Add a shader variant for Metal argument buffers
+    qt_pick qtbase refs/changes/31/763731/5
+
     qt_apply_local qtbase
+  )
+
+  (
+    cd qtshadertools
+    git config user.email "you@example.com"
+    git config user.name "Your Name"
+
+    # Keep shader tools at its own 6.12 head, in lockstep with qtbase.
+    git fetch $SDK_FETCH_DEPTH origin "$QTSHADERTOOLS_VERSION"
+    git checkout -q FETCH_HEAD
+
+    # Generate the MSL argument-buffer variant declared by the qtbase pick.
+    qt_pick qtshadertools refs/changes/32/763732/2
+
+    qt_apply_local qtshadertools
   )
 
   (
@@ -128,6 +160,8 @@ git init -q qt
     qt_pick qtdeclarative refs/changes/68/464668/2
     # masm: PATH_MAX used with no limits.h in scope
     qt_pick qtdeclarative refs/changes/04/757204/1
+
+    qt_apply_local qtdeclarative
   )
 
   (
@@ -137,6 +171,11 @@ git init -q qt
     # assimp missing ostream
     qt_pick qtquick3d-assimp refs/changes/32/687132/2
 
+  )
+
+  (
+    cd qtquick3d
+    qt_apply_local qtquick3d
   )
 )
 fi

@@ -1,0 +1,19 @@
+From: ossia SDK maintainers
+Date: Thu, 27 Aug 2026 00:00:00 +0000
+Subject: [PATCH] corelib: include exception for std::terminate
+
+Clang 23's libc++ no longer exposes std::terminate through the headers
+included transitively by qexceptionhandling.h. Include its defining header
+where the removed qTerminate() API calls it.
+---
+diff --git a/src/corelib/compat/removed_api.cpp b/src/corelib/compat/removed_api.cpp
+--- a/src/corelib/compat/removed_api.cpp
++++ b/src/corelib/compat/removed_api.cpp
+@@ -1250,6 +1250,7 @@
+ #include "qchar.h" // inlined API
+ 
+ 
++#include <exception>
+ #include "qexceptionhandling.h"
+ 
+ QT_BEGIN_NAMESPACE

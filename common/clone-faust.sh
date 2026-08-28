@@ -3,6 +3,7 @@
 source ../common/versions.sh
 
 FAUST_REPO=https://github.com/grame-cncm/faust
+FAUST_PATCHES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/faust-patches" && pwd)"
 
 # Backend selection written to faust/build/backends/llvm.cmake. Platforms that
 # need a different set (WASM) assign FAUST_BACKENDS before sourcing this file.
@@ -52,6 +53,19 @@ if [[ ! -d faust ]]; then
 
   for pr in ${FAUST_PRS:-}; do
     faust_pick "$pr"
+  done
+
+  for p in "$FAUST_PATCHES_DIR"/*.patch; do
+    [[ -e "$p" ]] || continue
+    if git apply --check "$p" 2>/dev/null; then
+      git apply "$p"
+      echo "clone-faust: applied $(basename "$p")"
+    elif git apply --reverse --check "$p" 2>/dev/null; then
+      echo "clone-faust: $(basename "$p") already present, skipping"
+    else
+      echo "clone-faust: $(basename "$p") does not apply to $FAUST_VERSION" >&2
+      exit 1
+    fi
   done
 )
 fi

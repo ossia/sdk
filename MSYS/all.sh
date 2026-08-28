@@ -20,9 +20,12 @@ source ./common.sh
 STAGE="${STAGE:-full}"
 
 build_core() {
+  # Install the pinned compiler first. Every library, including the zlib stack
+  # and freetype needed by LLVM itself, must be built with that compiler rather
+  # than whichever clang happens to be installed in the MSYS2 environment.
+  ./llvm-deps.sh
   ./zlib.sh
   ./freetype.sh
-  ./llvm-deps.sh
   ./llvm.sh
   # Before qt.sh -- see the note in Linux/build-all.sh (-system-webp).
   ./media-deps.sh libjpeg webp

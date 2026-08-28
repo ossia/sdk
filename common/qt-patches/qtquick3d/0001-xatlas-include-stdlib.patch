@@ -1,0 +1,11 @@
+diff --git a/src/3rdparty/xatlas/xatlas.cpp b/src/3rdparty/xatlas/xatlas.cpp
+--- a/src/3rdparty/xatlas/xatlas.cpp
++++ b/src/3rdparty/xatlas/xatlas.cpp
+@@ -50,6 +50,7 @@
+ #include <math.h>
+ #define __STDC_LIMIT_MACROS
+ #include <stdint.h>
++#include <stdlib.h>
+ #include <stdio.h>
+ #include <string.h>
+ 
