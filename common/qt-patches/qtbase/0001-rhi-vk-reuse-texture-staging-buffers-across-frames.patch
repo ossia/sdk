@@ -1,0 +1,177 @@
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Mon, 1 Sep 2026 00:00:00 +0200
+Subject: [PATCH] rhi: vk: reuse texture staging buffers across frames
+
+Texture uploads allocated a fresh staging buffer through VMA on every
+upload and released it right after recording the copy ("no reuse of
+staging, this is intentional"). Workloads that upload textures every
+frame - video playback in particular - therefore performed one
+vkAllocateMemory and one vkFreeMemory per texture per frame once the
+suballocator block became empty, and always for uploads over the
+dedicated-allocation threshold (16MB in the typical 256MB
+host-visible | device-local heap: one 4K 16-bit plane).
+
+On NVIDIA's Windows driver vkFreeMemory costs 4-5ms per call (measured
+median 4.1ms, max 53ms) and vkAllocateMemory up to 1.3ms, which made
+those uploads driver-bound: 4K ProRes playback in ossia score ran at
+50fps on Vulkan vs 142fps on D3D11 on the same RTX 3090, and a single
+>16MB subresource upload dropped from 22GB/s to 1.8GB/s.
+
+Keep the per-slot staging buffer alive on the QVkTexture instead and
+reuse it while it is large enough. It is released when a bigger upload
+needs to grow it, when the texture is destroyed (the destroy path
+already handled non-null staging buffers), or when the same texture is
+uploaded twice within one frame - the previous behavior - since the
+first upload's copy still references the staging contents. Same-frame
+re-upload is detected with a monotonic begun-frame counter covering
+both swapchain and offscreen frames.
+
+Reusing the slot's staging buffer across frames is safe: the frame
+slot's previous GPU work is fence-waited in beginFrame /
+beginOffscreenFrame before any new host write happens.
+
+With this, 1080p ProRes playback goes from 102fps to 550fps and 4K
+ProRes from 50fps to 169fps (Windows, RTX 3090, Vulkan), with
+byte-identical rendered output.
+---
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index a230eabf4aa..2ec1293e471 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -2734,6 +2734,7 @@ double QRhiVulkan::elapsedSecondsFromTimestamp(quint64 timestamp[2], bool *ok)
+ 
+ QRhi::FrameOpResult QRhiVulkan::beginFrame(QRhiSwapChain *swapChain, QRhi::BeginFrameFlags)
+ {
++    uploadFrameCounter += 1;
+     QVkSwapChain *swapChainD = QRHI_RES(QVkSwapChain, swapChain);
+     const int frameResIndex = swapChainD->bufferCount > 1 ? currentFrameSlot : 0;
+     QVkSwapChain::FrameResources &frame(swapChainD->frameRes[frameResIndex]);
+@@ -3109,6 +3110,7 @@ QRhi::FrameOpResult QRhiVulkan::waitCommandCompletion(int frameSlot)
+ 
+ QRhi::FrameOpResult QRhiVulkan::beginOffscreenFrame(QRhiCommandBuffer **cb, QRhi::BeginFrameFlags)
+ {
++    uploadFrameCounter += 1;
+     QRhi::FrameOpResult waitResult = waitCommandCompletion(currentFrameSlot);
+     if (waitResult != QRhi::FrameOpSuccess)
+         return waitResult;
+@@ -4690,31 +4692,57 @@ void QRhiVulkan::enqueueResourceUpdates(QVkCommandBuffer *cbD, QRhiResourceUpdat
+                 }
+             }
+ 
+-            Q_ASSERT(!utexD->stagingBuffers[currentFrameSlot]);
+-            VkBufferCreateInfo bufferInfo = {};
+-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+-            bufferInfo.size = stagingSize;
+-            bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
++            // Reuse the per-slot staging buffer when it is big enough. On some
++            // drivers (NVIDIA Windows) vkAllocateMemory/vkFreeMemory cost
++            // milliseconds each, so the previous alloc/free-every-frame
++            // behavior dominated the frame time of workloads that upload
++            // textures every frame (video playback). The slot's previous
++            // GPU work was fence-waited in beginFrame/beginOffscreenFrame,
++            // so rewriting the staging contents is safe.
++            if (utexD->stagingBuffers[currentFrameSlot]) {
++                VmaAllocationInfo ai = {};
++                vmaGetAllocationInfo(toVmaAllocator(allocator),
++                                     toVmaAllocation(utexD->stagingAllocations[currentFrameSlot]),
++                                     &ai);
++                if (ai.size < stagingSize
++                    || utexD->stagingUploadFrame[currentFrameSlot] == uploadFrameCounter)
++                {
++                    QRhiVulkan::DeferredReleaseEntry e;
++                    e.type = QRhiVulkan::DeferredReleaseEntry::StagingBuffer;
++                    e.lastActiveFrameSlot = currentFrameSlot;
++                    e.stagingBuffer.stagingBuffer = utexD->stagingBuffers[currentFrameSlot];
++                    e.stagingBuffer.stagingAllocation = utexD->stagingAllocations[currentFrameSlot];
++                    utexD->stagingBuffers[currentFrameSlot] = VK_NULL_HANDLE;
++                    utexD->stagingAllocations[currentFrameSlot] = nullptr;
++                    releaseQueue.append(e);
++                }
++            }
++            if (!utexD->stagingBuffers[currentFrameSlot]) {
++                VkBufferCreateInfo bufferInfo = {};
++                bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
++                bufferInfo.size = stagingSize;
++                bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+ 
+-            VmaAllocationCreateInfo allocInfo = {};
+-            allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
++                VmaAllocationCreateInfo allocInfo = {};
++                allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+ 
+-            VmaAllocation allocation;
+-            VkResult err = vmaCreateBuffer(toVmaAllocator(allocator), &bufferInfo, &allocInfo,
+-                                           &utexD->stagingBuffers[currentFrameSlot], &allocation, nullptr);
+-            if (err != VK_SUCCESS) {
+-                qWarning("Failed to create image staging buffer of size %d: %d", int(stagingSize), err);
+-                printExtraErrorInfo(err);
+-                continue;
++                VmaAllocation allocation;
++                VkResult err = vmaCreateBuffer(toVmaAllocator(allocator), &bufferInfo, &allocInfo,
++                                               &utexD->stagingBuffers[currentFrameSlot], &allocation, nullptr);
++                if (err != VK_SUCCESS) {
++                    qWarning("Failed to create image staging buffer of size %d: %d", int(stagingSize), err);
++                    printExtraErrorInfo(err);
++                    continue;
++                }
++                utexD->stagingAllocations[currentFrameSlot] = allocation;
++                setAllocationName(allocation, utexD->name());
+             }
+-            utexD->stagingAllocations[currentFrameSlot] = allocation;
+-            setAllocationName(allocation, utexD->name());
+ 
+             BufferImageCopyList copyInfos;
+             size_t curOfs = 0;
+             void *mp = nullptr;
+             VmaAllocation a = toVmaAllocation(utexD->stagingAllocations[currentFrameSlot]);
+-            err = vmaMapMemory(toVmaAllocator(allocator), a, &mp);
++            VkResult err = vmaMapMemory(toVmaAllocator(allocator), a, &mp);
+             if (err != VK_SUCCESS) {
+                 qWarning("Failed to map image data: %d", err);
+                 vmaDestroyBuffer(toVmaAllocator(allocator), utexD->stagingBuffers[currentFrameSlot], a);
+@@ -4751,15 +4779,9 @@ void QRhiVulkan::enqueueResourceUpdates(QVkCommandBuffer *cbD, QRhiResourceUpdat
+                 cbD->pools.bufferImageCopy.append(copyInfos.constData(), copyInfos.size());
+             }
+ 
+-            // no reuse of staging, this is intentional
+-            QRhiVulkan::DeferredReleaseEntry e;
+-            e.type = QRhiVulkan::DeferredReleaseEntry::StagingBuffer;
+-            e.lastActiveFrameSlot = currentFrameSlot;
+-            e.stagingBuffer.stagingBuffer = utexD->stagingBuffers[currentFrameSlot];
+-            e.stagingBuffer.stagingAllocation = utexD->stagingAllocations[currentFrameSlot];
+-            utexD->stagingBuffers[currentFrameSlot] = VK_NULL_HANDLE;
+-            utexD->stagingAllocations[currentFrameSlot] = nullptr;
+-            releaseQueue.append(e);
++            // The staging buffer is kept alive on the texture for reuse by the
++            // next upload in this frame slot; QVkTexture::destroy releases it.
++            utexD->stagingUploadFrame[currentFrameSlot] = uploadFrameCounter;
+ 
+             // Similarly to buffers, transitioning away from DST is done later,
+             // when a renderpass using the texture is encountered.
+diff --git a/src/gui/rhi/qrhivulkan_p.h b/src/gui/rhi/qrhivulkan_p.h
+index 7ec02adfdaa..9c853786800 100644
+--- a/src/gui/rhi/qrhivulkan_p.h
++++ b/src/gui/rhi/qrhivulkan_p.h
+@@ -117,6 +117,9 @@ struct QVkTexture : public QRhiTexture
+     QVkAlloc imageAlloc = nullptr;
+     VkBuffer stagingBuffers[QVK_FRAMES_IN_FLIGHT];
+     QVkAlloc stagingAllocations[QVK_FRAMES_IN_FLIGHT];
++    // QRhiVulkan::uploadFrameCounter value of the last upload that used the
++    // slot's staging buffer; guards against same-frame staging reuse.
++    quint64 stagingUploadFrame[QVK_FRAMES_IN_FLIGHT] = {};
+     VkImageView perLevelImageViews[QRhi::MAX_MIP_LEVELS];
+     bool owns = true;
+     struct UsageState {
+@@ -1110,6 +1113,12 @@ public:
+         int timestampQueryIndex[QVK_FRAMES_IN_FLIGHT];
+     } ofr;
+ 
++    // Monotonic count of begun frames (swapchain and offscreen), used to
++    // detect same-frame re-uploads of a texture so its per-slot staging
++    // buffer is only reused across distinct frames. Starts at 1 so a
++    // zero-initialized QVkTexture stamp never matches.
++    quint64 uploadFrameCounter = 1;
++
+     struct TextureReadback {
+         int activeFrameSlot = -1;
+         QRhiReadbackDescription desc;
