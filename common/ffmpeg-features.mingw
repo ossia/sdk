@@ -16,6 +16,10 @@
 --enable-cuvid
 --enable-amf
 --enable-vulkan
+# Vulkan filters + libplacebo, same story as common/ffmpeg-features.linux:
+# the SPIR-V compiler (--glslc) and the CUDA compiler (--enable-cuda-llvm,
+# --nvcc) are passed from MSYS/ffmpeg.sh since they are paths.
+--enable-libplacebo
 
 # schannel rather than openssl: it is a system SSP (-lsecur32 -lncrypt
 # -lcrypt32), so there is no extra library to build or ship, it validates

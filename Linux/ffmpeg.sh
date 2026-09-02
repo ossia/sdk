@@ -90,9 +90,40 @@ declare -a FFMPEG_X86_64_FLAGS=(
 )
 declare -n FFMPEG_ARCH_FLAGS=FFMPEG_${ARCH_VARNAME}_FLAGS
 
+# GPU filters. Both compilers below only run at build time; nothing new is
+# linked or dlopen'd in the result.
+#
+#  --glslc: ffmpeg 9 precompiles its Vulkan filter shaders with a glslang
+#    binary. Passed explicitly (the one the media stage just built) rather than
+#    left to configure's PATH probe: the probe is silent when it fails, and that
+#    silence is how earlier SDKs shipped --enable-vulkan with zero *_vulkan
+#    filters.
+#  --nvcc: --enable-cuda-llvm compiles the *_cuda filters' .cu sources to PTX
+#    text with clang (no CUDA SDK; compat/cuda/cuda_runtime.h is in-tree). The
+#    SDK's own clang is built for $LLVM_ARCH only (Linux/llvm.sh), so it cannot
+#    target NVPTX; the build image's distro clang (llvm-toolset) is built with
+#    every backend and is used for this one job. sm_52 rather than configure's
+#    sm_30 default: recent clangs refuse Kepler, and PTX is forward-compatible,
+#    so sm_52 covers every GPU from Maxwell (2014) on.
+declare -a FFMPEG_GPU_FLAGS=(
+  --glslc="$INSTALL_PREFIX/sysroot/bin/glslang"
+)
+NVPTX_CLANG=
+for candidate in /usr/bin/clang /usr/lib64/llvm*/bin/clang; do
+  if [[ -x "$candidate" ]] && "$candidate" -print-targets 2>/dev/null | grep -q '^ *nvptx64'; then
+    NVPTX_CLANG="$candidate"; break
+  fi
+done
+if [[ -n "$NVPTX_CLANG" ]]; then
+  FFMPEG_GPU_FLAGS+=( --enable-cuda-llvm --nvcc="$NVPTX_CLANG" --nvccflags="--cuda-gpu-arch=sm_52 -O2" )
+else
+  echo "ffmpeg.sh: no clang with an NVPTX target found -- the *_cuda filters need one (llvm-toolset in Dockerfile.centos)" >&2
+  exit 1
+fi
+
 # Unquoted on purpose: ffmpeg_features output is word-split, like $(cat qtfeatures).
 ../ffmpeg-$FFMPEG_VERSION/configure \
-  $(ffmpeg_features linux $CPU_ARCH) "${FFMPEG_LOCAL_FLAGS[@]}" "${FFMPEG_ARCH_FLAGS[@]}" \
+  $(ffmpeg_features linux $CPU_ARCH) "${FFMPEG_LOCAL_FLAGS[@]}" "${FFMPEG_ARCH_FLAGS[@]}" "${FFMPEG_GPU_FLAGS[@]}" \
   || { echo "::group::ffmpeg config.log (tail)"; tail -n 150 ffbuild/config.log; echo "::endgroup::"; exit 1; }
 
 # The asm above is the whole point of getting --arch right, so fail loudly
@@ -101,6 +132,16 @@ if [[ "$ARCH_VARNAME" == "X86_64" ]] && ! grep -qx 'HAVE_X86ASM=yes' ffbuild/con
   echo "ffmpeg.sh: x86 assembly is disabled -- check --arch/--cpu" >&2
   exit 1
 fi
+
+# Same treatment for the GPU filter families: configure drops a filter whose
+# dependency is missing without a word, so assert them (common/ffmpeg-check.sh).
+source "$SDK_COMMON_ROOT/common/ffmpeg-check.sh"
+ffmpeg_require_config \
+  CONFIG_GBLUR_VULKAN_FILTER CONFIG_SCALE_VULKAN_FILTER CONFIG_OVERLAY_VULKAN_FILTER \
+  CONFIG_XFADE_VULKAN_FILTER CONFIG_NLMEANS_VULKAN_FILTER CONFIG_V360_VULKAN_FILTER \
+  CONFIG_LIBPLACEBO_FILTER \
+  CONFIG_SCALE_CUDA_FILTER CONFIG_YADIF_CUDA_FILTER CONFIG_OVERLAY_CUDA_FILTER CONFIG_CHROMAKEY_CUDA_FILTER
+ffmpeg_report_gpu_filters
 
 make -j$NPROC
 make install

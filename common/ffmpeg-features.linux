@@ -33,6 +33,18 @@
 --enable-cuvid
 --enable-amf
 --enable-vulkan
+# Vulkan FILTERS (gblur_vulkan, scale_vulkan, overlay_vulkan, xfade_vulkan,
+# nlmeans_vulkan, v360_vulkan, ...) need a SPIR-V compiler at BUILD time on
+# top of --enable-vulkan; ffmpeg.sh passes --glslc=<sysroot>/bin/glslang from
+# the media stage and asserts the filters made it in (common/ffmpeg-check.sh).
+# libplacebo: tone mapping / colour management / custom GLSL on Vulkan frames.
+# Static, from common/build-media-deps-gpu.sh; nothing dlopen'd at runtime
+# beyond the Vulkan loader ffmpeg already loads.
+--enable-libplacebo
+# CUDA filters (scale_cuda, yadif_cuda, chromakey_cuda, overlay_cuda, ...) are
+# --enable-cuda-llvm + --nvcc=<clang with an NVPTX target>, set in ffmpeg.sh:
+# the compiler path is host-specific. No CUDA SDK involved: clang emits PTX
+# text that ffmpeg embeds and the NVIDIA driver JITs at runtime.
 
 --disable-libxcb
 --disable-libxcb-shm

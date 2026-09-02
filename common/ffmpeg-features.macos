@@ -15,6 +15,15 @@
 --enable-avfoundation
 --enable-indev=avfoundation
 --enable-videotoolbox
+# GPU filters on macOS, where there is no Vulkan (see above): scale_vt runs on
+# VideoToolbox frames (already in), and the `coreimage` / `coreimagesrc`
+# filters expose every Core Image filter (blur, colour, distortion, generators)
+# on the GPU. yadif_videotoolbox additionally needs --enable-metal, which
+# macOS/ffmpeg.sh adds when the Metal compiler is present on the runner.
+--enable-coreimage
+# coreimage_filter_deps="coreimage appkit", and appkit is in configure's
+# autodetect list, i.e. off under --disable-autodetect unless asked for.
+--enable-appkit
 --enable-audiotoolbox
 
 # openssl (built by macOS/openssl.sh into $INSTALL_PREFIX/openssl), NOT

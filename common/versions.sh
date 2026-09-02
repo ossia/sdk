@@ -15,6 +15,17 @@ export FFMPEG_VERSION=9.0
 # hardware decoding safe to turn on in binaries that must run everywhere.
 export NVCODEC_VERSION=n13.0.19.1          # ffmpeg 9 needs ffnvcodec >= 12.1.14.0
 export VULKAN_HEADERS_VERSION=vulkan-sdk-1.4.350.0   # ffmpeg 9 needs vulkan >= 1.3.277
+# GPU filter stage (common/build-media-deps-gpu.sh; Linux + MSYS only, macOS has
+# no Vulkan). glslang is pinned to the same Vulkan SDK release as the headers:
+# ffmpeg 9 compiles its Vulkan filter shaders with the `glslang` BINARY at build
+# time (no runtime dependency), and libplacebo links the static glslang
+# libraries. libplacebo: ffmpeg 9 requires >= 7.351.0.
+export GLSLANG_VERSION=vulkan-sdk-1.4.350.0
+export LIBPLACEBO_VERSION=v7.360.1
+# meson for libplacebo only (>= 1.3.0 required). Separate from MESON_VERSION,
+# which pipewire pins in the core stage; this one runs from its tarball and is
+# never installed.
+export MESON_GPU_VERSION=1.12.0
 # AMD AMF headers. ffmpeg 9 requires AMF_FULL_VERSION >= 1.5.2.0, and v1.5.2 is
 # exactly that -- do not pin lower, configure rejects it.
 export AMF_VERSION=v1.5.2
