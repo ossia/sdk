@@ -104,7 +104,12 @@ declare -n FFMPEG_ARCH_FLAGS=FFMPEG_${ARCH_VARNAME}_FLAGS
 #    target NVPTX; the build image's distro clang (llvm-toolset) is built with
 #    every backend and is used for this one job. sm_52 rather than configure's
 #    sm_30 default: recent clangs refuse Kepler, and PTX is forward-compatible,
-#    so sm_52 covers every GPU from Maxwell (2014) on.
+#    so sm_52 covers every GPU from Maxwell (2014) on -- ffmpeg embeds ONE
+#    PTX per kernel and the driver JITs it for the GPU at hand, so there is no
+#    multi-generation build to do. What limits compatibility is the PTX ISA
+#    version the compiler writes (clang 19 defaults to 8.5, i.e. driver >= 555,
+#    mid-2024); --cuda-feature=+ptx75 pins it to 7.5 (CUDA 11.5, driver >= 495,
+#    2021) which these kernels do not need more than.
 declare -a FFMPEG_GPU_FLAGS=(
   --glslc="$INSTALL_PREFIX/sysroot/bin/glslang"
 )
@@ -115,7 +120,7 @@ for candidate in /usr/bin/clang /usr/lib64/llvm*/bin/clang; do
   fi
 done
 if [[ -n "$NVPTX_CLANG" ]]; then
-  FFMPEG_GPU_FLAGS+=( --enable-cuda-llvm --nvcc="$NVPTX_CLANG" --nvccflags="--cuda-gpu-arch=sm_52 -O2" )
+  FFMPEG_GPU_FLAGS+=( --enable-cuda-llvm --nvcc="$NVPTX_CLANG" --nvccflags="--cuda-gpu-arch=sm_52 --cuda-feature=+ptx75 -O2" )
 else
   echo "ffmpeg.sh: no clang with an NVPTX target found -- the *_cuda filters need one (llvm-toolset in Dockerfile.centos)" >&2
   exit 1
