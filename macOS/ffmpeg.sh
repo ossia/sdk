@@ -94,7 +94,23 @@ export CFLAGS="$CFLAGS_NOARCH"
 export CXXFLAGS="$CFLAGS_NOARCH"
 export LDFLAGS="$CFLAGS_NOARCH"
 
+# GPU filters on macOS: no Vulkan here (common/ffmpeg-features.macos), so the
+# GPU set is VideoToolbox + CoreImage. yadif_videotoolbox is a Metal compute
+# kernel compiled at BUILD time with `xcrun -sdk macosx metal`; that compiler
+# is part of Xcode but not of every Command Line Tools install, so it is
+# opt-in on presence. --enable-metal with a missing compiler would make
+# configure die ("metal requested but not found"), hence the probe.
+FFMPEG_GPU_FLAGS=()
+if xcrun -sdk macosx metal -v >/dev/null 2>&1; then
+  FFMPEG_GPU_FLAGS=(--enable-metal)
+  HAVE_METAL_COMPILER=1
+else
+  echo "ffmpeg.sh: no Metal compiler (xcrun -sdk macosx metal); yadif_videotoolbox will be absent" >&2
+  HAVE_METAL_COMPILER=0
+fi
+
 xcrun ../ffmpeg-$FFMPEG_VERSION/configure "${FFMPEG_COMMON_FLAGS[@]}" "${FFMPEG_ARCH_FLAGS[@]}" \
+  ${FFMPEG_GPU_FLAGS[@]+"${FFMPEG_GPU_FLAGS[@]}"} \
   || { echo "::group::ffmpeg config.log (tail)"; tail -n 150 ffbuild/config.log; echo "::endgroup::"; exit 1; }
 
 # The assembly is the whole reason --arch is spelled out above; fail loudly
@@ -104,6 +120,15 @@ if [[ "$TARGET_ARCH" != "arm64" ]] && ! grep -qx 'HAVE_X86ASM=yes' ffbuild/confi
   echo "ffmpeg.sh: x86 assembly is disabled -- check --arch/--cpu" >&2
   exit 1
 fi
+
+# Same for the GPU filters (common/ffmpeg-check.sh): configure drops a filter
+# whose dependency is missing without a word.
+source "$SDK_COMMON_ROOT/common/ffmpeg-check.sh"
+ffmpeg_require_config CONFIG_SCALE_VT_FILTER CONFIG_COREIMAGE_FILTER CONFIG_COREIMAGESRC_FILTER
+if [[ "$HAVE_METAL_COMPILER" == "1" ]]; then
+  ffmpeg_require_config CONFIG_YADIF_VIDEOTOOLBOX_FILTER
+fi
+ffmpeg_report_gpu_filters
 
 xcrun make -j$NPROC
 xcrun make install

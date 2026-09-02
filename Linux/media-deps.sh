@@ -13,7 +13,9 @@ source ./common.sh clang
 # Deliberately NOT here: vaapi and Intel libvpl/QSV -- both are link-time
 # dependencies (libva.so.2 / libvpl.so) and would break the "runs everywhere"
 # guarantee. Intel hardware is covered by Vulkan Video via Mesa ANV instead.
-export MEDIA_DEPS_LIST="nvcodec_headers amf_headers vulkan_headers $(sed -e 's/#.*$//' ../common/media-deps-codecs)"
+# glslang and libplacebo (GPU filters, common/build-media-deps-gpu.sh) come
+# right after the Vulkan headers they build against and before the codecs.
+export MEDIA_DEPS_LIST="nvcodec_headers amf_headers vulkan_headers glslang libplacebo $(sed -e 's/#.*$//' ../common/media-deps-codecs)"
 # SVT-JPEG-XS is x86-only upstream (see common/media-deps-codecs.x86_64).
 if [[ "$CPU_ARCH" == "x86_64" ]]; then
   MEDIA_DEPS_LIST="$MEDIA_DEPS_LIST $(sed -e 's/#.*$//' ../common/media-deps-codecs.x86_64)"
@@ -50,5 +52,6 @@ export MD_SRT_EXTRA_FLAGS=(
 )
 
 source ../common/build-media-deps.sh
+source ../common/build-media-deps-gpu.sh
 
 build_media_deps
