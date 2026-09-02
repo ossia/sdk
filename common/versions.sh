@@ -22,10 +22,11 @@ export VULKAN_HEADERS_VERSION=vulkan-sdk-1.4.350.0   # ffmpeg 9 needs vulkan >= 
 # libraries. libplacebo: ffmpeg 9 requires >= 7.351.0.
 export GLSLANG_VERSION=vulkan-sdk-1.4.350.0
 export LIBPLACEBO_VERSION=v7.360.1
-# meson for libplacebo only (>= 1.3.0 required). Separate from MESON_VERSION,
-# which pipewire pins in the core stage; this one runs from its tarball and is
-# never installed.
-export MESON_GPU_VERSION=1.12.0
+# meson for libplacebo only. Separate from MESON_VERSION, which pipewire pins
+# in the core stage; this one runs from its tarball and is never installed.
+# 1.11 is the last release that runs on the Python 3.9 of the Linux build
+# image (1.12 requires 3.10; libplacebo itself only needs >= 0.63).
+export MESON_GPU_VERSION=1.11.0
 # AMD AMF headers. ffmpeg 9 requires AMF_FULL_VERSION >= 1.5.2.0, and v1.5.2 is
 # exactly that -- do not pin lower, configure rejects it.
 export AMF_VERSION=v1.5.2

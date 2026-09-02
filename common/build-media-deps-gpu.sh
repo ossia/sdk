@@ -46,20 +46,29 @@ _md_cxx_runtime_flag() {
   fi
 }
 
-# A meson recent enough for libplacebo (>= 1.3.0). The SDK's own MESON_VERSION
-# (0.61, a core-hash input via pipewire) is far too old, and the build images
-# vary: AlmaLinux 9 ships 0.63, MSYS2 tracks upstream. meson is pure python and
-# runs straight from its source tarball, so pin one and run that: no install,
-# no interaction with whatever meson the image has.
+# A pinned meson for libplacebo. The SDK's own MESON_VERSION (0.61, a
+# core-hash input via pipewire) predates libplacebo's floor, and the build
+# images vary (AlmaLinux 9 ships 0.63, MSYS2 tracks upstream). meson is pure
+# python and runs straight from its source tarball, so pin one and run that:
+# no install, no interaction with whatever meson the image has. The pin must
+# run on the image's interpreter: the Linux image has Python 3.9, so
+# MESON_GPU_VERSION stays on a release that accepts it (see versions.sh).
 _md_meson_gpu() {
   local src="$MEDIA_DEPS_SRC/meson-$MESON_GPU_VERSION"
   if [[ ! -f "$src/meson.py" ]]; then
     _md_fetch_tar "meson-$MESON_GPU_VERSION" 1 \
-      "https://github.com/mesonbuild/meson/releases/download/$MESON_GPU_VERSION/meson-$MESON_GPU_VERSION.tar.gz"
+      "https://github.com/mesonbuild/meson/releases/download/$MESON_GPU_VERSION/meson-$MESON_GPU_VERSION.tar.gz" \
+      || return 1
   fi
-  # MSYS2's mingw python ships python3.exe as well, but be safe about it.
-  local py="${PYTHON3:-}"
-  [[ -n "$py" ]] || py=$(command -v python3 || command -v python)
+  # Newest interpreter around, then whatever python3 is; MSYS2's mingw python
+  # ships python3.exe as well, but be safe about it.
+  local py="${PYTHON3:-}" candidate
+  if [[ -z "$py" ]]; then
+    for candidate in python3.13 python3.12 python3.11 python3.10 python3 python; do
+      if command -v "$candidate" >/dev/null 2>&1; then py=$candidate; break; fi
+    done
+  fi
+  [[ -n "$py" ]] || { echo "media-deps: no python for meson" >&2; return 1; }
   "$py" "$src/meson.py" "$@"
 }
 
@@ -123,9 +132,10 @@ _md_build_libplacebo() {   # ffmpeg's `libplacebo` filter (needs Vulkan + glslan
     -Dopengl=disabled -Dgl-proc-addr=disabled -Dd3d11=disabled \
     -Dlcms=disabled -Dlibdovi=disabled -Dxxhash=disabled -Dunwind=disabled \
     -Ddemos=false -Dtests=false -Dbench=false \
-    ${MD_MESON_EXTRA_FLAGS:+"${MD_MESON_EXTRA_FLAGS[@]}"}
-  ninja -C "$(_md_build_dir libplacebo)"
-  ninja -C "$(_md_build_dir libplacebo)" install
+    ${MD_MESON_EXTRA_FLAGS:+"${MD_MESON_EXTRA_FLAGS[@]}"} \
+    || { echo "media-deps: libplacebo: meson setup failed" >&2; return 1; }
+  ninja -C "$(_md_build_dir libplacebo)" || return 1
+  ninja -C "$(_md_build_dir libplacebo)" install || return 1
 
   # ffmpeg probes with `pkg-config --static --libs libplacebo` and link-tests
   # pl_vulkan_create with the C driver, so Libs.private must carry everything
