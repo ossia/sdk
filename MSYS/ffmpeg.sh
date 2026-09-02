@@ -29,7 +29,7 @@ declare -a FFMPEG_GPU_FLAGS=(
 )
 if [[ "$SDK_ARCH" == "x86_64" ]]; then
   if "$CC" -print-targets 2>/dev/null | grep -q '^ *nvptx64'; then
-    FFMPEG_GPU_FLAGS+=( --enable-cuda-llvm --nvcc="$CC" --nvccflags="--cuda-gpu-arch=sm_52 -O2" )
+    FFMPEG_GPU_FLAGS+=( --enable-cuda-llvm --nvcc="$CC" --nvccflags="--cuda-gpu-arch=sm_52 --cuda-feature=+ptx75 -O2" )
   else
     echo "ffmpeg.sh: $CC has no NVPTX target -- the *_cuda filters need one" >&2
     exit 1
