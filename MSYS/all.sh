@@ -30,6 +30,10 @@ build_core() {
   # Before qt.sh -- see the note in Linux/build-all.sh (-system-webp).
   ./media-deps.sh libjpeg webp
   ./qt.sh
+  # After qt.sh only because it is unrelated to it: dxcompiler.dll is a
+  # prebuilt Microsoft binary that Qt's D3D12 backend dlopen()s at runtime for
+  # shader model 6.x. Independent of the Qt build itself.
+  ./dxc.sh
 }
 
 build_media() {
