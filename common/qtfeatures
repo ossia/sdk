@@ -13,8 +13,6 @@
 -no-feature-dbus
 -no-feature-dockwidget
 -no-feature-effects
--no-feature-fontcombobox
--no-feature-fontdialog
 -feature-future
 -no-feature-gc_binaries
 -no-feature-gestures
