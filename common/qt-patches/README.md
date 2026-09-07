@@ -42,13 +42,6 @@ Clang 23's libc++ no longer provides C allocation and sorting declarations
 transitively. xatlas calls `realloc`, `free`, and `qsort`, so include their
 defining C standard library header directly.
 
-### qtdeclarative/0001-qmlmodels-adapt-compare-data-overload.patch
-
-The qtbase 6.12 head replaced its nullable `QCollator` pointer overload with
-reference and no-collator overloads before qtdeclarative was adapted. Keep the
-submodule heads buildable together until the matching qtdeclarative change
-lands.
-
 ### qtbase/0001-darwin-futex-runtime-availability-check.patch
 
 Qt 6.12 switched the Darwin futex backend from the private, weak-linked
@@ -71,3 +64,14 @@ platform-specific storage/selection from Qt 6.10. Machines with the address-wait
 API still take the futex path; older systems use Mach semaphores.
 
 Not yet submitted to Gerrit. Remove this file once it lands upstream.
+
+### qtbase/0003-rhi-vk-keep-swapchain-pixelsize-in-sync.patch
+
+Gerrit 726771 (`QRhiVulkan: keep pixelSize in sync`) is still open on dev and
+stopped cherry-picking onto the 6.12 head: upstream's *rhi: vulkan: Wait on the
+queue, not the device* turned the `df->vkDeviceWaitIdle(dev)` that 726771 moves
+into a `deviceLost`-guarded `df->vkQueueWaitIdle(gfxQueue)`, so the deletion
+half of the pick no longer matches. This is 726771 rebased: the wait still moves
+above the `surfacePixelSize()` read, but it is upstream's queue wait that moves,
+not the old device wait. Drop this and go back to `qt_pick` once 726771 lands
+and is picked to 6.12.

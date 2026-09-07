@@ -1,0 +1,81 @@
+From: ossia SDK maintainers
+Date: Sun, 06 Sep 2026 00:00:00 +0000
+Subject: [PATCH] rhi: vulkan: keep the swapchain pixelSize in sync on resize
+
+Rebase of Gerrit change 726771 (QRhiVulkan: keep pixelSize in sync) onto the
+6.12 head. The change moves the idle-wait above the surfacePixelSize() read so
+the extent cannot go stale between the read and vkCreateSwapchainKHR; upstream
+has since replaced that vkDeviceWaitIdle(dev) with a deviceLost-guarded
+vkQueueWaitIdle(gfxQueue), so the moved statement is upstream's, not the
+original one.
+---
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index b1da62cd..995dff50 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -2303,14 +2303,16 @@ bool QRhiVulkan::createOffscreenRenderPass(QVkRenderPassDescriptor *rpD,
+ bool QRhiVulkan::recreateSwapChain(QRhiSwapChain *swapChain)
+ {
+     QVkSwapChain *swapChainD = QRHI_RES(QVkSwapChain, swapChain);
++
++    if (!deviceLost)
++        df->vkQueueWaitIdle(gfxQueue);
++
++    swapChainD->pixelSize = swapChainD->surfacePixelSize();
+     if (swapChainD->pixelSize.isEmpty()) {
+         qWarning("Surface size is 0, cannot create swapchain");
+         return false;
+     }
+ 
+-    if (!deviceLost)
+-        df->vkQueueWaitIdle(gfxQueue);
+-
+     if (!vkCreateSwapchainKHR) {
+         vkCreateSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(f->vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
+         vkDestroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(f->vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
+@@ -2325,6 +2327,26 @@ bool QRhiVulkan::recreateSwapChain(QRhiSwapChain *swapChain)
+ 
+     VkSurfaceCapabilitiesKHR surfaceCaps;
+     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physDev, swapChainD->surface, &surfaceCaps);
++
++    // Re-sync pixelSize with the latest surface capabilities to avoid
++    // VUID-VkSwapchainCreateInfoKHR-pNext-07781 when the surface extent
++    // changes between surfacePixelSize() and this point.
++    if (surfaceCaps.currentExtent.width != 0xFFFFFFFF) {
++        swapChainD->pixelSize = QSize(int(surfaceCaps.currentExtent.width),
++                                      int(surfaceCaps.currentExtent.height));
++    } else {
++        swapChainD->pixelSize = QSize(qBound(int(surfaceCaps.minImageExtent.width),
++                                             swapChainD->pixelSize.width(),
++                                             int(surfaceCaps.maxImageExtent.width)),
++                                      qBound(int(surfaceCaps.minImageExtent.height),
++                                             swapChainD->pixelSize.height(),
++                                             int(surfaceCaps.maxImageExtent.height)));
++    }
++    if (swapChainD->pixelSize.isEmpty()) {
++        qWarning("Surface size is 0, cannot create swapchain");
++        return false;
++    }
++
+     quint32 reqBufferCount;
+     if (swapChainD->m_flags.testFlag(QRhiSwapChain::MinimalBufferCount) || surfaceCaps.maxImageCount == 0) {
+         reqBufferCount = qMax<quint32>(2, surfaceCaps.minImageCount);
+@@ -9401,14 +9423,16 @@ bool QVkSwapChain::createOrResize()
+         destroy();
+ 
+     window = m_window;
+-    m_currentPixelSize = surfacePixelSize();
+-    pixelSize = m_currentPixelSize;
+ 
+     if (!rhiD->recreateSwapChain(this)) {
+         qWarning("Failed to create new swapchain");
+         return false;
+     }
+ 
++    // pixelSize may have been clamped by recreateSwapChain() to match the
++    // actual surface capabilities; keep m_currentPixelSize in sync.
++    m_currentPixelSize = pixelSize;
++
+     if (needsRegistration || !rhiD->swapchains.contains(this))
+         rhiD->swapchains.insert(this);
+ 

@@ -40,6 +40,25 @@ qt_pick() {
   if git cherry-pick --keep-redundant-commits FETCH_HEAD; then
     return 0
   fi
+  # A pick whose only conflicts are under tests/ is still usable: we configure
+  # with -nomake tests -no-feature-testlib, so nothing there is ever compiled,
+  # and the 6.12 head regularly rewrites tst_qrhi.cpp under a dev-targeted RHI
+  # change. Callers opt in per pick with a third argument; the source hunks
+  # still have to apply cleanly or the pick fails as before.
+  if [[ -n "${3:-}" ]]; then
+    local unmerged src
+    unmerged=$(git diff --name-only --diff-filter=U)
+    src=$(printf '%s\n' "$unmerged" | grep -v '^tests/' || true)
+    if [[ -n "$unmerged" && -z "$src" ]]; then
+      printf '%s\n' "$unmerged" | while read -r f; do
+        git checkout --theirs -- "$f" && git add "$f"
+      done
+      if git -c core.editor=true cherry-pick --continue; then
+        echo "clone-qt: $repo $ref applied; conflicts under tests/ resolved in favour of the pick" >&2
+        return 0
+      fi
+    fi
+  fi
   git cherry-pick --abort || true
   echo "clone-qt: cherry-pick of $repo $ref conflicts with $QT_VERSION" >&2
   return 1
@@ -103,36 +122,37 @@ git init -q qt
 
     # The 658xxx changes were abandoned in favour of dev-targeted rewrites; the
     # old refs still resolve, so a stale one builds silently instead of failing.
+    # Same trap for a pick that has landed on 6.12: --keep-redundant-commits
+    # turns it into an empty commit rather than an error. Dropped on that basis:
+    # 686804 (win32: clang: fix unity builds) and, in qtquick3d-assimp, 687132
+    # (poly2tri: add missing include for clang-21) -- both are in the tree the
+    # current pins check out. 761497 and 761490 went the same way, see below.
     # qhash: prevent a -fsanitize=integer warning in the hash functions
     qt_pick qtbase refs/changes/05/757205/2
     # Enable exports on static builds
     qt_pick qtbase refs/changes/66/658066/2
     # qfsm disable sorting
     qt_pick qtbase refs/changes/07/757207/1
-    # win32 fontdatabase unity build fix
-    qt_pick qtbase refs/changes/04/686804/2
-    # QRhiVulkan: swapchain recreated with a stale extent on resize
-    qt_pick qtbase refs/changes/71/726771/3
 
     # RHI changes merged to dev but not present in the pinned 6.12 branch. Keep
     # their dev dependency order: the Metal indirect-count implementation builds
     # on the indirect APIs and render-pass preservation fixes.
-    # rhi: Add support for dispatch indirect
-    qt_pick qtbase refs/changes/11/738611/16
+    # rhi: Add support for dispatch indirect (tests/ rewritten upstream)
+    qt_pick qtbase refs/changes/11/738611/16 tests-ok
     # rhi: Add support for multi draw count indirect
     qt_pick qtbase refs/changes/12/738612/19
     # rhi: gl: Implement base instance support
     qt_pick qtbase refs/changes/67/761467/9
-    # rhi: metal: Preserve per-pass state when interrupting the render pass
-    qt_pick qtbase refs/changes/97/761497/9
-    # rhi: metal: Keep attachment contents when interrupting the render pass
-    qt_pick qtbase refs/changes/90/761490/10
+    # 761497 (metal: preserve per-pass state) and 761490 (metal: keep attachment
+    # contents) have landed on 6.12; picking them again only conflicts.
     # rhi: Implement DrawIndirectCount for Metal, add NoTransientBacking
-    qt_pick qtbase refs/changes/69/761469/12
+    qt_pick qtbase refs/changes/69/761469/12 tests-ok
     # rhi: metal: Disable ICB usage when the shader uses textures
     qt_pick qtbase refs/changes/41/763541/4
     # rhi: Add a shader variant for Metal argument buffers
     qt_pick qtbase refs/changes/31/763731/5
+    # macos: use same convention than other platforms for GL multisampling
+    qt_pick qtbase refs/changes/38/767938/1
 
     qt_apply_local qtbase
   )
@@ -162,15 +182,6 @@ git init -q qt
     qt_pick qtdeclarative refs/changes/04/757204/1
 
     qt_apply_local qtdeclarative
-  )
-
-  (
-    cd qtquick3d/src/3rdparty/assimp/src
-    git config user.email "you@example.com"
-    git config user.name "Your Name"
-    # assimp missing ostream
-    qt_pick qtquick3d-assimp refs/changes/32/687132/2
-
   )
 
   (

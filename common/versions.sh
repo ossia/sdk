@@ -100,12 +100,12 @@ export OPENSSL_VERSION=3.5.7
 # and code.qt.io both allow fetching one directly into a shallow clone, which
 # is what clone-qt.sh and WASM/qt-deps.sh rely on.
 # To bump: take the current tip of https://github.com/qt/qt5 refs/heads/6.12.
-export QT_VERSION=7b72c15f61f860c0fe6f67a92d550cd1556f57de
+export QT_VERSION=da7ca1ee7595c003b638ecc9294e6c1e6890eae3
 # qtbase and qtshadertools are checked out at their own 6.12 branch tips on top
 # of that, ahead of the pointers the super-repo carries; see clone-qt.sh. Move
-# all three together.
-export QTBASE_VERSION=baceb73610fab8725bcad5724e25935beef08699
-export QTSHADERTOOLS_VERSION=84c76c3695808bd6677df31278b38c095320d5f5
+# all three together: the qtbase RHI picks pair with the qtshadertools one.
+export QTBASE_VERSION=3700a2e52e9095f499d1a49fb18e1696f3a8d854
+export QTSHADERTOOLS_VERSION=edf9ef86d27734ed62dfe43711dd689263e0f5ba
 export CMAKE_VERSION_SHORT=4.3
 export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14
