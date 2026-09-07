@@ -17,6 +17,12 @@ declare -a QT_X86_64_FLAGS=(
 
 declare -n QT_ARCH_FLAGS=QT_${ARCH_VARNAME}_FLAGS
 
+# QtDBus dlopens libdbus-1 (QLibrary, tries .so.3 then .so.2) instead of taking a
+# DT_NEEDED on it, so the AppImage runs on hosts whose libdbus differs or is
+# absent -- QtDBus then just fails its calls and QDesktopServices::openUrl()
+# falls through to xdg-open. Set as a feature variable on purpose: configure's
+# documented -dbus-runtime is accepted but never reaches INPUT_dbus in 6.12, so
+# it silently leaves dbus-linked auto-detected ON.
 mkdir -p qt6-build-static
 (
   cd qt6-build-static
@@ -50,6 +56,7 @@ mkdir -p qt6-build-static
   -DCMAKE_C_FLAGS="$CFLAGS" \
   -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
   -DCMAKE_CXX_STANDARD=23 \
+  -DFEATURE_dbus_linked=OFF \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX;$INSTALL_PREFIX/sysroot" \
   -DFREETYPE_DIR="$INSTALL_PREFIX/sysroot" \
   -Dharfbuzz_DIR="$INSTALL_PREFIX/sysroot" \
