@@ -154,6 +154,16 @@ git init -q qt
     # macos: use same convention than other platforms for GL multisampling
     qt_pick qtbase refs/changes/38/767938/1
 
+    # More RHI fixes merged to dev and missing from 6.12.
+    # rhi: Report the per-stage storage buffer limits
+    qt_pick qtbase refs/changes/24/760024/5
+    # rhi: d3d11: Pad too small indirect buffers
+    qt_pick qtbase refs/changes/45/765245/5
+    # rhi: metal: Fix buffer readbacks. This one is the cherry-pick bot's own
+    # 6.12 change (dev is 766239), so drop it once it integrates rather than
+    # rebasing it. tests/ conflicts because 6.12 rewrote tst_qrhi.cpp.
+    qt_pick qtbase refs/changes/20/767720/1 tests-ok
+
     qt_apply_local qtbase
   )
 
