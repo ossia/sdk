@@ -2,16 +2,30 @@
 
 source ./common.sh
 
-if [[ -f $INSTALL_PREFIX/llvm/bin/clang ]]; then
+if [[ -f $INSTALL_PREFIX/llvm/.ossia-sdk-llvm-complete ]]; then
   exit 0
 fi
 
 source ./common/clone-llvm.sh
 (
+  # The surrounding debug SDK exports sanitizer flags for target libraries.
+  # The bootstrap compiler and its bootstrap libc++ must remain uninstrumented:
+  # LLVM's runtimes are configured as a nested build and otherwise inherit the
+  # environment even when the top-level CMake flags are clean.
+  unset CFLAGS CXXFLAGS LDFLAGS
   mkdir -p llvm-build-bootstrap
   cd llvm-build-bootstrap
   $CMAKE  -GNinja \
+  -DCMAKE_C_COMPILER=/usr/bin/clang \
+  -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
   -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_FLAGS="-O2 -g -fPIC $ARCHFLAGS" \
+  -DCMAKE_CXX_FLAGS="-O2 -g -fPIC $ARCHFLAGS" \
+  -DCMAKE_C_COMPILER_TARGET=${ARCH}-unknown-linux-gnu \
+  -DCMAKE_CXX_COMPILER_TARGET=${ARCH}-unknown-linux-gnu \
+  -DCMAKE_EXE_LINKER_FLAGS= \
+  -DCMAKE_SHARED_LINKER_FLAGS= \
+  -DCMAKE_MODULE_LINKER_FLAGS= \
   -DBUILD_SHARED_LIBS=0 \
   -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON \
   -DLLVM_TARGETS_TO_BUILD="$LLVM_ARCH" \
@@ -31,6 +45,10 @@ source ./common/clone-llvm.sh
   -DLIBCXX_ENABLE_STATIC=ON \
   -DLIBCXX_ENABLE_SHARED=OFF \
   -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
+  -DLIBCXXABI_ENABLE_STATIC=ON \
+  -DLIBCXXABI_ENABLE_SHARED=OFF \
+  -DLIBUNWIND_ENABLE_STATIC=ON \
+  -DLIBUNWIND_ENABLE_SHARED=OFF \
   -DLIBCXX_ENABLE_SHARED_ABI_LIBRARY=OFF \
   -DLIBCXX_ABI_ENABLE_STATIC=ON \
   -DLIBCXX_ABI_UNSTABLE=ON \
@@ -39,18 +57,29 @@ source ./common/clone-llvm.sh
   -DLIBUNWIND_USE_COMPILER_RT=OFF \
   -DLLVM_ENABLE_LIBPFM=OFF \
   -DLLVM_ENABLE_TERMINFO=OFF \
-  -DLLVM_ENABLE_PROJECTS="clang;lld;polly" \
+  -DLLVM_ENABLE_PROJECTS="clang;lld;polly;compiler-rt" \
   -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+  -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
+  -DCOMPILER_RT_BUILD_ORC=ON \
+  -DCOMPILER_RT_BUILD_BUILTINS=OFF \
+  -DCOMPILER_RT_BUILD_SANITIZERS="$COMPILER_RT_BUILD_SANITIZERS" \
+  -DCOMPILER_RT_BUILD_XRAY=OFF \
+  -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+  -DCOMPILER_RT_BUILD_PROFILE=OFF \
+  -DCOMPILER_RT_BUILD_MEMPROF=OFF \
+  -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
+  -DCOMPILER_RT_BUILD_GWP_ASAN="$COMPILER_RT_BUILD_GWP_ASAN" \
+  -DCOMPILER_RT_BUILD_SHARED_ASAN="$COMPILER_RT_BUILD_SHARED_ASAN" \
   -DLLVM_ENABLE_OCAMLDOC=OFF \
   -DLLVM_ENABLE_BINDINGS=0 \
   -DLLVM_INCLUDE_BENCHMARKS=0 \
   -DCMAKE_INSTALL_PREFIX=$SDK_ROOT/llvm-bootstrap \
   $LLVM_ADDITIONAL_FLAGS \
-  ../llvm/llvm
-  
-  $CMAKE --build .
-  $CMAKE --build . --target install/strip
-)
+  ../llvm/llvm || exit
+
+  $CMAKE --build . || exit
+  $CMAKE --build . --target "${CMAKE_INSTALL_TARGET:-install/strip}" || exit
+) || exit $?
 
 # LLVM is bootstrapped so that it is all built with the same libc++ version
 (
@@ -63,9 +92,9 @@ source ./common/clone-llvm.sh
   $CMAKE -GNinja \
   -DCMAKE_C_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang \
   -DCMAKE_CXX_COMPILER=$SDK_ROOT/llvm-bootstrap/bin/clang++ \
-  -DCMAKE_C_FLAGS="$CFLAGS" \
-  -DCMAKE_CXX_FLAGS="$CXXFLAGS -stdlib=libc++" \
-  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_FLAGS="${LLVM_CFLAGS:-$CFLAGS}" \
+  -DCMAKE_CXX_FLAGS="${LLVM_CXXFLAGS:-$CXXFLAGS} -stdlib=libc++" \
+  -DCMAKE_BUILD_TYPE="${LLVM_BUILD_TYPE:-$CMAKE_BUILD_TYPE}" \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   -DBUILD_SHARED_LIBS=0 \
   -DLLVM_ENABLE_WARNINGS=OFF \
@@ -95,18 +124,20 @@ source ./common/clone-llvm.sh
   -DLLVM_ENABLE_UNWIND_TABLES=ON \
   -DLLVM_ENABLE_EH=ON \
   -DLLVM_ENABLE_RTTI=ON \
-  -DLLVM_ENABLE_PROJECTS="clang;lld;polly;compiler-rt" \
-  -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+  -DLLVM_ENABLE_PROJECTS="$LLVM_ENABLE_PROJECTS" \
+  -DLLVM_ENABLE_RUNTIMES="$LLVM_ENABLE_RUNTIMES" \
+  -DLLVM_USE_SANITIZER="$LLVM_USE_SANITIZER" \
   -DALL_ORC_SUPPORTED_ARCH=${ARCH} \
   -DCOMPILER_RT_BUILD_ORC=ON \
   -DCOMPILER_RT_BUILD_BUILTINS=OFF \
-  -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
-  -DCOMPILER_RT_BUILD_XRAY=OFF \
-  -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
-  -DCOMPILER_RT_BUILD_PROFILE=OFF \
-  -DCOMPILER_RT_BUILD_MEMPROF=OFF \
-  -DCOMPILER_RT_BUILD_CTX_PROFILE=OFF \
-  -DCOMPILER_RT_BUILD_GWP_ASAN=OFF \
+  -DCOMPILER_RT_BUILD_SANITIZERS="$COMPILER_RT_BUILD_SANITIZERS" \
+  -DCOMPILER_RT_BUILD_XRAY="$COMPILER_RT_BUILD_XRAY" \
+  -DCOMPILER_RT_BUILD_LIBFUZZER="$COMPILER_RT_BUILD_LIBFUZZER" \
+  -DCOMPILER_RT_BUILD_PROFILE="$COMPILER_RT_BUILD_PROFILE" \
+  -DCOMPILER_RT_BUILD_MEMPROF="$COMPILER_RT_BUILD_MEMPROF" \
+  -DCOMPILER_RT_BUILD_CTX_PROFILE="$COMPILER_RT_BUILD_CTX_PROFILE" \
+  -DCOMPILER_RT_BUILD_GWP_ASAN="$COMPILER_RT_BUILD_GWP_ASAN" \
+  -DCOMPILER_RT_BUILD_SHARED_ASAN="$COMPILER_RT_BUILD_SHARED_ASAN" \
   -DCMAKE_C_COMPILER_TARGET=${ARCH}-unknown-linux-gnu \
   -DCMAKE_CXX_COMPILER_TARGET=${ARCH}-unknown-linux-gnu \
   -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON \
@@ -118,6 +149,10 @@ source ./common/clone-llvm.sh
   -DLIBCXX_ENABLE_SHARED_ABI_LIBRARY=OFF \
   -DLIBCXX_ABI_ENABLE_STATIC=ON \
   -DLIBCXX_ABI_UNSTABLE=ON \
+  -DLIBCXXABI_ENABLE_STATIC=ON \
+  -DLIBCXXABI_ENABLE_SHARED=OFF \
+  -DLIBUNWIND_ENABLE_STATIC=ON \
+  -DLIBUNWIND_ENABLE_SHARED=OFF \
   -DLIBCXX_CXX_ABI=libcxxabi \
   -DLIBCXX_USE_COMPILER_RT=OFF \
   -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
@@ -128,13 +163,74 @@ source ./common/clone-llvm.sh
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/llvm \
   $LLVM_ADDITIONAL_FLAGS \
-  ../llvm/llvm
-  
-  $CMAKE --build . --parallel
-  $CMAKE --build . --target install/strip
-)
+  ../llvm/llvm || exit
+
+
+  $CMAKE --build . --parallel || exit
+  $CMAKE --build . --target "${CMAKE_INSTALL_TARGET:-install/strip}" || exit
+) || exit $?
+# Compiler-rt cannot be built inside a sanitizer-instrumented runtime tree
+# because that instruments sanitizer runtimes with themselves. The clean
+# bootstrap builds the complete compiler-rt set; merge its Clang resource
+# directory into the final toolchain after installing LLVM.
+mkdir -p "$INSTALL_PREFIX/llvm/lib/clang"
+cp -a "$SDK_ROOT/llvm-bootstrap/lib/clang/." "$INSTALL_PREFIX/llvm/lib/clang/"
+
+if [[ "${SDK_DEBUG:-0}" == 1 ]]; then
+(
+  rm -rf llvm-runtimes-debug
+  $CMAKE -GNinja \
+    -S llvm/runtimes \
+    -B llvm-runtimes-debug \
+    -DCMAKE_C_COMPILER="$SDK_ROOT/llvm-bootstrap/bin/clang" \
+    -DCMAKE_CXX_COMPILER="$SDK_ROOT/llvm-bootstrap/bin/clang++" \
+    -DCMAKE_C_COMPILER_TARGET=${ARCH}-unknown-linux-gnu \
+    -DCMAKE_CXX_COMPILER_TARGET=${ARCH}-unknown-linux-gnu \
+    "-DCMAKE_C_FLAGS=$CFLAGS" \
+    "-DCMAKE_CXX_FLAGS=$CXXFLAGS -stdlib=libc++" \
+    "-DCMAKE_EXE_LINKER_FLAGS=$SANITIZER_LINK_FLAGS" \
+    "-DCMAKE_SHARED_LINKER_FLAGS=$SANITIZER_LINK_FLAGS" \
+    "-DCMAKE_MODULE_LINKER_FLAGS=$SANITIZER_LINK_FLAGS" \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+    -DLIBCXX_HARDENING_MODE=debug \
+    -DLIBCXX_ENABLE_ASSERTIONS=ON \
+    -DLIBCXX_ENABLE_STATIC=ON \
+    -DLIBCXX_ENABLE_SHARED=OFF \
+    -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
+    -DLIBCXX_ENABLE_SHARED_ABI_LIBRARY=OFF \
+    -DLIBCXX_ABI_UNSTABLE=ON \
+    -DLIBCXX_CXX_ABI=libcxxabi \
+    -DLIBCXX_USE_COMPILER_RT=OFF \
+    -DLIBCXXABI_ENABLE_ASSERTIONS=ON \
+    -DLIBCXXABI_ENABLE_STATIC=ON \
+    -DLIBCXXABI_ENABLE_SHARED=OFF \
+    -DLIBCXXABI_USE_LLVM_UNWINDER=OFF \
+    -DLIBCXXABI_USE_COMPILER_RT=OFF \
+    -DLIBUNWIND_ENABLE_ASSERTIONS=ON \
+    -DLIBUNWIND_ENABLE_STATIC=ON \
+    -DLIBUNWIND_ENABLE_SHARED=OFF \
+    -DLIBUNWIND_USE_COMPILER_RT=OFF \
+    -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/llvm" \
+    || exit
+  $CMAKE --build llvm-runtimes-debug --parallel || exit
+  $CMAKE --build llvm-runtimes-debug --target install || exit
+) || exit $?
+  # Clang's Linux driver searches this target-qualified directory for its
+  # default libc++; runtimes/ otherwise installs the static archives in lib/.
+  mkdir -p "$INSTALL_PREFIX/llvm/lib/${ARCH}-unknown-linux-gnu"
+  ln -sf ../libc++.a "$INSTALL_PREFIX/llvm/lib/${ARCH}-unknown-linux-gnu/libc++.a"
+  ln -sf ../libc++abi.a "$INSTALL_PREFIX/llvm/lib/${ARCH}-unknown-linux-gnu/libc++abi.a"
+  ln -sf ../libunwind.a "$INSTALL_PREFIX/llvm/lib/${ARCH}-unknown-linux-gnu/libunwind.a"
+fi
 
 (
-  cd $INSTALL_PREFIX/llvm
-  ln -s lib lib64 || true
+  cd "$INSTALL_PREFIX/llvm"
+  if [[ -d lib64 && ! -L lib64 ]]; then
+    cp -a lib64/. lib/
+    rm -rf lib64
+  fi
+  ln -sfn lib lib64
 )
+touch "$INSTALL_PREFIX/llvm/.ossia-sdk-llvm-complete"

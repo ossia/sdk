@@ -10,4 +10,4 @@ cmake -S portaudio -B portaudio-build \
  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/portaudio
 
 cmake --build portaudio-build
-cmake --build portaudio-build --target install/strip
+cmake --build portaudio-build --target "${CMAKE_INSTALL_TARGET:-install/strip}"

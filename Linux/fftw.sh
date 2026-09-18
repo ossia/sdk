@@ -38,7 +38,11 @@ declare -a FFTW_X86_64_FLAGS=(
 
 declare -n FFTW_ARCH_FLAGS=FFTW_${ARCH_VARNAME}_FLAGS
 
-CFLAGS+=" -O3 -fstrict-aliasing -ffast-math -fno-finite-math-only "
+if [[ "${SDK_DEBUG:-0}" == 1 ]]; then
+  FFTW_ARCH_FLAGS+=(--enable-debug)
+else
+  CFLAGS+=" -O3 -fstrict-aliasing -ffast-math -fno-finite-math-only "
+fi
 
 ../fftw-$FFTW_VERSION/configure "${FFTW_ARCH_FLAGS[@]}" CC="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC"
 

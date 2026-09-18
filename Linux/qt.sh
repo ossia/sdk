@@ -1,6 +1,9 @@
 #!/bin/bash -eux
 export SDK_COMMON_ROOT=$PWD
 source ./common.sh clang
+if [[ -f "$INSTALL_PREFIX/qt6-static/lib/cmake/Qt6/Qt6Config.cmake" ]]; then
+  exit 0
+fi
 
 source "$SDK_COMMON_ROOT/common/clone-qt.sh"
 

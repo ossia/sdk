@@ -26,6 +26,15 @@ fi
   PW_OPTS=(--prefix=$INSTALL_PREFIX/pipewire "-Dsession-managers=[]"
            -Dexamples=disabled -Dtests=disabled -Dsystemd=disabled
            -Ddbus=disabled -Dflatpak=disabled -Dopus=disabled)
+  if [[ "${SDK_DEBUG:-0}" == 1 ]]; then
+    PW_OPTS+=(
+      --buildtype=debug
+      -Db_ndebug=false
+      -Db_lundef=false
+      "-Dc_link_args=$SANITIZER_FLAGS"
+      "-Dcpp_link_args=$SANITIZER_FLAGS"
+    )
+  fi
   meson setup build "${PW_OPTS[@]}"
   meson configure build "${PW_OPTS[@]}"
   meson compile -C build

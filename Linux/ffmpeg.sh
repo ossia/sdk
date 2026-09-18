@@ -50,10 +50,23 @@ fi
 declare -a FFMPEG_LOCAL_FLAGS=(
   --extra-cflags="$CFLAGS -fPIC -I$INSTALL_PREFIX/sysroot/include"
   --extra-ldflags="-L$INSTALL_PREFIX/sysroot/lib -L$INSTALL_PREFIX/sysroot/lib64"
+  # Static HarfBuzz contains C++ code. FFmpeg links its probes and binaries
+  # with the C driver, so carry libc++ explicitly (debug hardening adds
+  # otherwise-unresolved __libcpp_verbose_abort references).
+  --extra-libs="-lc++"
   --cc="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CC"
   --cxx="${CCACHE_LAUNCHER:+$CCACHE_LAUNCHER }$CXX"
   --prefix=$INSTALL_PREFIX/ffmpeg
 )
+
+if [[ "${SDK_DEBUG:-0}" == 1 ]]; then
+  FFMPEG_LOCAL_FLAGS+=(
+    --enable-debug=3
+    --disable-optimizations
+    --disable-stripping
+    --assert-level=2
+  )
+fi
 
 # FIXME apply librelec patches:
 # https://github.com/LibreELEC/LibreELEC.tv/blob/master/packages/multimedia/ffmpeg/package.mk

@@ -3,15 +3,20 @@
 source ./common.sh clang
 source ./common/clone-sdl.sh
 
+SDL_DEBUG_FLAGS=()
+if [[ "${SDK_DEBUG:-0}" == 1 ]]; then
+  SDL_DEBUG_FLAGS+=(-DSDL_ASSERTIONS=2)
+fi
+
 cmake -S SDL2-$SDL_VERSION -B sdl-build \
--GNinja \
+"${CMAKE_COMMON_FLAGS[@]}" \
+"${SDL_DEBUG_FLAGS[@]}" \
 -DSDL_STATIC=1 \
 -DSDL_STATIC_PIC=1 \
 -DBUILD_SHARED_LIBS=0 \
--DCMAKE_BUILD_TYPE=Release \
 -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/SDL2" \
--DCMAKE_C_FLAGS="-DSDL_DYNAMIC_API=0" \
--DCMAKE_CXX_FLAGS="-DSDL_DYNAMIC_API=0" \
+"-DCMAKE_C_FLAGS=$CFLAGS -DSDL_DYNAMIC_API=0" \
+"-DCMAKE_CXX_FLAGS=$CXXFLAGS -DSDL_DYNAMIC_API=0" \
 -DSDL_EVENTS=1 \
 -DSDL_JOYSTICK=1 \
 -DSDL_HAPTIC=1 \
@@ -40,4 +45,4 @@ cmake -S SDL2-$SDL_VERSION -B sdl-build \
 -DSDL_IBUS=0
 
 cmake --build sdl-build
-cmake --build sdl-build --target install/strip
+cmake --build sdl-build --target "${CMAKE_INSTALL_TARGET:-install/strip}"

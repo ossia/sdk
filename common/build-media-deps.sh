@@ -151,7 +151,7 @@ _md_fetch_tar() {  # name stripdir url [url...]
 _md_cmake_flags() {
   MD_CMAKE_FLAGS=(
     -GNinja
-    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Release}"
     -DBUILD_SHARED_LIBS=OFF
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5
@@ -232,7 +232,7 @@ _md_build_dav1d() {   # AV1 decoding; ffmpeg's native AV1 decoder is far slower
   # does not define.
   meson setup "$(_md_build_dir dav1d)" "$MEDIA_DEPS_SRC/dav1d" \
     --prefix="$MEDIA_DEPS_PREFIX" --libdir=lib \
-    --buildtype=release --default-library=static \
+    --buildtype="${MESON_BUILD_TYPE:-release}" --default-library=static \
     -Denable_tools=false -Denable_tests=false \
     ${MD_MESON_EXTRA_FLAGS:+"${MD_MESON_EXTRA_FLAGS[@]}"}
   ninja -C "$(_md_build_dir dav1d)"

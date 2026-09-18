@@ -126,7 +126,7 @@ _md_build_libplacebo() {   # ffmpeg's `libplacebo` filter (needs Vulkan + glslan
   LIBRARY_PATH="$prefix/lib${LIBRARY_PATH:+:$LIBRARY_PATH}" \
   _md_meson_gpu setup "$(_md_build_dir libplacebo)" "$MEDIA_DEPS_SRC/libplacebo" \
     --prefix="$MEDIA_DEPS_PREFIX" --libdir=lib \
-    --buildtype=release --default-library=static --prefer-static \
+    --buildtype="${MESON_BUILD_TYPE:-release}" --default-library=static --prefer-static \
     -Dvulkan=enabled -Dvk-proc-addr=disabled -Dvulkan-sdk="$prefix" \
     -Dglslang=enabled -Dshaderc=disabled \
     -Dopengl=disabled -Dgl-proc-addr=disabled -Dd3d11=disabled \

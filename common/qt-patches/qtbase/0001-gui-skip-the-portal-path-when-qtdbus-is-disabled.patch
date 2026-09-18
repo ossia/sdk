@@ -1,0 +1,25 @@
+diff --git a/src/gui/platform/unix/qdesktopunixservices.cpp b/src/gui/platform/unix/qdesktopunixservices.cpp
+--- a/src/gui/platform/unix/qdesktopunixservices.cpp
++++ b/src/gui/platform/unix/qdesktopunixservices.cpp
+@@ -567,8 +567,10 @@ bool QDesktopUnixServices::openUrlWithPortal(const QUrl &url, const QString &xdgA
+
+ bool QDesktopUnixServices::openUrl(const QUrl &url)
+ {
++#  if QT_CONFIG(dbus)
+     if (!m_hasNoPortal)
+         return runWithXdgActivationToken(&QDesktopUnixServices::openUrlWithPortal, url);
++#  endif
+
+     return runWithXdgActivationToken(&QDesktopUnixServices::openUrlWithoutPortal, url);
+ }
+@@ -598,8 +600,10 @@ bool QDesktopUnixServices::openDocumentWithPortal(const QUrl &url, const QString
+
+ bool QDesktopUnixServices::openDocument(const QUrl &url)
+ {
++#  if QT_CONFIG(dbus)
+     if (!m_hasNoPortal)
+         return runWithXdgActivationToken(&QDesktopUnixServices::openDocumentWithPortal, url);
++#  endif
+
+     return runWithXdgActivationToken(&QDesktopUnixServices::openDocumentWithoutPortal, url);
+ }

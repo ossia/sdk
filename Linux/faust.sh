@@ -22,9 +22,9 @@ fi
   -DLINK_LLVM_STATIC=0 \
   -DINCLUDE_LLVM=0 \
   -DINCLUDE_LLVM_STATIC_IN_ARCHIVE=0 \
-  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/faust
   
   cmake --build faustdir
-  cmake --build faustdir --target install/strip
+  cmake --build faustdir --target "${CMAKE_INSTALL_TARGET:-install/strip}"
 )

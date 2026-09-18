@@ -1,0 +1,20 @@
+diff --git a/src/corelib/text/qstring.cpp b/src/corelib/text/qstring.cpp
+--- a/src/corelib/text/qstring.cpp
++++ b/src/corelib/text/qstring.cpp
+@@ -434,4 +434,7 @@ static bool simdTestMask(const char *&ptr, const char *end, quint32 maskval)
+ {
++    if (ptr == end)
++        return true;
++
+     auto updatePtr = [&](uint result) {
+         // found a character matching the mask
+         uint idx = qCountTrailingZeroBits(~result);
+@@ -688,5 +691,8 @@ const char16_t *QtPrivate::qustrchr(QStringView str, char16_t c) noexcept
+ {
+     const char16_t *n = str.utf16();
++    if (str.isEmpty())
++        return n;
++
+     const char16_t *e = n + str.size();
+ 
+ #ifdef __SSE2__
