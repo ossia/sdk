@@ -1,0 +1,89 @@
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Mon, 22 Sep 2026 12:00:00 +0200
+Subject: [PATCH] rhi: gl: honour QRhiTexture::sRGB for uncompressed formats
+
+QRhiTexture::sRGB reached the OpenGL backend only through
+toGlCompressedTextureFormat(), i.e. for BC / ETC2 / ASTC, and through the
+swapchain. toGlTextureFormat() maps RGBA8 to GL_RGBA8 unconditionally, so on an
+uncompressed texture the flag was accepted and silently dropped: the sampler
+returned the stored values with no sRGB->linear decode, while Vulkan, Metal and
+D3D all decode.
+
+Anything sampling an 8-bit colour texture is then too bright on OpenGL alone,
+and not by a constant: the sRGB curve lifts mid-tones far more than its fixed
+points at 0.0 and 1.0, so the error shows up as a hue shift rather than a gain
+change. Measured on a glTF base-colour texture whose albedo is exactly
+(1.0, 0.847, 0.0): the effective linear green a renderer sees is 0.687 on
+Vulkan and Metal -- the decoded value -- and 0.847 on OpenGL, the raw one,
+while red and blue agree to within 1/255 across all three because they sit on
+the fixed points.
+
+Map RGBA8 and BGRA8 to GL_SRGB8_ALPHA8 when the flag is set, and pass the
+texture's flags down from QGles2Texture::create(). There is no sRGB BGRA
+internal format, which is fine: the sRGB-ness belongs to the internal format
+and BGRA stays the client-side channel order. Gated on caps.rgba8Format, i.e.
+sized internal formats, since the unsized sRGB enums are not worth the ES2
+special cases.
+
+The two other call sites keep the default (no flags): one reads back pixels and
+uses only glformat/gltype, the other resolves a renderbuffer's sized internal
+format, and a QRhiRenderBuffer carries no sRGB flag.
+
+diff --git a/src/gui/rhi/qrhigles2.cpp b/src/gui/rhi/qrhigles2.cpp
+--- a/src/gui/rhi/qrhigles2.cpp
++++ b/src/gui/rhi/qrhigles2.cpp
+@@ -214,6 +214,10 @@
+ #define GL_R16                            0x822A
+ #endif
+ 
++#ifndef GL_SRGB8_ALPHA8
++#define GL_SRGB8_ALPHA8                   0x8C43
++#endif
++
+ #ifndef GL_RG16
+ #define GL_RG16                           0x822C
+ #endif
+@@ -1489,18 +1493,28 @@
+ 
+ static inline void toGlTextureFormat(QRhiTexture::Format format, const QRhiGles2::Caps &caps,
+                                      GLenum *glintformat, GLenum *glsizedintformat,
+-                                     GLenum *glformat, GLenum *gltype)
++                                     GLenum *glformat, GLenum *gltype,
++                                     QRhiTexture::Flags flags = {})
+ {
++    // Only the sized sRGB internal format carries the decode; there is no
++    // unsized equivalent worth using, so this needs GL 3.0 / ES 3.0, which is
++    // what rgba8Format (GL_EXT_texture_storage / sized formats) stands for.
++    const bool srgb = flags.testFlag(QRhiTexture::sRGB) && caps.rgba8Format;
+     switch (format) {
+     case QRhiTexture::RGBA8:
+-        *glintformat = GL_RGBA;
+-        *glsizedintformat = caps.rgba8Format ? GL_RGBA8 : GL_RGBA;
++        *glintformat = srgb ? GL_SRGB8_ALPHA8 : GL_RGBA;
++        *glsizedintformat = srgb ? GL_SRGB8_ALPHA8
++                                 : (caps.rgba8Format ? GL_RGBA8 : GL_RGBA);
+         *glformat = GL_RGBA;
+         *gltype = GL_UNSIGNED_BYTE;
+         break;
+     case QRhiTexture::BGRA8:
+-        *glintformat = caps.bgraInternalFormat ? GL_BGRA : GL_RGBA;
+-        *glsizedintformat = caps.rgba8Format ? GL_RGBA8 : GL_RGBA;
++        // No sRGB BGRA internal format exists; the sRGB-ness lives in the
++        // internal format and BGRA stays the client-side channel order.
++        *glintformat = srgb ? GL_SRGB8_ALPHA8
++                            : (caps.bgraInternalFormat ? GL_BGRA : GL_RGBA);
++        *glsizedintformat = srgb ? GL_SRGB8_ALPHA8
++                                 : (caps.rgba8Format ? GL_RGBA8 : GL_RGBA);
+         *glformat = GL_BGRA;
+         *gltype = GL_UNSIGNED_BYTE;
+         break;
+@@ -6608,7 +6622,8 @@
+         glformat = GL_RGBA;
+     } else {
+         toGlTextureFormat(m_format, rhiD->caps,
+-                          &glintformat, &glsizedintformat, &glformat, &gltype);
++                          &glintformat, &glsizedintformat, &glformat, &gltype,
++                          m_flags);
+     }
+ 
+     samplerState = QGles2SamplerData();
