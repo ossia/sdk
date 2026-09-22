@@ -29,11 +29,16 @@ and tessellation, whose vertex work runs as compute over a different set of
 shaders. The result is cached on the pipeline so the per-draw path does not
 recompute it.
 
+The vertex descriptor is also built after the shader stages are set up rather
+than before: it is what reads the origin, and the vertex shader's native
+binding map is only filled in by the stage loop, so building it first made the
+new computation fall back to the old one at pipeline-creation time -- exactly
+where Metal asserts.
+
 diff --git a/src/gui/rhi/qrhimetal.mm b/src/gui/rhi/qrhimetal.mm
-index 0d52d0be3a2..ffad3a9eb8d 100644
 --- a/src/gui/rhi/qrhimetal.mm
 +++ b/src/gui/rhi/qrhimetal.mm
-@@ -472,6 +472,11 @@ quint32 patchCountForDrawCall(quint32 vertexOrIndexCount, quint32 instanceCount)
+@@ -505,6 +505,11 @@
      void setupVertexInputDescriptor(MTLVertexDescriptor *desc);
      void setupStageInputDescriptor(MTLStageInputOutputDescriptor *desc);
  
@@ -45,7 +50,7 @@ index 0d52d0be3a2..ffad3a9eb8d 100644
      // SPIRV-Cross buffer size buffers
      QMetalBuffer *bufferSizeBuffer = nullptr;
  };
-@@ -1910,7 +1915,8 @@ static inline void rebindShaderResources(QMetalCommandBuffer *cbD, int resourceS
+@@ -2083,7 +2088,8 @@
      // layout-compatible anyways so maxBinding is the same.
      if (!srbD)
          srbD = QRHI_RES(QMetalShaderResourceBindings, cbD->currentGraphicsPipeline->shaderResourceBindings());
@@ -55,7 +60,7 @@ index 0d52d0be3a2..ffad3a9eb8d 100644
  
      if (firstVertexBinding != cbD->d->currentFirstVertexBinding
              || buffers != cbD->d->currentVertexInputsBuffers
-@@ -5396,11 +5402,76 @@ static inline MTLLanguageVersion toMetalLanguageVersion(const QShaderVersion &ve
+@@ -6480,11 +6486,76 @@
      d->slopeScaledDepthBias = m_slopeScaledDepthBias;
  }
  
@@ -133,7 +138,7 @@ index 0d52d0be3a2..ffad3a9eb8d 100644
  
      QRhiVertexInputLayout vertexInputLayout = q->vertexInputLayout();
      for (auto it = vertexInputLayout.cbeginAttributes(), itEnd = vertexInputLayout.cendAttributes();
-@@ -5431,7 +5502,8 @@ static inline MTLLanguageVersion toMetalLanguageVersion(const QShaderVersion &ve
+@@ -6515,7 +6586,8 @@
  {
      // same binding space for vertex and constant buffers - work it around
      // should be in native resource binding not SPIR-V, but this will work anyway
@@ -143,3 +148,28 @@ index 0d52d0be3a2..ffad3a9eb8d 100644
  
      QRhiVertexInputLayout vertexInputLayout = q->vertexInputLayout();
      for (auto it = vertexInputLayout.cbeginAttributes(), itEnd = vertexInputLayout.cendAttributes();
+@@ -6598,11 +6670,7 @@
+     // reaches them through an argument buffer.
+     const bool wantArgumentBuffers = m_flags.testFlag(UsesIndirectDraws) && rhiD->caps.indirectCommandBuffers;
+ 
+-    MTLVertexDescriptor *vertexDesc = [MTLVertexDescriptor vertexDescriptor];
+-    d->setupVertexInputDescriptor(vertexDesc);
+-
+     MTLRenderPipelineDescriptor *rpDesc = [[MTLRenderPipelineDescriptor alloc] init];
+-    rpDesc.vertexDescriptor = vertexDesc;
+ 
+     // Mutability cannot be determined (slotted buffers could be set as
+     // MTLMutabilityImmutable, but then we potentially need a different
+@@ -6691,6 +6759,12 @@
+         }
+     }
+ 
++    // After the stage loop: the vertex-buffer origin is read out of the vertex
++    // shader's native binding map, which is only filled in above.
++    MTLVertexDescriptor *vertexDesc = [MTLVertexDescriptor vertexDescriptor];
++    d->setupVertexInputDescriptor(vertexDesc);
++    rpDesc.vertexDescriptor = vertexDesc;
++
+     QMetalRenderPassDescriptor *rpD = QRHI_RES(QMetalRenderPassDescriptor, m_renderPassDesc);
+     setupAttachmentsInMetalRenderPassDescriptor(rpDesc, rpD);
+ 
