@@ -1,0 +1,145 @@
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Mon, 22 Sep 2026 03:30:00 +0200
+Subject: [PATCH] rhi: metal: start vertex buffers past the buffers, not past
+ every binding
+
+Metal gives each stage ONE table of 31 buffer slots, shared between the
+shader's own buffers and the vertex buffers, so the vertex buffers have to
+begin past whatever the shader resources occupy. That origin was computed as
+`srb->maxBinding + 1` -- the highest SRB binding NUMBER.
+
+But an SRB numbers every resource in a single space, while only buffers land
+in the buffer table: textures and samplers are filed into their own tables by
+enqueueShaderResourceBindings. Counting them reserves room for resources that
+are not there, and a shader that binds many textures is pushed off the end of
+a table it would have fitted in comfortably. Measured on a PBR shader binding
+18 textures and 15 buffers with 9 vertex streams: it asks for slot 45 of 31
+and the pipeline is refused, though it needs 15 buffers plus 9 streams.
+
+Take the highest NATIVE buffer index the vertex stage actually uses instead.
+The native resource binding map is per type and dense, so that is exactly the
+buffer-table occupancy. Two occupants are not SRB entries and come from
+nativeShaderInfo: the argument buffer holding textures and samplers in the
+argument-buffer variant, and the buffer-size buffer SPIRV-Cross emits
+alongside storage buffers -- both are native buffer indices.
+
+Falls back to the previous computation where the new one cannot apply: a
+QShader old enough to carry no native binding map, where the mapping is 1:1,
+and tessellation, whose vertex work runs as compute over a different set of
+shaders. The result is cached on the pipeline so the per-draw path does not
+recompute it.
+
+diff --git a/src/gui/rhi/qrhimetal.mm b/src/gui/rhi/qrhimetal.mm
+index 0d52d0be3a2..ffad3a9eb8d 100644
+--- a/src/gui/rhi/qrhimetal.mm
++++ b/src/gui/rhi/qrhimetal.mm
+@@ -472,6 +472,11 @@ quint32 patchCountForDrawCall(quint32 vertexOrIndexCount, quint32 instanceCount)
+     void setupVertexInputDescriptor(MTLVertexDescriptor *desc);
+     void setupStageInputDescriptor(MTLStageInputOutputDescriptor *desc);
+ 
++    // First Metal buffer-table slot the vertex buffers may use, i.e. one past
++    // whatever the shader resources occupy. See the definition.
++    int vertexBufferOrigin(QMetalShaderResourceBindings *srbD);
++    int cachedVertexBufferOrigin = -1;
++
+     // SPIRV-Cross buffer size buffers
+     QMetalBuffer *bufferSizeBuffer = nullptr;
+ };
+@@ -1910,7 +1915,8 @@ static inline void rebindShaderResources(QMetalCommandBuffer *cbD, int resourceS
+     // layout-compatible anyways so maxBinding is the same.
+     if (!srbD)
+         srbD = QRHI_RES(QMetalShaderResourceBindings, cbD->currentGraphicsPipeline->shaderResourceBindings());
+-    const int firstVertexBinding = srbD->maxBinding + 1;
++    const int firstVertexBinding =
++            QRHI_RES(QMetalGraphicsPipeline, cbD->currentGraphicsPipeline)->d->vertexBufferOrigin(srbD);
+ 
+     if (firstVertexBinding != cbD->d->currentFirstVertexBinding
+             || buffers != cbD->d->currentVertexInputsBuffers
+@@ -5396,11 +5402,76 @@ static inline MTLLanguageVersion toMetalLanguageVersion(const QShaderVersion &ve
+     d->slopeScaledDepthBias = m_slopeScaledDepthBias;
+ }
+ 
++// Metal gives each stage ONE table of 31 buffer slots, shared between the
++// shader's buffers and the vertex buffers, so the vertex buffers have to start
++// past whatever the resources occupy. That origin was taken as
++// `srb->maxBinding + 1`, the highest SRB binding NUMBER -- but an SRB numbers
++// every resource in one space, while only buffers land in the buffer table:
++// textures and samplers go to their own tables (see
++// enqueueShaderResourceBindings, which files them into separate lists).
++//
++// A shader that binds many textures therefore pushed its vertex buffers off the
++// end of a table they would have fit in comfortably. A PBR shader binding ~18
++// textures and 15 buffers asked for slot 45 of 31 and was refused, though it
++// needs only 15 + its vertex streams.
++//
++// Take the highest NATIVE buffer index the vertex stage actually uses instead.
++// The native resource binding map is per type and dense, so that is exactly the
++// buffer-table occupancy. Two occupants are not SRB entries and are counted
++// from nativeShaderInfo: the argument buffer that holds textures/samplers in
++// the argument-buffer variant, and the buffer-size buffer SPIRV-Cross emits
++// alongside storage buffers. Both are native buffer indices.
++//
++// Falls back to the old computation when there is no native map (a QShader old
++// enough to predate it, where the mapping is 1:1) and for tessellation, whose
++// vertex work runs as compute over a different set of shaders.
++int QMetalGraphicsPipelineData::vertexBufferOrigin(QMetalShaderResourceBindings *srbD)
++{
++    if (cachedVertexBufferOrigin >= 0)
++        return cachedVertexBufferOrigin;
++
++    const QShader::NativeResourceBindingMap &map(vs.nativeResourceBindingMap);
++    if (tess.enabled || map.isEmpty()) {
++        cachedVertexBufferOrigin = srbD->maxBinding + 1;
++        return cachedVertexBufferOrigin;
++    }
++
++    int maxNativeBuffer = -1;
++
++    for (const QRhiShaderResourceBinding &b : std::as_const(srbD->sortedBindings)) {
++        const QRhiShaderResourceBinding::Data *d =
++                QRhiImplementation::shaderResourceBindingData(b);
++        switch (d->type) {
++        case QRhiShaderResourceBinding::UniformBuffer:
++        case QRhiShaderResourceBinding::BufferLoad:
++        case QRhiShaderResourceBinding::BufferStore:
++        case QRhiShaderResourceBinding::BufferLoadStore:
++            break;
++        default:
++            continue;
++        }
++        if (!d->stage.testFlag(QRhiShaderResourceBinding::VertexStage))
++            continue;
++        auto it = map.constFind(d->binding);
++        if (it != map.cend())
++            maxNativeBuffer = qMax(maxNativeBuffer, it->first);
++    }
++
++    for (auto it = vs.nativeShaderInfo.extraBufferBindings.cbegin(),
++              end = vs.nativeShaderInfo.extraBufferBindings.cend(); it != end; ++it) {
++        maxNativeBuffer = qMax(maxNativeBuffer, it.value());
++    }
++
++    cachedVertexBufferOrigin = maxNativeBuffer + 1;
++    return cachedVertexBufferOrigin;
++}
++
+ void QMetalGraphicsPipelineData::setupVertexInputDescriptor(MTLVertexDescriptor *desc)
+ {
+     // same binding space for vertex and constant buffers - work it around
+     // should be in native resource binding not SPIR-V, but this will work anyway
+-    const int firstVertexBinding = QRHI_RES(QMetalShaderResourceBindings, q->shaderResourceBindings())->maxBinding + 1;
++    const int firstVertexBinding =
++            vertexBufferOrigin(QRHI_RES(QMetalShaderResourceBindings, q->shaderResourceBindings()));
+ 
+     QRhiVertexInputLayout vertexInputLayout = q->vertexInputLayout();
+     for (auto it = vertexInputLayout.cbeginAttributes(), itEnd = vertexInputLayout.cendAttributes();
+@@ -5431,7 +5502,8 @@ static inline MTLLanguageVersion toMetalLanguageVersion(const QShaderVersion &ve
+ {
+     // same binding space for vertex and constant buffers - work it around
+     // should be in native resource binding not SPIR-V, but this will work anyway
+-    const int firstVertexBinding = QRHI_RES(QMetalShaderResourceBindings, q->shaderResourceBindings())->maxBinding + 1;
++    const int firstVertexBinding =
++            vertexBufferOrigin(QRHI_RES(QMetalShaderResourceBindings, q->shaderResourceBindings()));
+ 
+     QRhiVertexInputLayout vertexInputLayout = q->vertexInputLayout();
+     for (auto it = vertexInputLayout.cbeginAttributes(), itEnd = vertexInputLayout.cendAttributes();
