@@ -13,8 +13,8 @@ source ../common/clone-zlib.sh
   -DWITH_GTEST=0 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build zlib-build --config Release
-  cmake --build zlib-build --config Release --target install/strip
+  cmake --build zlib-build --config "$CMAKE_BUILD_TYPE"
+  cmake --build zlib-build --config "$CMAKE_BUILD_TYPE" --target "${CMAKE_INSTALL_TARGET:-install/strip}"
 )
 
 (
@@ -29,11 +29,9 @@ source ../common/clone-zlib.sh
   -DENABLE_SHARED_LIB=0 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build bzip2-build --config Release
-  cmake --build bzip2-build --config Release --target install/strip
+  cmake --build bzip2-build --config "$CMAKE_BUILD_TYPE"
+  cmake --build bzip2-build --config "$CMAKE_BUILD_TYPE" --target "${CMAKE_INSTALL_TARGET:-install/strip}"
   
-  cd $INSTALL_PREFIX/sysroot
-  ln -s lib64 lib || true
   
   cp "$INSTALL_PREFIX/sysroot/lib/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib/libbz2.a" || true
   cp "$INSTALL_PREFIX/sysroot/lib64/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib64/libbz2.a" || true
@@ -49,8 +47,8 @@ source ../common/clone-zlib.sh
   -DZSTD_BUILD_STATIC=1 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build zstd-build --config Release
-  cmake --build zstd-build --config Release --target install/strip
+  cmake --build zstd-build --config "$CMAKE_BUILD_TYPE"
+  cmake --build zstd-build --config "$CMAKE_BUILD_TYPE" --target "${CMAKE_INSTALL_TARGET:-install/strip}"
   
 )
 
@@ -62,8 +60,8 @@ source ../common/clone-zlib.sh
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot" \
   -DSHARE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build brotli-build --config Release
-  cmake --build brotli-build --config Release --target install/strip
+  cmake --build brotli-build --config "$CMAKE_BUILD_TYPE"
+  cmake --build brotli-build --config "$CMAKE_BUILD_TYPE" --target "${CMAKE_INSTALL_TARGET:-install/strip}"
   
 )
 
@@ -72,12 +70,13 @@ source ../common/clone-zlib.sh
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DBUILD_SHARED_LIBS=0 \
   -DBUILD_TESTING=0 \
+  -DXZ_SANDBOX=no \
   -DCREATE_XZ_SYMLINKS=0 \
   -DCREATE_LZMA_SYMLINKS=0 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build xz-build --config Release
-  cmake --build xz-build --config Release --target install/strip
+  cmake --build xz-build --config "$CMAKE_BUILD_TYPE"
+  cmake --build xz-build --config "$CMAKE_BUILD_TYPE" --target "${CMAKE_INSTALL_TARGET:-install/strip}"
   
 )
 
@@ -90,8 +89,8 @@ source ../common/clone-zlib.sh
   -DSNAPPY_INSTALL=1 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build snappy-build --config Release
-  cmake --build snappy-build --config Release --target install/strip
+  cmake --build snappy-build --config "$CMAKE_BUILD_TYPE"
+  cmake --build snappy-build --config "$CMAKE_BUILD_TYPE" --target "${CMAKE_INSTALL_TARGET:-install/strip}"
   
 )
 

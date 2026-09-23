@@ -2,6 +2,9 @@
 
 source ./common.sh clang
 source ./common/clone-freetype.sh
+if [[ -f "$INSTALL_PREFIX/sysroot/.ossia-sdk-freetype-complete" ]]; then
+  exit 0
+fi
 
 # FIXME
 # Freetype links against libz.so and libbz2.so instead of .a
@@ -12,6 +15,7 @@ cmake \
   -S freetype \
   -B freetype-build \
   "${CMAKE_COMMON_FLAGS[@]}" \
+  -DDISABLE_FORCE_DEBUG_POSTFIX=ON \
   -DFT_DISABLE_PNG=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
   -DFT_DISABLE_HARFBUZZ=TRUE \
@@ -20,7 +24,7 @@ cmake \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
 
 cmake --build freetype-build --parallel
-cmake --build freetype-build --target install/strip
+cmake --build freetype-build --target "${CMAKE_INSTALL_TARGET:-install/strip}"
 )
 
 # 2. Build harfbuzz
@@ -45,7 +49,6 @@ cmake --build freetype-build --target install/strip
   cd build
   ninja
   ninja install
-  ln -s $INSTALL_PREFIX/sysroot/lib64 $INSTALL_PREFIX/sysroot/lib
 )
 
 # 3. Build freetype with harfbuzz
@@ -54,6 +57,7 @@ cmake \
   -S freetype \
   -B freetype-build-final \
   "${CMAKE_COMMON_FLAGS[@]}" \
+  -DDISABLE_FORCE_DEBUG_POSTFIX=ON \
   -DFT_DISABLE_PNG=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
   -DFT_DISABLE_HARFBUZZ=FALSE \
@@ -62,5 +66,6 @@ cmake \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
 
 cmake --build freetype-build-final --parallel
-cmake --build freetype-build-final --target install/strip
+cmake --build freetype-build-final --target "${CMAKE_INSTALL_TARGET:-install/strip}"
+touch "$INSTALL_PREFIX/sysroot/.ossia-sdk-freetype-complete"
 )

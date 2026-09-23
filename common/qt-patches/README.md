@@ -75,3 +75,25 @@ half of the pick no longer matches. This is 726771 rebased: the wait still moves
 above the `surfacePixelSize()` read, but it is upstream's queue wait that moves,
 not the old device wait. Drop this and go back to `qt_pick` once 726771 lands
 and is picked to 6.12.
+
+### qtbase/0001-gui-skip-the-portal-path-when-qtdbus-is-disabled.patch
+
+The SDK configures Qt with `-no-dbus -no-feature-dbus`, and Qt 6.12 does not
+handle that in `QDesktopUnixServices`. Without QtDBus, `openUrlWithPortal()` /
+`openDocumentWithPortal()` are nothing but `Q_UNREACHABLE_RETURN(false)`, and
+the ctor code that would set `m_hasNoPortal = true` is itself inside
+`#if QT_CONFIG(dbus)`. `m_hasNoPortal` therefore stays false forever and
+`openUrl()` unconditionally dispatches to a `__builtin_unreachable()` body:
+every `QDesktopServices::openUrl()` is undefined behaviour.
+
+clang 23.1.0 acts on it. It inlines the unreachable callee into the non-Wayland
+fallback of `runWithXdgActivationToken()`, marks that block `unreachable`, and
+SimplifyCFG then legitimately rewrites the `!waylandWindow || !waylandApp`
+guard into `llvm.assume`. The Wayland path becomes unconditional, so on xcb
+score dereferences a null `QWaylandApplication` in `lastInputSerial()` and
+segfaults on any clicked link. clang 22.1.8 leaves the guard alone, which is
+why this only showed up after the LLVM bump.
+
+The patch takes the portal branch only under `QT_CONFIG(dbus)`, so a no-DBus
+build goes straight to `openUrlWithoutPortal()` (xdg-open) as intended. Not yet
+submitted to Gerrit. Remove this file once it lands upstream.

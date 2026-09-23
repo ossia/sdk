@@ -42,6 +42,21 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/rh/rh-git218/root/usr/lib:/opt/rh/h
 # steps are covered separately by CMAKE_<LANG>_COMPILER_LAUNCHER.
 command -v ccache >/dev/null 2>&1 && export CCACHE_LAUNCHER="ccache" || export CCACHE_LAUNCHER=""
 
+export SDK_DEBUG=0
+export CMAKE_INSTALL_TARGET=install/strip
+export LLVM_BUILD_TYPE=Release
+export LLVM_ENABLE_PROJECTS="clang;lld;polly;compiler-rt"
+export LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
+export LLVM_USE_SANITIZER=""
+export COMPILER_RT_BUILD_SANITIZERS=OFF
+export COMPILER_RT_BUILD_XRAY=OFF
+export COMPILER_RT_BUILD_LIBFUZZER=OFF
+export COMPILER_RT_BUILD_PROFILE=OFF
+export COMPILER_RT_BUILD_MEMPROF=OFF
+export COMPILER_RT_BUILD_CTX_PROFILE=OFF
+export COMPILER_RT_BUILD_GWP_ASAN=OFF
+export COMPILER_RT_BUILD_SHARED_ASAN=OFF
+
 export CMAKE_BUILD_TYPE=Release
 export MESON_BUILD_TYPE=release
 export QT_MODE="release"
