@@ -1,0 +1,37 @@
+From 0064d1c01e768fe6b7b4fe008d23e551e4a185c1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jean-Micha=C3=ABl=20Celerier?=
+ <jeanmichael.celerier@gmail.com>
+Date: Thu, 24 Sep 2026 23:29:38 -0400
+Subject: [PATCH] rhi: metal: skip generateMips on single-level textures
+
+-[MTLBlitCommandEncoder generateMipmapsForTexture:] requires a texture
+with more than one mip level; with the Metal validation layer enabled a
+1-level texture (e.g. a 1x1 texture created with MipMapped, or any
+texture whose mipLevelsForSize() is 1) aborts the process. D3D12 and
+Vulkan do nothing for a single level; do the same here.
+---
+ src/gui/rhi/qrhimetal.mm | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/src/gui/rhi/qrhimetal.mm b/src/gui/rhi/qrhimetal.mm
+index 634db4c..c54d840 100644
+--- a/src/gui/rhi/qrhimetal.mm
++++ b/src/gui/rhi/qrhimetal.mm
+@@ -3540,9 +3540,11 @@ void QRhiMetal::enqueueResourceUpdates(QRhiCommandBuffer *cb, QRhiResourceUpdate
+             d->activeTextureReadbacks.append(readback);
+         } else if (u.type == QRhiResourceUpdateBatchPrivate::TextureOp::GenMips) {
+             QMetalTexture *utexD = QRHI_RES(QMetalTexture, u.dst);
+-            ensureBlit();
+-            [blitEnc generateMipmapsForTexture: utexD->d->tex];
+-            utexD->lastActiveFrameSlot = currentFrameSlot;
++            if (utexD->mipLevelCount > 1) {
++                ensureBlit();
++                [blitEnc generateMipmapsForTexture: utexD->d->tex];
++                utexD->lastActiveFrameSlot = currentFrameSlot;
++            }
+         }
+     }
+ 
+-- 
+2.43.0
+
