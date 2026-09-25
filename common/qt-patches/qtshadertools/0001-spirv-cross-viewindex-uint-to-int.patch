@@ -1,0 +1,48 @@
+From 0ec3e7f18cdd043327bd13311f704d9e7726e871 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jean-Micha=C3=ABl=20Celerier?=
+ <jeanmichael.celerier@gmail.com>
+Date: Wed, 23 Sep 2026 12:23:13 -0400
+Subject: [PATCH] SPIRV-Cross: convert gl_ViewID_OVR to int for ViewIndex
+
+SPIR-V's ViewIndex builtin is a signed int; GL_OVR_multiview2 declares
+gl_ViewID_OVR as "in highp uint". The GLSL backend substituted the name
+with no conversion, so every use in an int context became an implicit
+uint -> int conversion, which GLSL rejects:
+
+  0(100) : error C7011: implicit cast from "uint" to "int"
+      isf_ViewIndexVarying = gl_ViewID_OVR;
+
+The builtin is read-only and builtin_to_glsl is its only reference in the
+GLSL backend -- the emitter never declares it, since the extension does --
+so folding the conversion into the returned name is safe.
+
+Affects any multiview shader lowered to GL: the pipeline is never created
+and nothing draws.
+---
+ src/3rdparty/SPIRV-Cross/spirv_glsl.cpp | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp b/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp
+index f9b489c..6980370 100644
+--- a/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp
++++ b/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp
+@@ -10554,7 +10554,15 @@ string CompilerGLSL::builtin_to_glsl(BuiltIn builtin, StorageClass storage)
+ 		if (options.vulkan_semantics)
+ 			return "gl_ViewIndex";
+ 		else
+-			return "gl_ViewID_OVR";
++			// SPIR-V's ViewIndex is a signed int, but GL_OVR_multiview2 declares
++			// gl_ViewID_OVR as "in highp uint". Substituting the name alone
++			// leaves an implicit uint -> int conversion at every use, which GLSL
++			// forbids, so a shader that assigns ViewIndex to an int fails to
++			// compile:
++			//   error C7011: implicit cast from "uint" to "int"
++			// This builtin is read-only and never declared by the emitter, so
++			// the conversion is safe to fold into the name.
++			return "int(gl_ViewID_OVR)";
+ 
+ 	case BuiltInNumSubgroups:
+ 		request_subgroup_feature(ShaderSubgroupSupportHelper::NumSubgroups);
+-- 
+2.43.0
+
