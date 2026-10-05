@@ -111,6 +111,12 @@ export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14
 export MESON_VERSION=0.61.1
 export PIPEWIRE_VERSION=1.6.7
+# Linux core stage: a static fontconfig (+ expat, its XML parser) for Qt, which
+# reads the host's /etc/fonts at runtime. fontconfig 2.18 needs meson >= 1.11,
+# the last release that runs on the build image's Python 3.9.
+export FONTCONFIG_VERSION=2.18.3
+export FONTCONFIG_MESON_VERSION=1.11.0
+export EXPAT_VERSION=2.9.0
 # `extra` stage: prebuilt extension dependencies (see common/build-*.sh)
 export ONNXRUNTIME_VERSION=1.27.0
 
