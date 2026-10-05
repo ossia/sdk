@@ -40,6 +40,7 @@ runs:
           common/clone-llvm.sh
           common/clone-qt.sh
           common/clone-freetype.sh
+          common/clone-fontconfig.sh
           common/clone-zlib.sh
           common/clone-openssl.sh
           common/clone-cmake.sh
@@ -58,6 +59,7 @@ runs:
           linux)
             plat_files=(
               Linux/llvm.sh Linux/qt.sh Linux/openssl.sh Linux/freetype.sh
+              Linux/fontconfig.sh
               Linux/zlib.sh Linux/cmake.sh Linux/common.sh
               Linux/build-all.sh Linux/build-all-release.sh Linux/create-sdk.sh
               Linux/CentOS/common.release.sh Linux/Dockerfile.centos
@@ -93,7 +95,7 @@ runs:
         # media deps: Qt is configured -system-webp and -system-libjpeg, so the
         # core genuinely contains both. See the note on build-media-deps.sh above.
         core_versions=$(grep -E \
-          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|QTBASE_VERSION|QTSHADERTOOLS_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION|WEBP_VERSION|LIBJPEGTURBO_VERSION)=' \
+          '^export (LLVM_VERSION|LLVM_MINGW_VERSION|OPENSSL_VERSION|QT_VERSION|QTBASE_VERSION|QTSHADERTOOLS_VERSION|CMAKE_VERSION|CMAKE_VERSION_SHORT|PYTHON_VERSION|WEBP_VERSION|LIBJPEGTURBO_VERSION|FONTCONFIG_VERSION|FONTCONFIG_MESON_VERSION|EXPAT_VERSION)=' \
           common/versions.sh | LC_ALL=C sort)
 
         hash=$( { printf '%s\n' "${files[@]}" | LC_ALL=C sort -u | xargs sha256sum; \

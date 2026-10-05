@@ -1,50 +1,51 @@
-#!/bin/bash -eu
+#!/bin/bash -eux
 
 source ./common.sh clang
+source ../common/clone-fontconfig.sh
 
-if [[ ! -d fontconfig-2.14.2 ]]; then
+# expat: fontconfig's XML parser for the configuration files.
+cmake \
+  -S "expat-$EXPAT_VERSION" \
+  -B expat-build \
+  "${CMAKE_COMMON_FLAGS[@]}" \
+  -DEXPAT_SHARED_LIBS=OFF \
+  -DEXPAT_BUILD_TOOLS=OFF \
+  -DEXPAT_BUILD_EXAMPLES=OFF \
+  -DEXPAT_BUILD_TESTS=OFF \
+  -DEXPAT_BUILD_DOCS=OFF \
+  -DEXPAT_BUILD_FUZZERS=OFF \
+  -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
+cmake --build expat-build --parallel
+cmake --build expat-build --target install/strip
+
+# The library is embedded in an application that runs on arbitrary distros, so
+# every path compiled into it is the conventional host one: it reads the host's
+# /etc/fonts/fonts.conf (and conf.d), font directories and system caches,
+# never anything under the SDK prefix. Additional font dirs are those the build
+# image happens to have, hence "no".
+# Only the "devel" install tag is installed: library, headers and .pc. The
+# "runtime" one would write fonts.conf and conf.d into the image's /etc.
 (
-  wget -nv https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.xz
-  # $GIT clone https://gitlab.freedesktop.org/fontconfig/fontconfig.git
-  tar xaf fontconfig-2.14.2.tar.xz
+  cd "fontconfig-$FONTCONFIG_VERSION"
+  rm -rf build
+  python3 "../meson-$FONTCONFIG_MESON_VERSION/meson.py" setup build \
+    -Dbuildtype=$MESON_BUILD_TYPE \
+    -Ddefault_library=static \
+    -Dprefix="$INSTALL_PREFIX/sysroot" \
+    -Dsysconfdir=/etc \
+    -Dlocalstatedir=/var \
+    -Dtemplate-dir=/usr/share/fontconfig/conf.avail \
+    -Dxml-dir=/usr/share/xml/fontconfig \
+    -Dadditional-fonts-dirs=no \
+    -Dxml-backend=expat \
+    -Dfontations=disabled \
+    -Diconv=disabled \
+    -Dnls=disabled \
+    -Ddoc=disabled \
+    -Dtests=disabled \
+    -Dtools=disabled \
+    -Dcache-build=disabled \
+    -Dwrap_mode=nofallback
+  python3 "../meson-$FONTCONFIG_MESON_VERSION/meson.py" compile -C build
+  python3 "../meson-$FONTCONFIG_MESON_VERSION/meson.py" install -C build --tags devel
 )
-fi
-
-(
-
-export LIBRARY_PATH=$INSTALL_PREFIX/freetype
-export PKG_CONFIG_PATH=$INSTALL_PREFIX/freetype/lib64/pkgconfig:$INSTALL_PREFIX/harfbuzz/lib64/pkgconfig
-meson_options=(
-  -D default-hinting=slight
-  -D default-sub-pixel-rendering=rgb
-  -D doc-html=disabled
-  -D doc-pdf=disabled
-  -D doc-txt=disabled
-  -D buildtype=$MESON_BUILD_TYPE 
-  -D default_library=static 
-  -D glib=disabled 
-  -D gobject=disabled 
-  -D icu=disabled 
-  -D docs=disabled 
-  -D prefix=$INSTALL_PREFIX/fontconfig
-)
-cd fontconfig-2.14.2
-meson build "${meson_options[@]}"
-
-cd build
-ninja
-ninja install
-)
-
-# 
-# $CMAKE \
-#   -S fontconfig-2.14.2 \
-#   -B fontconfig-build \
-#   -DCMAKE_BUILD_TYPE=Release \
-#   -DBUILD_SHARED_LIBS=OFF \
-#   -DCMAKE_POSITION_INDEPENDENT_CODE=1 \
-#   -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX/fontconfig
-# 
-# $CMAKE --build fontconfig-build --parallel
-# $CMAKE --build fontconfig-build --target install/strip
-# 

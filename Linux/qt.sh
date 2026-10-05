@@ -41,6 +41,7 @@ mkdir -p qt6-build-static
   -no-feature-libudev \
   -no-feature-glib \
   -no-feature-gtk3 \
+  -feature-fontconfig \
   -system-zlib \
   -eglfs \
   -kms \
