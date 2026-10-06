@@ -14,7 +14,11 @@ brew update
 # not enable vulkan -- that would mean shipping MoltenVK, a real runtime
 # dependency, where VideoToolbox already covers Apple hardware. So glslang would
 # be installed and never used.
-brew install cmake ninja boost gnu-tar gnu-sed yasm nasm subversion meson pkg-config ccache xz
+# The dependents check is the same blanket upgrade by another door: once a
+# dependency of these formulae is upgraded, brew upgrades everything
+# preinstalled that depends on it, and fails when one of them cannot be relinked.
+HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 \
+  brew install cmake ninja boost gnu-tar gnu-sed yasm nasm subversion meson pkg-config ccache xz
 
 SDK_DIR=.
 
