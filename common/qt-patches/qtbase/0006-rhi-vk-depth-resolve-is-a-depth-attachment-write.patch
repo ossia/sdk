@@ -1,0 +1,66 @@
+From 9f40f8c8a06dc30522c3888a3f724d54981b3fc9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jean-Micha=C3=ABl=20Celerier?=
+ <jeanmichael.celerier@gmail.com>
+Date: Wed, 23 Sep 2026 12:22:05 -0400
+Subject: [PATCH] rhi: vk: a depth resolve is a depth-stencil attachment write
+
+toVkLayout() maps TexDepthResolveOutput to
+VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, but toVkAccess() mapped
+it to VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT and the resolve target was
+registered with TexColorOutputStage. The layout and the access therefore
+disagree, and the validation layer rejects every barrier on a depth
+resolve target:
+
+  pImageMemoryBarriers[0] image is VkImage [depthTexture] and accessMask
+  is VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, but for layout
+  VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL expected accessMask
+  are VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT|..._WRITE_BIT
+
+Per VK_KHR_depth_stencil_resolve the resolve is part of the depth/stencil
+attachment writes, so the stage and access now agree with the layout.
+
+Measured on a 16x9x24 clustered-forward scene at 4x MSAA: 180 occurrences
+of UNASSIGNED-BestPractices-ImageBarrierAccessLayout in a 30-frame run
+before, 0 after, with the rendered image unchanged.
+---
+ src/gui/rhi/qrhivulkan.cpp | 17 +++++++++++++----
+ 1 file changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index 4602c74883c..d0e05ae308e 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -3295,7 +3295,7 @@ void QRhiVulkan::activateTextureRenderTarget(QVkCommandBuffer *cbD, QVkTextureRe
+         QVkTexture *depthResolveTexD = QRHI_RES(QVkTexture, rtD->m_desc.depthResolveTexture());
+         trackedRegisterTexture(&passResTracker, depthResolveTexD,
+                                QRhiPassResourceTracker::TexDepthResolveOutput,
+-                               QRhiPassResourceTracker::TexColorOutputStage);
++                               QRhiPassResourceTracker::TexDepthOutputStage);
+         depthResolveTexD->lastActiveFrameSlot = currentFrameSlot;
+     }
+     if (rtD->m_desc.shadingRateMap()) {
+@@ -5312,9 +5312,18 @@ static inline VkAccessFlags toVkAccess(QRhiPassResourceTracker::TextureAccess ac
+     case QRhiPassResourceTracker::TexDepthOutput:
+         return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+     case QRhiPassResourceTracker::TexDepthResolveOutput:
+-        // a multisample resolve, even for depth-stencil, is a color attachment
+-        // write as far as synchronization is concerned
+-        return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
++        // A depth/stencil resolve is part of the depth/stencil attachment
++        // writes, not the color ones. toVkLayout() puts this access in
++        // VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, and pairing that
++        // layout with COLOR_ATTACHMENT_WRITE makes every barrier on a depth
++        // resolve target invalid:
++        //
++        //   pImageMemoryBarriers[0] ... accessMask is
++        //   VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT, but for layout
++        //   VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL expected
++        //   accessMask are VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT|
++        //   VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
++        return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+     case QRhiPassResourceTracker::TexStorageLoad:
+         return VK_ACCESS_SHADER_READ_BIT;
+     case QRhiPassResourceTracker::TexStorageStore:
+-- 
+2.43.0
+
