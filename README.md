@@ -10,5 +10,5 @@ The dependencies are built statically on every platform and very up-to-date
 - PortAudio
 - FFTW
 - JACK
-- SDL
+- SDL2 and SDL3
 
