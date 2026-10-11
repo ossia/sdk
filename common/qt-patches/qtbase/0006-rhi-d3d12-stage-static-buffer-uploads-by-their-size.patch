@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sat, 10 Oct 2026 23:27:02 -0400
+Subject: [PATCH 1/2] rhi: d3d12: stage the bytes of a static buffer upload,
+ not the whole buffer
+
+Every BufferOp::StaticUpload allocated a staging area of the full buffer
+size, whatever the size of the update. A batch with many small uploads
+into a large buffer then needed the buffer size once per upload: 770
+updates totalling 19 MB into 128 MB buffers asked for about 96 GB, ran
+the process out of memory (E_OUTOFMEMORY from CreateCommittedResource)
+and left the uploads that failed undone.
+
+Stage only the uploaded range and copy it from the start of the
+allocation.
+---
+ src/gui/rhi/qrhid3d12.cpp | 17 ++++++++++++-----
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+
+diff --git a/src/gui/rhi/qrhid3d12.cpp b/src/gui/rhi/qrhid3d12.cpp
+index c32cf94e0b..09a91ab931 100644
+--- a/src/gui/rhi/qrhid3d12.cpp
++++ b/src/gui/rhi/qrhid3d12.cpp
+@@ -4468,11 +4468,18 @@ void QRhiD3D12::enqueueResourceUpdates(QD3D12CommandBuffer *cbD, QRhiResourceUpd
+             // dedicated StagingArea and then deferred-release it to make sure
+             // if stays alive while the frame is possibly still in flight.
+ 
++            // Stage only the bytes being uploaded, not the whole buffer: a
++            // batch with many small uploads into a large buffer would
++            // otherwise allocate the full buffer size once per upload.
++            const quint32 dataSize = quint32(u.data.size());
++            if (!dataSize)
++                continue;
++
+             QD3D12StagingArea::Allocation stagingAlloc;
+-            const quint32 allocSize = QD3D12StagingArea::allocSizeForArray(bufD->m_size, 1);
++            const quint32 allocSize = QD3D12StagingArea::allocSizeForArray(dataSize, 1);
+             recordSmallStagingAreaDemand(allocSize);
+             if (smallStagingAreas[currentFrameSlot].remainingCapacity() >= allocSize)
+-                stagingAlloc = smallStagingAreas[currentFrameSlot].get(bufD->m_size);
++                stagingAlloc = smallStagingAreas[currentFrameSlot].get(dataSize);
+ 
+             std::optional<QD3D12StagingArea> ownStagingArea;
+             if (!stagingAlloc.isValid()) {
+@@ -4486,7 +4493,7 @@ void QRhiD3D12::enqueueResourceUpdates(QD3D12CommandBuffer *cbD, QRhiResourceUpd
+                 }
+             }
+ 
+-            memcpy(stagingAlloc.p + u.offset, u.data.constData(), u.data.size());
++            memcpy(stagingAlloc.p, u.data.constData(), dataSize);
+ 
+             barrierGen.addTransitionBarrier(bufD->handles[0], D3D12_RESOURCE_STATE_COPY_DEST);
+             barrierGen.enqueueBufferedTransitionBarriers(cbD);
+@@ -4495,8 +4502,8 @@ void QRhiD3D12::enqueueResourceUpdates(QD3D12CommandBuffer *cbD, QRhiResourceUpd
+                 cbD->cmdList->CopyBufferRegion(res->resource,
+                                                u.offset,
+                                                stagingAlloc.buffer,
+-                                               stagingAlloc.bufferOffset + u.offset,
+-                                               u.data.size());
++                                               stagingAlloc.bufferOffset,
++                                               dataSize);
+             }
+ 
+             if (ownStagingArea.has_value())
+-- 
+2.43.0
+

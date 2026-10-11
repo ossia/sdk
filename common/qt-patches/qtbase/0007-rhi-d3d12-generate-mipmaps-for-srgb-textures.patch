@@ -1,0 +1,115 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sat, 10 Oct 2026 23:27:02 -0400
+Subject: [PATCH 2/2] rhi: d3d12: generate mipmaps for sRGB textures
+
+The mipmap generators wrote the chain through typed UAVs in the
+texture's own format. sRGB formats cannot be used for typed UAVs, so
+CreateUnorderedAccessView failed, the dispatch ran with null UAV
+descriptors and the device was removed (DXGI_ERROR_DEVICE_REMOVED).
+
+Back sRGB textures created with UsedWithGenerateMips with the typeless
+format of their family (every view of a texture already names its typed
+format explicitly), and have the generators read and write through the
+UNORM member of that family. The chain is filtered on the encoded
+values, which matches the other backends within a fraction of a
+percent on glTF base colour textures.
+---
+ src/gui/rhi/qrhid3d12.cpp | 46 ++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 41 insertions(+), 5 deletions(-)
+
+diff --git a/src/gui/rhi/qrhid3d12.cpp b/src/gui/rhi/qrhid3d12.cpp
+index 09a91ab931..318eb95a26 100644
+--- a/src/gui/rhi/qrhid3d12.cpp
++++ b/src/gui/rhi/qrhid3d12.cpp
+@@ -3871,6 +3871,38 @@ void QD3D12MipmapGenerator::destroy()
+     createFailed = false;
+ }
+ 
++// The typeless format of an sRGB format's family, for resources that need
++// views of more than one member of it. Other formats are returned unchanged.
++static inline DXGI_FORMAT toD3DTypelessSrgbFamily(DXGI_FORMAT format)
++{
++    switch (format) {
++    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
++        return DXGI_FORMAT_R8G8B8A8_TYPELESS;
++    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
++        return DXGI_FORMAT_B8G8R8A8_TYPELESS;
++    default:
++        return format;
++    }
++}
++
++// The format the mipmap generators read and write a texture with: typed UAVs
++// cannot be sRGB, so the sRGB members of a family (backed by its typeless
++// format, see QD3D12Texture::create) go through their UNORM sibling. The
++// chain is then filtered on the encoded values.
++static inline DXGI_FORMAT toD3DMipmapGenFormat(DXGI_FORMAT format)
++{
++    switch (format) {
++    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
++    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
++        return DXGI_FORMAT_R8G8B8A8_UNORM;
++    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
++    case DXGI_FORMAT_B8G8R8A8_TYPELESS:
++        return DXGI_FORMAT_B8G8R8A8_UNORM;
++    default:
++        return format;
++    }
++}
++
+ void QD3D12MipmapGenerator::generate(QD3D12CommandBuffer *cbD, const QD3D12ObjectHandle &textureHandle)
+ {
+     if (!ensureCreated())
+@@ -3983,7 +4015,7 @@ void QD3D12MipmapGenerator::generate(QD3D12CommandBuffer *cbD, const QD3D12Objec
+ 
+             QD3D12Descriptor srv = rhiD->shaderVisibleCbvSrvUavHeap.perFrameHeapSlice[rhiD->currentFrameSlot].get(1);
+             D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+-            srvDesc.Format = res->desc.Format;
++            srvDesc.Format = toD3DMipmapGenFormat(res->desc.Format);
+             srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+             if (isCubeOrArray) {
+                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+@@ -4003,7 +4035,7 @@ void QD3D12MipmapGenerator::generate(QD3D12CommandBuffer *cbD, const QD3D12Objec
+             for (quint32 uavIdx = 0; uavIdx < 4; ++uavIdx) {
+                 const quint32 uavMipLevel = qMin(level + 1u + uavIdx, res->desc.MipLevels - 1u);
+                 D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+-                uavDesc.Format = res->desc.Format;
++                uavDesc.Format = toD3DMipmapGenFormat(res->desc.Format);
+                 if (isCubeOrArray) {
+                     uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+                     uavDesc.Texture2DArray.MipSlice = uavMipLevel;
+@@ -4242,7 +4274,7 @@ void QD3D12MipmapGenerator3D::generate(QD3D12CommandBuffer *cbD, const QD3D12Obj
+ 
+         QD3D12Descriptor srv = rhiD->shaderVisibleCbvSrvUavHeap.perFrameHeapSlice[rhiD->currentFrameSlot].get(1);
+         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+-        srvDesc.Format = res->desc.Format;
++        srvDesc.Format = toD3DMipmapGenFormat(res->desc.Format);
+         srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+         srvDesc.Texture3D.MipLevels = res->desc.MipLevels;
+@@ -4254,7 +4286,7 @@ void QD3D12MipmapGenerator3D::generate(QD3D12CommandBuffer *cbD, const QD3D12Obj
+         D3D12_CPU_DESCRIPTOR_HANDLE uavCpuHandle = uavStart.cpuHandle;
+         const quint32 uavMipLevel = qMin(level + 1u, res->desc.MipLevels - 1u);
+         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+-        uavDesc.Format = res->desc.Format;
++        uavDesc.Format = toD3DMipmapGenFormat(res->desc.Format);
+         uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+         uavDesc.Texture3D.MipSlice = uavMipLevel;
+         uavDesc.Texture3D.WSize = UINT(-1);
+@@ -5811,7 +5843,11 @@ bool QD3D12Texture::create()
+                                                       : (is3D ? qMax(1, m_depth)
+                                                               : 1));
+     resourceDesc.MipLevels = mipLevelCount;
+-    resourceDesc.Format = dxgiFormat;
++    // Mipmap generation writes through typed UAVs, which sRGB formats cannot
++    // have. Back such a texture with the typeless format of its family; every
++    // view of it names its typed format explicitly.
++    resourceDesc.Format = m_flags.testFlag(UsedWithGenerateMips) ? toD3DTypelessSrgbFamily(dxgiFormat)
++                                                                 : dxgiFormat;
+     resourceDesc.SampleDesc = sampleDesc;
+     resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+     resourceDesc.Flags = D3D12_RESOURCE_FLAGS(resourceFlags);
+-- 
+2.43.0
+

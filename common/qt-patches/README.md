@@ -75,3 +75,22 @@ half of the pick no longer matches. This is 726771 rebased: the wait still moves
 above the `surfacePixelSize()` read, but it is upstream's queue wait that moves,
 not the old device wait. Drop this and go back to `qt_pick` once 726771 lands
 and is picked to 6.12.
+
+### qtbase/0006-rhi-d3d12-stage-static-buffer-uploads-by-their-size.patch
+
+`QRhiD3D12` sized the staging area of every static buffer upload by the whole
+destination buffer, not by the uploaded range. score's Scene Preprocessor
+queues hundreds of small uploads into 128 MB mesh buffers in one batch, which
+asked for about 96 GB of upload heap and failed with `E_OUTOFMEMORY`. The patch
+stages only the uploaded bytes. Not submitted upstream yet; remove it when an
+equivalent fix lands.
+
+### qtbase/0007-rhi-d3d12-generate-mipmaps-for-srgb-textures.patch
+
+`QRhiD3D12`'s mipmap generators create typed UAVs in the texture's own format,
+which is invalid for sRGB formats: the dispatch runs with null UAVs and the
+device is removed. sRGB textures created with `UsedWithGenerateMips` are now
+backed by the typeless format of their family, and the generators read and
+write through its UNORM member, so the chain is filtered on encoded values
+(within a fraction of a percent of the Vulkan blit on glTF textures). Not
+submitted upstream yet.
