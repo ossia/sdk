@@ -64,10 +64,11 @@ esac
 if [[ "$STAGE" == "core" ]]; then
   # Ship only the core-owned top-level dirs (allowlist); media is added later.
   # Includes the build tools (cmake, python) and the llvm-mingw toolchain so a
-  # later media build has everything it needs.
+  # later media build has everything it needs. bin/ holds dxcompiler.dll and
+  # dxil.dll from dxc.sh, which is part of the core build.
   cd $INSTALL_PREFIX
   core_dirs=()
-  for d in llvm llvm-libs qt6-static sysroot freetype cmake python; do
+  for d in llvm llvm-libs qt6-static sysroot freetype cmake python bin; do
     [[ -e "$INSTALL_PREFIX/$d" ]] && core_dirs+=("$d")
   done
   7z a "$SDK_ROOT/sdk-core-mingw-$SDK_ARCH.7z" "${core_dirs[@]}"

@@ -75,6 +75,7 @@ runs:
             plat_files=(
               MSYS/llvm.sh MSYS/llvm-deps.sh MSYS/qt.sh MSYS/freetype.sh
               MSYS/zlib.sh MSYS/cmake.sh MSYS/common.sh MSYS/all.sh MSYS/deps.sh
+              MSYS/dxc.sh
             )
             ;;
           *) echo "core-hash: unknown platform '$platform'" >&2; exit 1 ;;
