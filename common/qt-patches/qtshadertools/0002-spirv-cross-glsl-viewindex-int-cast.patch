@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sun, 11 Oct 2026 11:30:16 -0400
+Subject: [PATCH] SPIRV-Cross: GLSL: cast gl_ViewID_OVR to int when loading
+ ViewIndex
+
+SPIR-V's ViewIndex builtin is a signed int, as is Vulkan GLSL's
+gl_ViewIndex, but GL_OVR_multiview declares gl_ViewID_OVR as
+"in highp uint". The GLSL backend substitutes the name and loads it
+with no cast, so a shader that stores the view index into an int --
+`v_face = gl_ViewIndex;` -- becomes `v_face = gl_ViewID_OVR;`, which
+GLSL forbids:
+
+    error C7011: implicit cast from "uint" to "int"   (NVIDIA)
+    'assign' : cannot convert from 'in uint ViewIndex' to 'flat out int'
+                                                      (glslang)
+
+Handle ViewIndex in cast_from_variable_load like the other builtins
+whose GLSL type differs from SPIR-V's: when not targeting Vulkan
+semantics, the loaded value is a uint, and bitcast_expression wraps it
+as int(gl_ViewID_OVR). Uses that need a uint get uint(int(...)), which
+is exact for view indices. The HLSL backend goes through the same path
+and gets int(gl_ViewIndex) from its uint SV_ViewID, which it already
+accepted implicitly. MSL has its own cast_from_variable_load.
+
+Not in upstream SPIRV-Cross main as of 2026-10-11.
+---
+ src/3rdparty/SPIRV-Cross/spirv_glsl.cpp | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp b/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp
+index f9b489c..aab14c8 100644
+--- a/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp
++++ b/src/3rdparty/SPIRV-Cross/spirv_glsl.cpp
+@@ -19682,6 +19682,17 @@ void CompilerGLSL::cast_from_variable_load(uint32_t source_id, std::string &expr
+ 		expected_type = SPIRType::UInt;
+ 		break;
+ 
++	case BuiltInViewIndex:
++		// SPIR-V's ViewIndex is a signed int, and so is Vulkan GLSL's
++		// gl_ViewIndex, but GL_OVR_multiview declares gl_ViewID_OVR as
++		// "in highp uint" (and HLSL's SV_ViewID is uint too). Without a cast,
++		// storing the view index into an int is an implicit uint -> int
++		// conversion, which GLSL forbids:
++		//   error C7011: implicit cast from "uint" to "int"
++		if (!options.vulkan_semantics)
++			expected_type = SPIRType::UInt;
++		break;
++
+ 	default:
+ 		break;
+ 	}
+-- 
+2.43.0
+

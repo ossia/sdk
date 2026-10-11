@@ -94,3 +94,43 @@ backed by the typeless format of their family, and the generators read and
 write through its UNORM member, so the chain is filtered on encoded values
 (within a fraction of a percent of the Vulkan blit on glTF textures). Not
 submitted upstream yet.
+
+### qtbase/0008-rhi-metal-buffer-size-buffer-srb-key.patch
+
+SPIRV-Cross implements `length()` on a runtime array through a "buffer size
+buffer", which qtshadertools places at native buffer index 25. `QRhiMetal`
+adds it to the SRB and keyed its entry in the shader's native resource binding
+map by that native index, while the map is keyed by QRhi (SPIR-V) binding. An
+SRB with its own binding 25 lost its map entry: the size buffer was either
+never bound (binding 25 a storage buffer) or bound on top of a uniform buffer,
+and every `length()` read another resource's contents, typically 0. The entry
+is now keyed by a binding no application uses. Composes with
+`0001-rhi-metal-vertex-buffer-origin-from-native-buffers.patch`, which reads
+native indices only. Not submitted upstream yet.
+
+### qtbase/0009-rhi-d3d11-readonly-storage-buffers-as-srv.patch and qtshadertools/0001-hlsl-readonly-storage-buffers-as-srv.patch
+
+Qt bakes every storage block as an `RWByteAddressBuffer` UAV for HLSL. On
+Direct3D 11 that means storage buffers cannot be read in vertex shaders (UAVs
+exist only at the pixel and compute stages, so they read zero), and fxc rejects
+UAV loads that feed gradient operations (X3662) or barrier-controlling flow
+(X3663).
+
+The qtshadertools patch adds an opt-in
+`QShaderBaker::setHlslReadOnlyStorageBuffersAsSrv(bool)` (feature macro
+`QT_SHADERTOOLS_HAS_HLSL_READONLY_SSBO_SRV`): readonly blocks become
+`ByteAddressBuffer` SRVs in t registers after the images, recorded as
+`{tN, -2}` in the native binding map. The qtbase patch makes `QRhiD3D11` bind
+those through a cached raw buffer SRV at every stage; storage buffers are
+created with `D3D11_BIND_SHADER_RESOURCE` too. Only D3D11 understands the
+marker, so score enables the option for `QRhi::D3D11` only. The two patches
+go together. Not submitted upstream yet.
+
+### qtshadertools/0002-spirv-cross-glsl-viewindex-int-cast.patch
+
+SPIR-V's `ViewIndex` is a signed int, but `GL_OVR_multiview` declares
+`gl_ViewID_OVR` as `uint`. SPIRV-Cross's GLSL backend substituted the name
+without a cast, so `v_face = gl_ViewIndex;` into an `int` became an implicit
+uint-to-int conversion, which NVIDIA's GL compiler rejects (C7011). The patch
+loads it as `int(gl_ViewID_OVR)` outside Vulkan semantics. GL only in effect.
+Not in upstream SPIRV-Cross yet.

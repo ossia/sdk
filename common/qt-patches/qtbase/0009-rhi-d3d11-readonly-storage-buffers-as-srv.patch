@@ -1,0 +1,173 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sun, 11 Oct 2026 11:06:43 -0400
+Subject: [PATCH] rhi: d3d11: bind readonly storage buffers as raw buffer SRVs
+
+Shaders baked with QShaderBaker::setHlslReadOnlyStorageBuffersAsSrv()
+(qtshadertools, ossia SDK patch) declare readonly storage blocks as
+ByteAddressBuffer in a t register and report them as {tN, -2} in the
+native resource binding map. Bind those through a raw BUFFEREX SRV at
+whatever stage uses them, vertex, hull, domain and geometry included;
+other storage bindings keep the UAV path, which D3D11 only has at the
+pixel and compute stages.
+
+Storage buffers are therefore also created with D3D11_BIND_SHADER_RESOURCE.
+QD3D11Buffer::shaderResourceView() caches one SRV per offset, like the
+UAVs, and releases them on destroy(). A stage's SRV batch is now applied
+even when the stage has no sampler, which a compute shader reading only
+storage buffers never has.
+
+This lets D3D11 read storage buffers in vertex shaders (they read zero
+before), and lets fxc accept their contents in gradient operations
+(X3662) and in barrier-controlling flow (X3663), which UAV loads cannot
+feed. Shaders baked without the option are unaffected.
+---
+ src/gui/rhi/qrhid3d11.cpp | 76 ++++++++++++++++++++++++++++++---------
+ src/gui/rhi/qrhid3d11_p.h |  9 +++--
+ 2 files changed, 67 insertions(+), 18 deletions(-)
+
+diff --git a/src/gui/rhi/qrhid3d11.cpp b/src/gui/rhi/qrhid3d11.cpp
+index f8ebef87..9db65370 100644
+--- a/src/gui/rhi/qrhid3d11.cpp
++++ b/src/gui/rhi/qrhid3d11.cpp
+@@ -2710,23 +2710,35 @@ void QRhiD3D11::updateShaderResourceBindings(QD3D11ShaderResourceBindings *srbD,
+             bd.sbuf.id = bufD->m_id;
+             bd.sbuf.generation = bufD->generation;
+             bool validStage = false;
+-            if (b->stage.testFlag(QRhiShaderResourceBinding::ComputeStage)) {
+-                std::pair<int, int> nativeBinding = mapBinding(b->binding, RBM_COMPUTE, nativeResourceBindingMaps);
+-                if (nativeBinding.first >= 0) {
+-                    ID3D11UnorderedAccessView *uav = bufD->unorderedAccessView(b->u.sbuf.offset);
+-                    if (uav)
+-                        res[RBM_COMPUTE].uavs.append({ nativeBinding.first, uav });
++            // {tN, -2}: the shader declares the block readonly and was baked
++            // with QShaderBaker::setHlslReadOnlyStorageBuffersAsSrv(), so it
++            // is a ByteAddressBuffer SRV, valid at every stage.
++            static const struct { QRhiShaderResourceBinding::StageFlag flag; int rbm; } stages[] = {
++                { QRhiShaderResourceBinding::VertexStage, RBM_VERTEX },
++                { QRhiShaderResourceBinding::TessellationControlStage, RBM_HULL },
++                { QRhiShaderResourceBinding::TessellationEvaluationStage, RBM_DOMAIN },
++                { QRhiShaderResourceBinding::GeometryStage, RBM_GEOMETRY },
++                { QRhiShaderResourceBinding::FragmentStage, RBM_FRAGMENT },
++                { QRhiShaderResourceBinding::ComputeStage, RBM_COMPUTE },
++            };
++            for (const auto &st : stages) {
++                if (!b->stage.testFlag(st.flag))
++                    continue;
++                const std::pair<int, int> nativeBinding = mapBinding(b->binding, st.rbm, nativeResourceBindingMaps);
++                if (nativeBinding.first < 0) {
++                    if (st.rbm == RBM_FRAGMENT || st.rbm == RBM_COMPUTE)
++                        validStage = true;
++                    continue;
+                 }
+-                validStage = true;
+-            }
+-            if (b->stage.testFlag(QRhiShaderResourceBinding::FragmentStage)) {
+-                std::pair<int, int> nativeBinding = mapBinding(b->binding, RBM_FRAGMENT, nativeResourceBindingMaps);
+-                if (nativeBinding.first >= 0) {
+-                    ID3D11UnorderedAccessView *uav = bufD->unorderedAccessView(b->u.sbuf.offset);
+-                    if (uav)
+-                        res[RBM_FRAGMENT].uavs.append({ nativeBinding.first, uav });
++                if (nativeBinding.second == -2) {
++                    if (ID3D11ShaderResourceView *srv = bufD->shaderResourceView(b->u.sbuf.offset))
++                        res[st.rbm].textures.append({ nativeBinding.first, srv });
++                    validStage = true;
++                } else if (st.rbm == RBM_FRAGMENT || st.rbm == RBM_COMPUTE) {
++                    if (ID3D11UnorderedAccessView *uav = bufD->unorderedAccessView(b->u.sbuf.offset))
++                        res[st.rbm].uavs.append({ nativeBinding.first, uav });
++                    validStage = true;
+                 }
+-                validStage = true;
+             }
+             if (!validStage)
+                 qWarning("Unordered access only supported at fragment/compute stage");
+@@ -3279,6 +3291,10 @@ void QD3D11Buffer::destroy()
+         it.value()->Release();
+     uavs.clear();
+ 
++    for (auto it = srvs.begin(), end = srvs.end(); it != end; ++it)
++        it.value()->Release();
++    srvs.clear();
++
+     QRHI_RES_RHI(QRhiD3D11);
+     if (rhiD)
+         rhiD->unregisterResource(this);
+@@ -3294,7 +3310,7 @@ static inline uint toD3DBufferUsage(QRhiBuffer::UsageFlags usage)
+     if (usage.testFlag(QRhiBuffer::UniformBuffer))
+         u |= D3D11_BIND_CONSTANT_BUFFER;
+     if (usage.testFlag(QRhiBuffer::StorageBuffer))
+-        u |= D3D11_BIND_UNORDERED_ACCESS;
++        u |= D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE; // raw SRV for readonly blocks
+     return uint(u);
+ }
+ 
+@@ -3419,6 +3435,34 @@ ID3D11UnorderedAccessView *QD3D11Buffer::unorderedAccessView(quint32 offset)
+     return uav;
+ }
+ 
++ID3D11ShaderResourceView *QD3D11Buffer::shaderResourceView(quint32 offset)
++{
++    auto it = srvs.find(offset);
++    if (it != srvs.end())
++        return it.value();
++
++    // SPIRV-Cross generated HLSL uses ByteAddressBuffer for readonly blocks
++    // when baked with QShaderBaker::setHlslReadOnlyStorageBuffersAsSrv().
++    D3D11_SHADER_RESOURCE_VIEW_DESC desc = {};
++    desc.Format = DXGI_FORMAT_R32_TYPELESS;
++    desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
++    desc.BufferEx.FirstElement = offset / 4u;
++    desc.BufferEx.NumElements = aligned(m_size - offset, 4u) / 4u;
++    desc.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
++
++    QRHI_RES_RHI(QRhiD3D11);
++    ID3D11ShaderResourceView *srv = nullptr;
++    HRESULT hr = rhiD->dev->CreateShaderResourceView(buffer, &desc, &srv);
++    if (FAILED(hr)) {
++        qWarning("Failed to create buffer SRV: %s",
++            qPrintable(QSystemError::windowsComString(hr)));
++        return nullptr;
++    }
++
++    srvs[offset] = srv;
++    return srv;
++}
++
+ QD3D11RenderBuffer::QD3D11RenderBuffer(QRhiImplementation *rhi, Type type, const QSize &pixelSize,
+                                        int sampleCount, QRhiRenderBuffer::Flags flags,
+                                        QRhiTexture::Format backingFormatHint)
+diff --git a/src/gui/rhi/qrhid3d11_p.h b/src/gui/rhi/qrhid3d11_p.h
+index 98d2f9b8..bfd7efc5 100644
+--- a/src/gui/rhi/qrhid3d11_p.h
++++ b/src/gui/rhi/qrhid3d11_p.h
+@@ -39,11 +39,13 @@ struct QD3D11Buffer : public QRhiBuffer
+     void endFullDynamicBufferUpdateForCurrentFrame() override;
+ 
+     ID3D11UnorderedAccessView *unorderedAccessView(quint32 offset);
++    ID3D11ShaderResourceView *shaderResourceView(quint32 offset);
+ 
+     ID3D11Buffer *buffer = nullptr;
+     char *dynBuf = nullptr;
+     bool hasPendingDynamicUpdates = false;
+     QHash<quint32, ID3D11UnorderedAccessView *> uavs;
++    QHash<quint32, ID3D11ShaderResourceView *> srvs;
+     uint generation = 0;
+     friend class QRhiD3D11;
+ };
+@@ -284,8 +286,11 @@ struct QD3D11ShaderResourceBindings : public QRhiShaderResourceBindings
+         QRhiBatchedBindings<ID3D11SamplerState *> samplers;
+         QRhiBatchedBindings<ID3D11ShaderResourceView *> shaderresources;
+         void finish() {
+-            present = samplers.finish();
+-            shaderresources.finish();
++            // A stage can have SRVs and no samplers: readonly storage
++            // buffers baked as SRVs, or separate images.
++            const bool hasSamplers = samplers.finish();
++            const bool hasSrvs = shaderresources.finish();
++            present = hasSamplers || hasSrvs;
+         }
+         void clear() {
+             samplers.clear();
+-- 
+2.43.0
+

@@ -1,0 +1,77 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sun, 11 Oct 2026 11:06:27 -0400
+Subject: [PATCH] rhi: metal: key the buffer size buffer outside the SRB
+ binding space
+
+SPIRV-Cross implements length() on a runtime array through a "buffer
+size buffer", which qtshadertools places at native buffer index 25.
+QRhiMetal adds it to the SRB and to the shader's native resource binding
+map, but keyed that map entry by the native index, 25, while the map is
+keyed by QRhi (SPIR-V) binding. An SRB with its own binding 25 then lost
+its map entry, and either the size buffer was considered present already
+(binding 25 a storage buffer) or two buffers were bound at native index
+25 (binding 25 a uniform buffer). Either way every length() read another
+resource's contents, typically 0.
+
+Key the entry by a binding no application can use instead.
+---
+ src/gui/rhi/qrhimetal.mm | 21 ++++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/src/gui/rhi/qrhimetal.mm b/src/gui/rhi/qrhimetal.mm
+index 634db4cf..8ce0ce18 100644
+--- a/src/gui/rhi/qrhimetal.mm
++++ b/src/gui/rhi/qrhimetal.mm
+@@ -1231,6 +1231,17 @@ enum class BindingType {
+     Sampler
+ };
+ 
++// The SPIRV-Cross buffer size buffer is not an SRB entry; QRhi appends one for
++// it to the SRB and maps it to its native index through the shader's
++// nativeResourceBindingMap. That map is keyed by QRhi (SPIR-V) binding, so the
++// key must be one no application binding can use: keying it by the native
++// index (25) clobbered the map entry of whatever the SRB has at binding 25 and
++// made setShaderResources believe the size buffer was already present when
++// that binding was a storage buffer, or bind two buffers at native index 25
++// when it was a uniform buffer. Either way runtime-array length() read
++// another resource's contents.
++static const int QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING = 0x7fff0000;
++
+ static inline int mapBinding(int binding,
+                              int stageIndex,
+                              const QShader::NativeResourceBindingMap *nativeResourceBindingMaps[],
+@@ -1836,7 +1847,7 @@ void QRhiMetal::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+         quint32 offset = 0;
+         for (const auto &shader : shaders) {
+ 
+-            const int binding = shader.first->nativeShaderInfo.extraBufferBindings[QShaderPrivate::MslBufferSizeBufferBinding];
++            const int binding = QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING;
+ 
+             // if we don't have a srb entry for the buffer size buffer
+             if (!(storageBufferSizes.contains(shader.second) && storageBufferSizes[shader.second].contains(binding))) {
+@@ -6796,8 +6807,8 @@ bool QMetalGraphicsPipeline::create()
+ 
+     for (QMetalShader *shader : shaders) {
+         if (shader->nativeShaderInfo.extraBufferBindings.contains(QShaderPrivate::MslBufferSizeBufferBinding)) {
+-            const int binding = shader->nativeShaderInfo.extraBufferBindings[QShaderPrivate::MslBufferSizeBufferBinding];
+-            shader->nativeResourceBindingMap[binding] = {binding, -1};
++            const int nativeBinding = shader->nativeShaderInfo.extraBufferBindings[QShaderPrivate::MslBufferSizeBufferBinding];
++            shader->nativeResourceBindingMap[QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING] = {nativeBinding, -1};
+             int maxNativeBinding = 0;
+             for (const QShaderDescription::StorageBlock &block : shader->desc.storageBlocks())
+                 maxNativeBinding = qMax(maxNativeBinding, shader->nativeResourceBindingMap[block.binding].first);
+@@ -6914,8 +6925,8 @@ bool QMetalComputePipeline::create()
+ 
+         // SPIRV-Cross buffer size buffers
+         if (d->cs.nativeShaderInfo.extraBufferBindings.contains(QShaderPrivate::MslBufferSizeBufferBinding)) {
+-            const int binding = d->cs.nativeShaderInfo.extraBufferBindings[QShaderPrivate::MslBufferSizeBufferBinding];
+-            d->cs.nativeResourceBindingMap[binding] = {binding, -1};
++            const int nativeBinding = d->cs.nativeShaderInfo.extraBufferBindings[QShaderPrivate::MslBufferSizeBufferBinding];
++            d->cs.nativeResourceBindingMap[QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING] = {nativeBinding, -1};
+         }
+ 
+         if (rhiD->d->shaderCache.count() >= QRhiMetal::MAX_SHADER_CACHE_ENTRIES) {
+-- 
+2.43.0
+
