@@ -126,6 +126,25 @@ created with `D3D11_BIND_SHADER_RESOURCE` too. Only D3D11 understands the
 marker, so score enables the option for `QRhi::D3D11` only. The two patches
 go together. Not submitted upstream yet.
 
+### qtbase/0010-rhi-vk-depth-resolve-is-a-depth-attachment-write.patch
+
+`toVkLayout()` maps `TexDepthResolveOutput` to
+`VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL`, while `toVkAccess()` mapped
+it to `VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT` and the resolve target was
+registered with `TexColorOutputStage`. Layout and access disagreed, so the
+validation layer rejected every barrier on a depth resolve target
+(UNASSIGNED-BestPractices-ImageBarrierAccessLayout: 180 in a 30-frame 4x MSAA
+clustered scene before, 0 after, image unchanged). A depth resolve is now a
+depth-stencil attachment write. Touches neither region of the earlier
+qrhivulkan.cpp patches. Not submitted upstream yet.
+
+### qtbase/0011-rhi-metal-skip-generatemips-on-single-level-textures.patch
+
+`-[MTLBlitCommandEncoder generateMipmapsForTexture:]` aborts under the Metal
+validation layer on a texture with one mip level (a 1x1 `MipMapped` texture in
+the score graphics sweep). The blit is skipped when `mipLevelCount < 2`, which
+is what D3D12 and Vulkan effectively do. Not submitted upstream yet.
+
 ### qtshadertools/0002-spirv-cross-glsl-viewindex-int-cast.patch
 
 SPIR-V's `ViewIndex` is a signed int, but `GL_OVR_multiview` declares
