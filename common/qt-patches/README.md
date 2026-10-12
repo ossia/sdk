@@ -42,6 +42,18 @@ Clang 23's libc++ no longer provides C allocation and sorting declarations
 transitively. xatlas calls `realloc`, `free`, and `qsort`, so include their
 defining C standard library header directly.
 
+### qtquick3d/0002-directional-pcf-shadows-clamp-split-index.patch
+
+`findSplitIndex()` returns -1 for a fragment past the last cascade split. The
+directional PCF shadow path (the default `softShadowQuality`) indexed
+`matrices[]`, `dimensionsInverted[]` and `atlasLocations[]` with it and only
+masked the result afterwards; the hard path clamps first. On D3D12 the
+out-of-bounds root-CBV read in DXIL hangs the GPU: DRED shows the first opaque
+draw of the main pass never completing, then `DXGI_ERROR_DEVICE_HUNG`. Any
+DirectionalLight with `castsShadow: true` whose camera sees past the last split
+removes the device (score's docs `3d/gltf-checkers`). Clamp as the hard path
+does; the masked output is unchanged. Not yet submitted upstream.
+
 ### qtbase/0001-darwin-futex-runtime-availability-check.patch
 
 Qt 6.12 switched the Darwin futex backend from the private, weak-linked

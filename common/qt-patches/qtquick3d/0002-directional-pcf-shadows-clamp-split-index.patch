@@ -1,0 +1,51 @@
+From 0f5ebdbe654dfd42b3262b812bd092a54761a3d8 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sun, 11 Oct 2026 21:27:31 -0400
+Subject: [PATCH] Directional PCF shadows: do not index the light arrays with
+ split -1
+
+findSplitIndex() returns -1 for a fragment past the last cascade split.
+The hard-shadow path clamps the index before reading matrices[],
+dimensionsInverted[] and atlasLocations[]; the PCF path read them at
+index -1 and only masked the result afterwards with validSplit.
+
+An out-of-bounds uniform read is undefined. On D3D12, where QRhi binds
+uniform buffers as root CBVs and the shader is DXIL, it hangs the GPU:
+the first opaque draw of the main pass never completes and the device is
+removed (DXGI_ERROR_DEVICE_HUNG, 0x887a0006). Any scene with a
+DirectionalLight casting PCF shadows (the default softShadowQuality)
+whose camera sees past the last split is affected; D3D11, Vulkan, OpenGL
+and Metal happened to survive the read.
+
+Clamp the index for the array reads, as the hard path does. The result
+is still masked by validSplit, so the output is unchanged.
+---
+ .../res/effectlib/shadowMapping.glsllib              | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/src/runtimerender/res/effectlib/shadowMapping.glsllib b/src/runtimerender/res/effectlib/shadowMapping.glsllib
+index 5471e55a..79d205fe 100644
+--- a/src/runtimerender/res/effectlib/shadowMapping.glsllib
++++ b/src/runtimerender/res/effectlib/shadowMapping.glsllib
+@@ -235,10 +235,14 @@ ShadowResult qt_sampleDirectionalLight_pcf(in int lightIndex, in float zDepthVie
+     // Using a mask instead of early return
+     float validSplit = step(0.0, float(splitIndex)); // 1.0 if splitIndex >= 0, 0.0 otherwise
+ 
+-    // Get current split shadow data
+-    vec4 projCoord = ubDirectionalLights.directionalLights[lightIndex].matrices[splitIndex] * vec4(worldPos, 1.0);
+-    vec3 dimensions = ubDirectionalLights.directionalLights[lightIndex].dimensionsInverted[splitIndex].xyz;
+-    vec4 shadowAtlasInfo = ubDirectionalLights.directionalLights[lightIndex].atlasLocations[splitIndex];
++    // Get current split shadow data. splitIndex is -1 past the last split;
++    // the result is then masked by validSplit, but the arrays must not be
++    // indexed with it: out-of-bounds uniform reads are undefined, and on
++    // D3D12 (root CBV, DXIL) they hang the GPU.
++    int safeSplitIndex = max(splitIndex, 0);
++    vec4 projCoord = ubDirectionalLights.directionalLights[lightIndex].matrices[safeSplitIndex] * vec4(worldPos, 1.0);
++    vec3 dimensions = ubDirectionalLights.directionalLights[lightIndex].dimensionsInverted[safeSplitIndex].xyz;
++    vec4 shadowAtlasInfo = ubDirectionalLights.directionalLights[lightIndex].atlasLocations[safeSplitIndex];
+     float layerIndex = shadowAtlasInfo.w;
+     vec2 uvAtlasOffset = shadowAtlasInfo.xy;
+     float uvAtlasScale = shadowAtlasInfo.z;
+-- 
+2.43.0
+
