@@ -157,6 +157,16 @@ validation layer on a texture with one mip level (a 1x1 `MipMapped` texture in
 the score graphics sweep). The blit is skipped when `mipLevelCount < 2`, which
 is what D3D12 and Vulkan effectively do. Not submitted upstream yet.
 
+### qtbase/0012-xcb-egl-pass-an-xlib-window-to-the-x11-platform.patch
+
+On the `EGL_PLATFORM_X11_KHR` path, `QXcbEglWindow::create()` passes
+`&m_window`, a pointer to a 32-bit `xcb_window_t`, where the extension expects
+a pointer to a 64-bit Xlib `Window`. The upper half is read from the next
+member (`m_depth`). The NVIDIA driver rejects the window with
+`EGL_BAD_NATIVE_WINDOW`, Qt keeps `EGL_NO_SURFACE`, and every OpenGL window
+under `xcb_egl` stays black. Present since 6.7 (12d6fc52291) and still on dev;
+drop this once a fix lands upstream.
+
 ### qtshadertools/0002-spirv-cross-glsl-viewindex-int-cast.patch
 
 SPIR-V's `ViewIndex` is a signed int, but `GL_OVR_multiview` declares

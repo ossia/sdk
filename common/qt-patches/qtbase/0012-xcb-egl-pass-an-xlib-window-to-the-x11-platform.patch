@@ -1,0 +1,23 @@
+diff --git a/src/plugins/platforms/xcb/gl_integrations/xcb_egl/qxcbeglwindow.cpp b/src/plugins/platforms/xcb/gl_integrations/xcb_egl/qxcbeglwindow.cpp
+index 80d7e03193d..c555f0fbc94 100644
+--- a/src/plugins/platforms/xcb/gl_integrations/xcb_egl/qxcbeglwindow.cpp
++++ b/src/plugins/platforms/xcb/gl_integrations/xcb_egl/qxcbeglwindow.cpp
+@@ -51,9 +51,17 @@ void QXcbEglWindow::create()
+     if (m_glIntegration->usingPlatformDisplay()) {
+         auto createPlatformWindowSurface = reinterpret_cast<PFNEGLCREATEPLATFORMWINDOWSURFACEEXTPROC>(
+             eglGetProcAddress("eglCreatePlatformWindowSurfaceEXT"));
++#if QT_CONFIG(xcb_xlib)
++        // EGL_PLATFORM_X11_KHR takes a pointer to an Xlib Window, which is
++        // wider than xcb_window_t on LP64.
++        unsigned long nativeWindow = m_window;
++#else
++        // EGL_PLATFORM_XCB_KHR takes a pointer to an xcb_window_t.
++        xcb_window_t nativeWindow = m_window;
++#endif
+         m_surface = createPlatformWindowSurface(m_glIntegration->eglDisplay(),
+                                                 m_config,
+-                                                reinterpret_cast<void *>(&m_window),
++                                                reinterpret_cast<void *>(&nativeWindow),
+                                                 nullptr);
+         return;
+     }
