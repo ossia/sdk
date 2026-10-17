@@ -1,0 +1,34 @@
+From 20836b2dbff9238bd107394d64e03440d2b69ba5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jean-Micha=C3=ABl=20Celerier?=
+ <jeanmichael.celerier@gmail.com>
+Date: Sat, 17 Oct 2026 16:56:19 -0400
+Subject: [PATCH] rhi: vk: beginExternal in a compute pass has no target
+
+maybeRenderTargetData() asserted currentTarget before checking that a
+render pass is being recorded. A compute pass begun with ExternalContent
+has no target, so beginExternal() inside it tripped the assertion in
+debug builds; release builds were fine, since a null render target data
+is what the compute path expects. Only assert in the render pass branch.
+---
+ src/gui/rhi/qrhivulkan.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index c4b2fb964..f3f615d1f 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -7007,9 +7007,10 @@ const QRhiNativeHandles *QRhiVulkan::nativeHandles(QRhiCommandBuffer *cb)
+ 
+ static inline QVkRenderTargetData *maybeRenderTargetData(QVkCommandBuffer *cbD)
+ {
+-    Q_ASSERT(cbD->currentTarget);
+     QVkRenderTargetData *rtD = nullptr;
+     if (cbD->recordingPass == QVkCommandBuffer::RenderPass) {
++        // A compute pass has no target: only a render pass needs one.
++        Q_ASSERT(cbD->currentTarget);
+         switch (cbD->currentTarget->resourceType()) {
+         case QRhiResource::SwapChainRenderTarget:
+             rtD = &QRHI_RES(QVkSwapChainRenderTarget, cbD->currentTarget)->d;
+-- 
+2.43.0
+

@@ -167,6 +167,23 @@ member (`m_depth`). The NVIDIA driver rejects the window with
 under `xcb_egl` stays black. Present since 6.7 (12d6fc52291) and still on dev;
 drop this once a fix lands upstream.
 
+### qtbase/0013-rhi-vk-beginexternal-in-compute-pass-has-no-target.patch
+
+`maybeRenderTargetData()` asserts `currentTarget` before checking that a render
+pass is being recorded. A compute pass begun with `ExternalContent` has no
+target, so `beginExternal()` inside it aborts debug builds (score's voxel
+examples, which record external Vulkan commands in a compute pass). Release
+builds are unaffected: a null render target is what the compute path expects.
+The assertion moves into the render pass branch. Not submitted upstream yet.
+
+### qtbase/0014-rhi-gl-no-min-filter-on-multisample-textures.patch
+
+`QGles2Texture::create()` sets `GL_TEXTURE_MIN_FILTER` on every texture,
+including `GL_TEXTURE_2D_MULTISAMPLE` ones, which take no sampler state: each
+multisample texture (Qt Quick 3D's MSAA render texture, so every glTF scene in
+score on OpenGL) raises `GL_INVALID_ENUM` and fails strict KHR_debug checks.
+It is skipped when `samples > 1`. Not submitted upstream yet.
+
 ### qtshadertools/0002-spirv-cross-glsl-viewindex-int-cast.patch
 
 SPIR-V's `ViewIndex` is a signed int, but `GL_OVR_multiview` declares
