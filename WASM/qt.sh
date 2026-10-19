@@ -13,7 +13,6 @@ mkdir -p qt6-build-host
      -skip qtconnectivity \
      -skip qtserialport \
      -skip qtmultimedia \
-     -skip qtquick3d \
      -skip qtquicktimeline \
      -skip qtquick3dphysics \
      -release \
@@ -42,14 +41,15 @@ mkdir -p qt6-build-static
   cd qt6-build-static
   # Skip the same modules as the host build above: the wasm cross-build pulls
   # host tools (Qt6::balsam / Qt6Quick3DTools, QuickTimeline) from qt6-host, so
-  # anything built here must also exist there. Quick3D/multimedia aren't needed
-  # for the (audio-focused) wasm SDK.
+  # anything built here must also exist there. Multimedia isn't needed here.
+  # Quick3D stays in: QML apps built on score (SAT's Domeport, for one) import
+  # QtQuick3D, and a static wasm app can only link the QML plugins the SDK
+  # ships. Its assimp model importer is left out, a viewer doesn't need it.
   ../qt/configure \
      -skip qtwayland \
      -skip qtconnectivity \
      -skip qtserialport \
      -skip qtmultimedia \
-     -skip qtquick3d \
      -skip qtquicktimeline \
      -skip qtquick3dphysics \
      -release \
@@ -63,7 +63,8 @@ mkdir -p qt6-build-static
      -feature-opengles3 \
      -no-feature-zstd \
      -qt-host-path /opt/ossia-sdk-wasm/qt6-host \
-     -platform wasm-emscripten 
+     -platform wasm-emscripten \
+     -no-feature-quick3d-assimp
   cmake .  -DCMAKE_C_FLAGS="$CFLAGS" \
   -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
   -DCMAKE_CXX_STANDARD=23
