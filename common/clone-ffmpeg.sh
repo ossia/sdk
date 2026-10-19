@@ -34,7 +34,15 @@ fi
 
 if [[ ! -f "$FFMPEG_READY" ]]; then
   case "$OSTYPE" in
-    darwin*)  echo "Mac OS" ;;
+    darwin*)
+      echo "Mac OS"
+     (
+      set -e
+      cd "$FFMPEG_SRC"
+      # Without camera access, opening an avfoundation device otherwise never returns
+      patch -p1 < ../../common/patches/ffmpeg/0002-avfoundation-interruptible-first-frame.patch
+     )
+    ;;
     win*)     echo "Windows" ;;
     msys*)    echo "MSYS / MinGW / Git Bash" ;;
     cygwin*)  echo "Cygwin" ;;
