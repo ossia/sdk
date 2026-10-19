@@ -1,0 +1,55 @@
+From: Jean-Michaël Celerier <jeanmichael.celerier@gmail.com>
+Subject: [PATCH] avdevice/avfoundation: make waiting for the first frame interruptible
+
+AVFoundation does not report an error when a capture session cannot deliver
+frames, for instance when the user has not granted, or has refused, access to
+the camera or the microphone: the session runs and no sample buffer ever
+arrives. avf_read_header() then spins forever in get_video_config() /
+get_audio_config(), ignoring the interrupt callback, so callers have no way to
+time out or cancel the open.
+
+Check the interrupt callback in both loops.
+---
+--- a/libavdevice/avfoundation.m
++++ b/libavdevice/avfoundation.m
+@@ -628,6 +628,18 @@
+     return 0;
+ }
+ 
++/**
++ * AVFoundation does not fail when frames cannot be delivered, e.g. when the user
++ * has not granted (or has refused) access to the camera or microphone: the
++ * session runs and no frame ever comes. Waiting for the first frame must thus
++ * remain abortable through the caller's interrupt callback.
++ */
++static int avf_interrupted(AVFormatContext *s)
++{
++    AVIOInterruptCB *cb = &s->interrupt_callback;
++    return cb->callback && cb->callback(cb->opaque);
++}
++
+ static int get_video_config(AVFormatContext *s)
+ {
+     AVFContext *ctx = (AVFContext*)s->priv_data;
+@@ -641,6 +653,10 @@
+ 
+     // Take stream info from the first frame.
+     while (ctx->frames_captured < 1) {
++        if (avf_interrupted(s)) {
++            av_log(s, AV_LOG_ERROR, "Interrupted while waiting for the first video frame\n");
++            return 1;
++        }
+         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, YES);
+     }
+ 
+@@ -686,6 +702,10 @@
+ 
+     // Take stream info from the first frame.
+     while (ctx->audio_frames_captured < 1) {
++        if (avf_interrupted(s)) {
++            av_log(s, AV_LOG_ERROR, "Interrupted while waiting for the first audio frame\n");
++            return 1;
++        }
+         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, YES);
+     }
+ 
