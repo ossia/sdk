@@ -22,7 +22,7 @@ if [[ ! -d "$FFMPEG_SRC" ]]; then
       && tar xjf "ffmpeg-$FFMPEG_VERSION.tar.bz2" && return 0
     echo "clone-ffmpeg: not on the ossia mirror, falling back upstream" >&2
     curl -fksSL -o "ffmpeg-$FFMPEG_VERSION.tar.gz" \
-      "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n$FFMPEG_VERSION.tar.gz" \
+      "https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_COMMIT:-refs/tags/n$FFMPEG_VERSION}.tar.gz" \
       && mkdir -p "$FFMPEG_SRC" \
       && tar xzf "ffmpeg-$FFMPEG_VERSION.tar.gz" -C "$FFMPEG_SRC" --strip-components=1 \
       && return 0
@@ -30,6 +30,10 @@ if [[ ! -d "$FFMPEG_SRC" ]]; then
       && tar xjf "ffmpeg-$FFMPEG_VERSION.tar.bz2"
   }
   fetch_ffmpeg || { echo "clone-ffmpeg: every source failed for $FFMPEG_SRC" >&2; exit 1; }
+  # A git snapshot has no FF_VERSION file, so it would report itself as "N-unknown"
+  if [[ -n "${FFMPEG_COMMIT:-}" && ! -f "$FFMPEG_SRC/FF_VERSION" ]]; then
+    echo "$FFMPEG_VERSION" > "$FFMPEG_SRC/FF_VERSION"
+  fi
 fi
 
 if [[ ! -f "$FFMPEG_READY" ]]; then

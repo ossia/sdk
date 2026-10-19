@@ -1,5 +1,10 @@
 export SDL_VERSION=2.32.10
-export FFMPEG_VERSION=9.0
+# ffmpeg master, pinned to a commit: 9.0.x still ships the Vulkan ProRes decoder
+# that gets part of every frame wrong, fixed on master on 2026-09-20. Back to a
+# release tag once one carries those fixes. FFMPEG_VERSION names the source
+# directory and is what `ffmpeg -version` reports; bump both together.
+export FFMPEG_COMMIT=71403a21b02a92b925e26e609e9bd3e48df451cf
+export FFMPEG_VERSION=git-${FFMPEG_COMMIT:0:10}
 
 # ---------------------------------------------------------------------------
 # ffmpeg media dependencies (common/build-media-deps.sh).

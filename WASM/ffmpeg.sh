@@ -26,7 +26,7 @@ if [[ ! -d "ffmpeg-$VERSION" ]]; then
       && tar xjf "ffmpeg-$VERSION.tar.bz2" && return 0
     echo "WASM/ffmpeg.sh: not on the ossia mirror, falling back upstream" >&2
     curl -fksSL -o "ffmpeg-$VERSION.tar.gz" \
-      "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n$VERSION.tar.gz" \
+      "https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_COMMIT:-refs/tags/n$VERSION}.tar.gz" \
       && mkdir -p "ffmpeg-$VERSION" \
       && tar xzf "ffmpeg-$VERSION.tar.gz" -C "ffmpeg-$VERSION" --strip-components=1 \
       && return 0
@@ -36,6 +36,9 @@ if [[ ! -d "ffmpeg-$VERSION" ]]; then
   if ! fetch_ffmpeg || [[ ! -d "ffmpeg-$VERSION" ]]; then
     echo "WASM/ffmpeg.sh: every source failed for ffmpeg-$VERSION" >&2
     exit 1
+  fi
+  if [[ -n "${FFMPEG_COMMIT:-}" && ! -f "ffmpeg-$VERSION/FF_VERSION" ]]; then
+    echo "$VERSION" > "ffmpeg-$VERSION/FF_VERSION"
   fi
 fi
 
