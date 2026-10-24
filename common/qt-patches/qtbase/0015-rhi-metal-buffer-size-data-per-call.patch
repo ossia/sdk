@@ -1,0 +1,217 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sat, 24 Oct 2026 08:32:22 -0400
+Subject: [PATCH] rhi: metal: give each setShaderResources its own buffer size
+ data
+
+SPIRV-Cross implements length() on a runtime array through a "buffer
+size buffer" holding the size of every storage buffer the shader binds.
+QRhiMetal kept one such buffer per pipeline, a Static buffer, which is
+host-visible on Metal, and setShaderResources() wrote the sizes of the
+SRB at hand to it at offset 0, in place. Every draw or dispatch recorded
+with the pipeline in a command buffer then read the sizes of the last
+setShaderResources() of that pipeline, not of its own: with one compute
+pipeline run over several SRBs of different buffer sizes, all dispatches
+but the last saw wrong length() values. The in-place write also raced
+with the previous frame still in flight.
+
+Write the sizes of each call to a region of their own instead, carved
+from per-frame-slot chunks that are reused once the slot's previous frame
+has completed, and bind that region. The SRB entry for the size buffer
+stays, as the carrier of the binding, but its buffer, the one of the
+pipeline the SRB was first used with and possibly gone since, is no
+longer dereferenced.
+---
+ src/gui/rhi/qrhimetal.mm | 98 ++++++++++++++++++++++++++++++++++------
+ 1 file changed, 85 insertions(+), 13 deletions(-)
+
+diff --git a/src/gui/rhi/qrhimetal.mm b/src/gui/rhi/qrhimetal.mm
+index 6b68b5657b8d..70355f744f66 100644
+--- a/src/gui/rhi/qrhimetal.mm
++++ b/src/gui/rhi/qrhimetal.mm
+@@ -294,6 +294,18 @@ struct QRhiMetalData
+     id<MTLBuffer> icbNoCountBuffer = nil;
+     bool icbSetupFailed = false;
+ 
++    // Contents of the SPIRV-Cross buffer size buffers, one region per
++    // setShaderResources() call, see there. Per frame slot: a slot's regions
++    // are reused once the GPU is done with that slot's previous frame.
++    struct BufferSizeData {
++        QVarLengthArray<id<MTLBuffer>, 2> chunks;
++        int chunk = 0;
++        quint32 offset = 0;
++    } bufferSizeData[QMTL_FRAMES_IN_FLIGHT];
++    static const quint32 BUFFER_SIZE_DATA_CHUNK = 65536;
++    static const quint32 BUFFER_SIZE_DATA_ALIGN = 256; // constant address space buffer offsets
++    std::pair<id<MTLBuffer>, quint32> allocBufferSizeData(int slot, const void *data, quint32 size);
++
+     static const int TEXBUF_ALIGN = 256; // probably not accurate
+ 
+     QHash<QRhiShaderStage, QMetalShader> shaderCache;
+@@ -383,6 +395,8 @@ struct QMetalCommandBufferData
+     QRhiBatchedBindings<NSUInteger> currentVertexInputOffsets;
+     id<MTLDepthStencilState> currentDepthStencilState;
+     QMetalShaderResourceBindingsData currentShaderResourceBindingState;
++    // The buffer size buffer region per stage for the setShaderResources() in progress.
++    std::pair<id<MTLBuffer>, quint32> currentBufferSizeData[QRhiMetal::SUPPORTED_STAGES];
+     // Intended final store actions for the attachments whose store action is
+     // deferred. MTLStoreActionUnknown for depth and stencil means not deferred.
+     // See beginPass().
+@@ -722,6 +736,14 @@ void QRhiMetal::destroy()
+     [d->icbArgumentBuffer release];
+     d->icbArgumentBuffer = nil;
+ 
++    for (QRhiMetalData::BufferSizeData &bsd : d->bufferSizeData) {
++        for (id<MTLBuffer> chunk : bsd.chunks)
++            [chunk release];
++        bsd.chunks.clear();
++        bsd.chunk = 0;
++        bsd.offset = 0;
++    }
++
+     [d->icbRangeBuffer release];
+     d->icbRangeBuffer = nil;
+ 
+@@ -1472,6 +1494,17 @@ void QRhiMetal::enqueueShaderResourceBindings(QMetalShaderResourceBindings *srbD
+         case QRhiShaderResourceBinding::BufferStore:
+         case QRhiShaderResourceBinding::BufferLoadStore:
+         {
++            if (b->binding == QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING) {
++                for (int stage = 0; stage < SUPPORTED_STAGES; ++stage) {
++                    if (b->stage.testFlag(toRhiSrbStage(stage))) {
++                        const int nativeBinding = mapBinding(b->binding, stage, nativeResourceBindingMaps, BindingType::Buffer);
++                        const auto &region(cbD->d->currentBufferSizeData[stage]);
++                        if (nativeBinding >= 0 && region.first)
++                            bindingData.res[stage].buffers.append({ nativeBinding, region.first, region.second });
++                    }
++                }
++                break;
++            }
+             QMetalBuffer *bufD = QRHI_RES(QMetalBuffer, b->u.sbuf.buf);
+             id<MTLBuffer> mtlbuf = bufD->d->buf[0];
+             quint32 offset = b->u.sbuf.offset;
+@@ -1690,6 +1723,11 @@ void QRhiMetal::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+     // do buffer writes, figure out if we need to rebind, and mark as in-use
+     for (int i = 0, ie = srbD->sortedBindings.count(); i != ie; ++i) {
+         const QRhiShaderResourceBinding::Data *b = shaderResourceBindingData(srbD->sortedBindings.at(i));
++        // Appended below for the buffer size buffer. Its buffer is the one of
++        // the pipeline the SRB was first used with, which may be gone, and is
++        // not what gets bound anyway.
++        if (b->binding == QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING)
++            continue;
+         QMetalShaderResourceBindings::BoundResourceData &bd(srbD->boundResourceData[i]);
+         switch (b->type) {
+         case QRhiShaderResourceBinding::UniformBuffer:
+@@ -1844,13 +1882,20 @@ void QRhiMetal::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+                 shaders.append({&gfxPsD->d->fs, QRhiShaderResourceBinding::StageFlag::FragmentStage});
+         }
+ 
+-        quint32 offset = 0;
++        for (int stage = 0; stage < SUPPORTED_STAGES; ++stage)
++            cbD->d->currentBufferSizeData[stage] = { nil, 0 };
++
+         for (const auto &shader : shaders) {
+ 
+             const int binding = QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING;
+ 
+             // if we don't have a srb entry for the buffer size buffer
+-            if (!(storageBufferSizes.contains(shader.second) && storageBufferSizes[shader.second].contains(binding))) {
++            const bool hasEntry = std::any_of(srbD->sortedBindings.cbegin(), srbD->sortedBindings.cend(),
++                                              [&shader](const QRhiShaderResourceBinding &sb) {
++                const QRhiShaderResourceBinding::Data *sbd = shaderResourceBindingData(sb);
++                return sbd->binding == QRHI_METAL_BUFFER_SIZE_BUFFER_SRB_BINDING && sbd->stage == shader.second;
++            });
++            if (!hasEntry) {
+ 
+                 int maxNativeBinding = 0;
+                 for (const QShaderDescription::StorageBlock &block : shader.first->desc.storageBlocks())
+@@ -1858,8 +1903,8 @@ void QRhiMetal::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+ 
+                 const int size = (maxNativeBinding + 1) * sizeof(int);
+ 
+-                Q_ASSERT(offset + size <= bufD->size());
+-                srbD->sortedBindings.append(QRhiShaderResourceBinding::bufferLoad(binding, shader.second, bufD, offset, size));
++                Q_ASSERT(size <= int(bufD->size()));
++                srbD->sortedBindings.append(QRhiShaderResourceBinding::bufferLoad(binding, shader.second, bufD, 0, size));
+ 
+                 QMetalShaderResourceBindings::BoundResourceData bd;
+                 bd.sbuf.id = bufD->m_id;
+@@ -1885,18 +1930,20 @@ void QRhiMetal::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+                 bufferSizeBufferData[index] = sizes[block.binding];
+             }
+ 
+-            QRhiBufferData data;
++            // The sizes are those of this call's bindings, so they go to a
++            // region of their own rather than to the pipeline's buffer: that
++            // one is host-visible and was rewritten in place by every call, so
++            // every draw or dispatch recorded with the pipeline in a frame
++            // read the sizes of the last one.
+             const quint32 size = bufferSizeBufferData.size() * sizeof(int);
+-            data.assign(reinterpret_cast<const char *>(bufferSizeBufferData.constData()), size);
+-            Q_ASSERT(offset + size <= bufD->size());
+-            bufD->d->pendingUpdates[bufD->d->slotted ? currentFrameSlot : 0].append({ offset, data });
+-
+-            // buffer offsets must be 32byte aligned
+-            offset += ((size + 31) / 32) * 32;
++            for (int stage = 0; stage < SUPPORTED_STAGES; ++stage) {
++                if (toRhiSrbStage(stage) == shader.second)
++                    cbD->d->currentBufferSizeData[stage] = d->allocBufferSizeData(currentFrameSlot, bufferSizeBufferData.constData(), size);
++            }
+         }
+ 
+-        executeBufferHostWritesForCurrentFrame(bufD);
+-        bufD->lastActiveFrameSlot = currentFrameSlot;
++        // the bound region changes with every call
++        resNeedsRebind = true;
+     }
+ 
+     // make sure the resources for the correct slot get bound
+@@ -2990,6 +3037,8 @@ QRhi::FrameOpResult QRhiMetal::beginFrame(QRhiSwapChain *swapChain, QRhi::BeginF
+         swapChainD->ds->lastActiveFrameSlot = currentFrameSlot;
+ 
+     executeDeferredReleases();
++    d->bufferSizeData[currentFrameSlot].chunk = 0;
++    d->bufferSizeData[currentFrameSlot].offset = 0;
+     swapChainD->cbWrapper.resetState(swapChainD->d->lastGpuTime[currentFrameSlot]);
+     swapChainD->d->lastGpuTime[currentFrameSlot] = 0;
+     finishActiveReadbacks();
+@@ -3112,6 +3161,8 @@ QRhi::FrameOpResult QRhiMetal::beginOffscreenFrame(QRhiCommandBuffer **cb, QRhi:
+     d->ofr.cbWrapper.d->cb = d->newCommandBuffer();
+ 
+     executeDeferredReleases();
++    d->bufferSizeData[currentFrameSlot].chunk = 0;
++    d->bufferSizeData[currentFrameSlot].offset = 0;
+     d->ofr.cbWrapper.resetState(d->ofr.lastGpuTime);
+     d->ofr.lastGpuTime = 0;
+     finishActiveReadbacks();
+@@ -3597,6 +3648,27 @@ void QRhiMetal::executeBufferHostWritesForCurrentFrame(QMetalBuffer *bufD)
+     executeBufferHostWritesForSlot(bufD, bufD->d->slotted ? currentFrameSlot : 0);
+ }
+ 
++std::pair<id<MTLBuffer>, quint32> QRhiMetalData::allocBufferSizeData(int slot, const void *data, quint32 size)
++{
++    Q_ASSERT(size <= BUFFER_SIZE_DATA_CHUNK);
++    BufferSizeData &bsd(bufferSizeData[slot]);
++    if (bsd.chunk < bsd.chunks.count() && bsd.offset + size > BUFFER_SIZE_DATA_CHUNK) {
++        ++bsd.chunk;
++        bsd.offset = 0;
++    }
++    if (bsd.chunk == bsd.chunks.count()) {
++        id<MTLBuffer> chunk = [dev newBufferWithLength: BUFFER_SIZE_DATA_CHUNK options: MTLResourceStorageModeShared];
++        chunk.label = @"QRhiMetal buffer size data";
++        bsd.chunks.append(chunk);
++        bsd.offset = 0;
++    }
++    id<MTLBuffer> buf = bsd.chunks[bsd.chunk];
++    const quint32 offset = bsd.offset;
++    memcpy(static_cast<char *>([buf contents]) + offset, data, size);
++    bsd.offset = aligned(offset + size, BUFFER_SIZE_DATA_ALIGN);
++    return { buf, offset };
++}
++
+ void QRhiMetal::resourceUpdate(QRhiCommandBuffer *cb, QRhiResourceUpdateBatch *resourceUpdates)
+ {
+     Q_ASSERT(QRHI_RES(QMetalCommandBuffer, cb)->recordingPass == QMetalCommandBuffer::NoPass);
+-- 
+2.43.0
+
