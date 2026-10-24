@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sat, 24 Oct 2026 10:53:06 -0400
+Subject: [PATCH] rhi: vulkan: offscreen render passes wait for previous
+ attachment writes
+
+createOffscreenRenderPass() gave a texture render target's render pass
+no external subpass dependency, leaving the barriers to the resource
+tracking. Those barriers end at the attachment stages, but an attachment
+whose contents are not preserved starts the pass from
+VK_IMAGE_LAYOUT_UNDEFINED, and that layout transition happens at the
+start of the external dependency. With only the implicit dependency
+(TOP_OF_PIPE, no access) the transition does not chain after the
+barrier, so two passes into the same texture render target within one
+command buffer race: the second pass's layout transition against the
+first pass's color and depth writes. The synchronization validation
+layer reports SYNC-HAZARD-WRITE-AFTER-WRITE at vkCmdBeginRenderPass for
+every color and depth attachment.
+
+Add an external dependency from the attachment stages and writes, which
+chains with the tracking barriers.
+---
+ src/gui/rhi/qrhivulkan.cpp | 28 ++++++++++++++++++++++++----
+ 1 file changed, 24 insertions(+), 4 deletions(-)
+
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index f3f615d1f337..3328dfafc712 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -2271,10 +2271,30 @@ bool QRhiVulkan::createOffscreenRenderPass(QVkRenderPassDescriptor *rpD,
+     selfDependency.dependencyFlags = depFlags;
+     rpD->subpassDeps.append(selfDependency);
+ 
+-    // rpD->subpassDeps stays empty: don't yet know the correct initial/final
+-    // access and stage stuff for the implicit deps at this point, so leave it
+-    // to the resource tracking and activateTextureRenderTarget() to generate
+-    // barriers.
++    // The resource tracking and activateTextureRenderTarget() put a barrier
++    // before the pass for whatever last used its attachments. That barrier
++    // ends at the attachment stages, while an attachment whose contents are
++    // not preserved starts from VK_IMAGE_LAYOUT_UNDEFINED, and that layout
++    // transition happens at the start of the external dependency. With only
++    // the implicit one (TOP_OF_PIPE, no access) the transition does not
++    // chain after the barrier and races the writes a previous pass made to
++    // the same image: two passes into one texture render target in a command
++    // buffer were a write-after-write hazard. Make the dependency start at
++    // the attachment stages so it chains.
++    VkSubpassDependency externalDep = {};
++    externalDep.srcSubpass = VK_SUBPASS_EXTERNAL;
++    externalDep.dstSubpass = 0;
++    externalDep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
++                             | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT
++                             | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
++    externalDep.dstStageMask = externalDep.srcStageMask;
++    externalDep.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
++                              | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
++    externalDep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
++                              | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
++                              | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT
++                              | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
++    rpD->subpassDeps.append(externalDep);
+ 
+     VkRenderPassCreateInfo rpInfo;
+     VkSubpassDescription subpassDesc;
+-- 
+2.43.0
+
