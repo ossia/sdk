@@ -1,0 +1,152 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sun, 25 Oct 2026 23:59:11 -0400
+Subject: [PATCH] shadertools: optionally route gl_NumWorkGroups through a
+ cbuffer in HLSL
+
+HLSL has no built-in for the workgroup count of a dispatch. SPIRV-Cross
+replaces gl_NumWorkGroups with a constant buffer it adds, but only when
+remap_num_workgroups_builtin() is called; qtshadertools never called it,
+so any compute shader reading the built-in failed to bake for HLSL
+("NumWorkgroups builtin is used, but remap_num_workgroups_builtin() was
+not called").
+
+Add QShaderBaker::setHlslNumWorkGroupsBinding(int), -1 (off) by default;
+QT_SHADERTOOLS_HAS_HLSL_NUM_WORKGROUPS_BINDING advertises it. With a
+binding >= 0, a compute shader reading the built-in gets
+cbuffer SPIRV_Cross_NumWorkgroups { uint3 count; } in the b register after
+its own uniform blocks, reported in the native resource binding map at
+that binding, so a uniform buffer bound there feeds it. Shaders that do
+not read the built-in are unchanged. The binding must not be used by any
+other resource of the shader.
+---
+ src/shadertools/qshaderbaker.cpp | 21 ++++++++++++++++++++-
+ src/shadertools/qshaderbaker.h   |  3 +++
+ src/shadertools/qspirvshader.cpp | 22 +++++++++++++++++++++-
+ src/shadertools/qspirvshader_p.h |  3 ++-
+ 4 files changed, 46 insertions(+), 3 deletions(-)
+
+diff --git a/src/shadertools/qshaderbaker.cpp b/src/shadertools/qshaderbaker.cpp
+index 94e069a..02faf3c 100644
+--- a/src/shadertools/qshaderbaker.cpp
++++ b/src/shadertools/qshaderbaker.cpp
+@@ -139,6 +139,7 @@ struct QShaderBakerPrivate
+     bool perTargetEnabled = false;
+     bool breakOnShaderTranslationError = true;
+     bool hlslReadOnlyStorageBuffersAsSrv = false;
++    int hlslNumWorkGroupsBinding = -1;
+     QSpirvShader::TessellationInfo tessInfo;
+     QSpirvShader::MultiViewInfo multiViewInfo;
+     QShaderBaker::SpirvOptions spirvOptions;
+@@ -445,6 +446,23 @@ void QShaderBaker::setHlslReadOnlyStorageBuffersAsSrv(bool enable)
+     d->hlslReadOnlyStorageBuffersAsSrv = enable;
+ }
+ 
++/*!
++    HLSL has no built-in for the number of workgroups of a dispatch, so
++    SPIRV-Cross refuses a compute shader reading \c gl_NumWorkGroups unless it
++    is replaced by a constant buffer. When \a binding is 0 or more, a compute
++    shader that reads it gets that constant buffer,
++    \c{cbuffer SPIRV_Cross_NumWorkgroups { uint3 count; }}, in the b register
++    after its own uniform blocks. The native resource binding map reports it
++    at \a binding, so a uniform buffer of at least 12 bytes bound there (and
++    holding the dispatch's group counts) feeds it. \a binding must not be used
++    by any resource of the shader. A shader that does not read the built-in
++    is unchanged. Default is -1: the shader fails to translate, as before.
++ */
++void QShaderBaker::setHlslNumWorkGroupsBinding(int binding)
++{
++    d->hlslNumWorkGroupsBinding = binding;
++}
++
+ /*!
+     Controls the behavior when shader translation (from SPIR-V to
+     GLSL/HLSL/MSL) fails. By default this setting is true, which will cause
+@@ -814,7 +832,8 @@ QShader QShaderBaker::bake()
+             {
+                 QShader::NativeResourceBindingMap nativeBindings;
+                 shader.setShader(currentSpirvShader->translateToHLSL(req.second.version(), &nativeBindings,
+-                                                                     d->hlslReadOnlyStorageBuffersAsSrv));
++                                                                     d->hlslReadOnlyStorageBuffersAsSrv,
++                                                                     d->hlslNumWorkGroupsBinding));
+                 if (shader.shader().isEmpty()) {
+                     if (d->breakOnShaderTranslationError) {
+                         d->errorMessage = currentSpirvShader->translationErrorMessage();
+diff --git a/src/shadertools/qshaderbaker.h b/src/shadertools/qshaderbaker.h
+index 272732c..1ca8858 100644
+--- a/src/shadertools/qshaderbaker.h
++++ b/src/shadertools/qshaderbaker.h
+@@ -19,6 +19,7 @@
+ #include <rhi/qshader.h>
+ 
+ #define QT_SHADERTOOLS_HAS_HLSL_READONLY_SSBO_SRV 1
++#define QT_SHADERTOOLS_HAS_HLSL_NUM_WORKGROUPS_BINDING 1
+ 
+ QT_BEGIN_NAMESPACE
+ 
+@@ -61,6 +62,8 @@ public:
+     void setBreakOnShaderTranslationError(bool enable);
+     // ossia SDK patch; test with QT_SHADERTOOLS_HAS_HLSL_READONLY_SSBO_SRV
+     void setHlslReadOnlyStorageBuffersAsSrv(bool enable);
++    // ossia SDK patch; test with QT_SHADERTOOLS_HAS_HLSL_NUM_WORKGROUPS_BINDING
++    void setHlslNumWorkGroupsBinding(int binding);
+     void setTessellationMode(QShaderDescription::TessellationMode mode);
+     void setTessellationOutputVertexCount(int count);
+     void setMultiViewCount(int count);
+diff --git a/src/shadertools/qspirvshader.cpp b/src/shadertools/qspirvshader.cpp
+index 3d4d04a..e48576c 100644
+--- a/src/shadertools/qspirvshader.cpp
++++ b/src/shadertools/qspirvshader.cpp
+@@ -745,7 +745,8 @@ QByteArray QSpirvShader::translateToGLSL(int version,
+ }
+ 
+ QByteArray QSpirvShader::translateToHLSL(int version, QShader::NativeResourceBindingMap *nativeBindings,
+-                                         bool readOnlyStorageBuffersAsSrv) const
++                                         bool readOnlyStorageBuffersAsSrv,
++                                         int numWorkGroupsBinding) const
+ {
+     d->spirvCrossErrorMsg.clear();
+ 
+@@ -840,6 +841,25 @@ QByteArray QSpirvShader::translateToHLSL(int version, QShader::NativeResourceBin
+         regBinding += 1;
+     }
+ 
++    // gl_NumWorkGroups has no HLSL built-in: SPIRV-Cross reads it from a
++    // constant buffer it adds, if asked to. It goes in the next b register,
++    // reported at the binding the caller reserved for it.
++    if (numWorkGroupsBinding >= 0 && stage == SpvExecutionModelGLCompute) {
++        if (const spvc_variable_id id = spvc_compiler_hlsl_remap_num_workgroups_builtin(d->hlslGen)) {
++            spvc_compiler_set_decoration(d->hlslGen, id, SpvDecorationDescriptorSet, 0);
++            spvc_compiler_set_decoration(d->hlslGen, id, SpvDecorationBinding, uint(numWorkGroupsBinding));
++            spvc_hlsl_resource_binding bindingMapping = {};
++            bindingMapping.stage = stage;
++            bindingMapping.desc_set = 0;
++            bindingMapping.binding = uint(numWorkGroupsBinding);
++            bindingMapping.cbv.register_space = 0;
++            bindingMapping.cbv.register_binding = regBinding;
++            spvc_compiler_hlsl_add_resource_binding(d->hlslGen, &bindingMapping);
++            nativeBindings->insert(numWorkGroupsBinding, { regBinding, -1 });
++            regBinding += 1;
++        }
++    }
++
+     // UAV registers live in the same name space as outputs, so they must be bound
+     // to at least outputVariables.size().
+     regBinding = d->shaderDescription.outputVariables().size();
+diff --git a/src/shadertools/qspirvshader_p.h b/src/shadertools/qspirvshader_p.h
+index a029a84..2dac39c 100644
+--- a/src/shadertools/qspirvshader_p.h
++++ b/src/shadertools/qspirvshader_p.h
+@@ -87,7 +87,8 @@ public:
+                                QVector<SeparateToCombinedImageSamplerMapping> *separateToCombinedImageSamplerMappings) const;
+     QByteArray translateToHLSL(int version,
+                                QShader::NativeResourceBindingMap *nativeBindings,
+-                               bool readOnlyStorageBuffersAsSrv = false) const;
++                               bool readOnlyStorageBuffersAsSrv = false,
++                               int numWorkGroupsBinding = -1) const;
+     QByteArray translateToMSL(int version,
+                               MslFlags flags,
+                               QShader::Stage stage,
+-- 
+2.43.0
+

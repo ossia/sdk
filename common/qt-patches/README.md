@@ -192,3 +192,17 @@ without a cast, so `v_face = gl_ViewIndex;` into an `int` became an implicit
 uint-to-int conversion, which NVIDIA's GL compiler rejects (C7011). The patch
 loads it as `int(gl_ViewID_OVR)` outside Vulkan semantics. GL only in effect.
 Not in upstream SPIRV-Cross yet.
+
+### qtshadertools/0003-hlsl-num-workgroups-through-a-cbuffer.patch
+
+HLSL has no built-in for a dispatch's workgroup count, and SPIRV-Cross only
+replaces `gl_NumWorkGroups` with a constant buffer when
+`remap_num_workgroups_builtin()` is called, which qtshadertools never did: every
+compute shader reading it failed to bake for HLSL. The patch adds an opt-in
+`QShaderBaker::setHlslNumWorkGroupsBinding(int)` (feature macro
+`QT_SHADERTOOLS_HAS_HLSL_NUM_WORKGROUPS_BINDING`): such a shader gets
+`cbuffer SPIRV_Cross_NumWorkgroups { uint3 count; }` in the b register after
+its own uniform blocks, reported in the native resource binding map at the
+given binding, so a uniform buffer bound there feeds it. Filling it is the
+application's job: score copies an INDIRECT dispatch's arguments into it on
+the GPU. Composes with 0001. Not submitted upstream yet.
