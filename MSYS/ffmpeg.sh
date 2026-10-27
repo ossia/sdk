@@ -63,5 +63,11 @@ fi
 ffmpeg_report_gpu_filters
 
 $MAKE V=1 -j1
-$MAKE install
+# V=1 on install too. Without it, ffmpeg (since 33d5616fbe, after 9.0) prints
+# each installed file with its own printf, all chained into ONE shell command
+# per library; libavutil's ~100 headers make that ~13-17k characters, which
+# arrives at sh truncated ("unexpected EOF while looking for matching `\"'"
+# on x86_64, Error 127 on arm64, both in install-libavutil-headers). With V=1
+# the recipe is a single `install -m 644 <files> <dir>`, ~3k characters.
+$MAKE V=1 install
 )
