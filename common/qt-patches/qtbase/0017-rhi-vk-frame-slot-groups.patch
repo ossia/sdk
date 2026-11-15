@@ -1,0 +1,179 @@
+From a003283dee2248a252f8ebe1a18cf796cc38f10d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jean-Micha=C3=ABl=20Celerier?=
+ <jeanmichael.celerier@gmail.com>
+Date: Sun, 15 Nov 2026 13:05:14 -0500
+Subject: [PATCH] rhi: vulkan: let several frames share one frame slot
+
+QRhiVulkan has QVK_FRAMES_IN_FLIGHT slots shared by every swapchain and
+by offscreen frames, and moves to the next slot after each endFrame and
+endOffscreenFrame. beginFrame then waits for all command buffers of its
+slot. An application that renders one offscreen frame and then presents
+N swapchains per tick therefore waits, in the second swapchain's
+beginFrame, for the offscreen work it submitted moments ago, and each
+later swapchain for the one two places before it: nothing overlaps
+across ticks.
+
+Add QRhi::ContinueFrameSlot (BeginFrameFlag) and QRhi::KeepFrameSlot
+(EndFrameFlag). A frame begun with ContinueFrameSlot reuses the current
+slot: it skips the fence wait, the command pool reset, the deferred
+releases and readback completion, and does not count as a new frame for
+staging-buffer reuse. A frame ended with KeepFrameSlot does not advance
+the slot. The first frame of a group does the usual wait for the work
+submitted QVK_FRAMES_IN_FLIGHT groups earlier; the last one advances.
+Within a group each dynamic buffer must be updated at most once, as
+within a single frame. QRHI_HAS_FRAME_SLOT_GROUPS advertises the flags.
+Other backends ignore them.
+---
+ src/gui/rhi/qrhi.h         |  6 ++++-
+ src/gui/rhi/qrhivulkan.cpp | 49 +++++++++++++++++++++++++-------------
+ 2 files changed, 37 insertions(+), 18 deletions(-)
+
+diff --git a/src/gui/rhi/qrhi.h b/src/gui/rhi/qrhi.h
+index c719ca60..6dc8eb89 100644
+--- a/src/gui/rhi/qrhi.h
++++ b/src/gui/rhi/qrhi.h
+@@ -5,6 +5,8 @@
+ #ifndef QRHI_H
+ #define QRHI_H
+ 
++#define QRHI_HAS_FRAME_SLOT_GROUPS 1
++
+ //
+ //  W A R N I N G
+ //  -------------
+@@ -1982,11 +1984,13 @@ public:
+     };
+ 
+     enum BeginFrameFlag {
++        ContinueFrameSlot = 1 << 0
+     };
+     Q_DECLARE_FLAGS(BeginFrameFlags, BeginFrameFlag)
+ 
+     enum EndFrameFlag {
+-        SkipPresent = 1 << 0
++        SkipPresent = 1 << 0,
++        KeepFrameSlot = 1 << 1
+     };
+     Q_DECLARE_FLAGS(EndFrameFlags, EndFrameFlag)
+ 
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index 981f61e4..52993182 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -2734,9 +2734,11 @@ double QRhiVulkan::elapsedSecondsFromTimestamp(quint64 timestamp[2], bool *ok)
+     return 0;
+ }
+ 
+-QRhi::FrameOpResult QRhiVulkan::beginFrame(QRhiSwapChain *swapChain, QRhi::BeginFrameFlags)
++QRhi::FrameOpResult QRhiVulkan::beginFrame(QRhiSwapChain *swapChain, QRhi::BeginFrameFlags flags)
+ {
+-    uploadFrameCounter += 1;
++    const bool continueSlot = flags.testFlag(QRhi::ContinueFrameSlot);
++    if (!continueSlot)
++        uploadFrameCounter += 1;
+     QVkSwapChain *swapChainD = QRHI_RES(QVkSwapChain, swapChain);
+     const int frameResIndex = swapChainD->bufferCount > 1 ? currentFrameSlot : 0;
+     QVkSwapChain::FrameResources &frame(swapChainD->frameRes[frameResIndex]);
+@@ -2751,9 +2753,11 @@ QRhi::FrameOpResult QRhiVulkan::beginFrame(QRhiSwapChain *swapChain, QRhi::Begin
+     // commands, so if a resource is written in B's frame or when B checks for
+     // pending resource releases, that won't mess up A's in-flight commands (as
+     // they are not in flight anymore).
+-    QRhi::FrameOpResult waitResult = waitCommandCompletion(frameResIndex);
+-    if (waitResult != QRhi::FrameOpSuccess)
+-        return waitResult;
++    if (!continueSlot) {
++        QRhi::FrameOpResult waitResult = waitCommandCompletion(frameResIndex);
++        if (waitResult != QRhi::FrameOpSuccess)
++            return waitResult;
++    }
+ 
+     if (!frame.imageAcquired) {
+         // move on to next swapchain image
+@@ -2784,7 +2788,8 @@ QRhi::FrameOpResult QRhiVulkan::beginFrame(QRhiSwapChain *swapChain, QRhi::Begin
+         swapChainD->ds->lastActiveFrameSlot = currentFrameSlot;
+ 
+     // reset the command pool
+-    ensureCommandPoolForNewFrame();
++    if (!continueSlot)
++        ensureCommandPoolForNewFrame();
+ 
+     // start recording to this frame's command buffer
+     QRhi::FrameOpResult cbres = startPrimaryCommandBuffer(&frame.cmdBuf);
+@@ -2802,7 +2807,10 @@ QRhi::FrameOpResult QRhiVulkan::beginFrame(QRhiSwapChain *swapChain, QRhi::Begin
+         swapChainD->rtWrapperRight.d.fb = image.fb;
+     }
+ 
+-    prepareNewFrame(&swapChainD->cbWrapper);
++    if (continueSlot)
++        swapChainD->cbWrapper.resetState();
++    else
++        prepareNewFrame(&swapChainD->cbWrapper);
+ 
+     // Read the timestamps for the previous frame for this slot.
+     if (frame.timestampQueryIndex >= 0) {
+@@ -2946,7 +2954,8 @@ QRhi::FrameOpResult QRhiVulkan::endFrame(QRhiSwapChain *swapChain, QRhi::EndFram
+         // mark the current swapchain buffer as unused from our side
+         frame.imageAcquired = false;
+         // and move on to the next slot
+-        currentFrameSlot = (currentFrameSlot + 1) % QVK_FRAMES_IN_FLIGHT;
++        if (!flags.testFlag(QRhi::KeepFrameSlot))
++            currentFrameSlot = (currentFrameSlot + 1) % QVK_FRAMES_IN_FLIGHT;
+     }
+ 
+     swapChainD->frameCount += 1;
+@@ -3110,21 +3119,27 @@ QRhi::FrameOpResult QRhiVulkan::waitCommandCompletion(int frameSlot)
+     return QRhi::FrameOpSuccess;
+ }
+ 
+-QRhi::FrameOpResult QRhiVulkan::beginOffscreenFrame(QRhiCommandBuffer **cb, QRhi::BeginFrameFlags)
++QRhi::FrameOpResult QRhiVulkan::beginOffscreenFrame(QRhiCommandBuffer **cb, QRhi::BeginFrameFlags flags)
+ {
+-    uploadFrameCounter += 1;
+-    QRhi::FrameOpResult waitResult = waitCommandCompletion(currentFrameSlot);
+-    if (waitResult != QRhi::FrameOpSuccess)
+-        return waitResult;
++    const bool continueSlot = flags.testFlag(QRhi::ContinueFrameSlot);
++    if (!continueSlot) {
++        uploadFrameCounter += 1;
++        QRhi::FrameOpResult waitResult = waitCommandCompletion(currentFrameSlot);
++        if (waitResult != QRhi::FrameOpSuccess)
++            return waitResult;
+ 
+-    ensureCommandPoolForNewFrame();
++        ensureCommandPoolForNewFrame();
++    }
+ 
+     QVkCommandBuffer *cbWrapper = ofr.cbWrapper[currentFrameSlot];
+     QRhi::FrameOpResult cbres = startPrimaryCommandBuffer(&cbWrapper->cb);
+     if (cbres != QRhi::FrameOpSuccess)
+         return cbres;
+ 
+-    prepareNewFrame(cbWrapper);
++    if (continueSlot)
++        cbWrapper->resetState();
++    else
++        prepareNewFrame(cbWrapper);
+     ofr.active = true;
+ 
+     if (ofr.timestampQueryIndex[currentFrameSlot] >= 0) {
+@@ -3169,7 +3184,6 @@ QRhi::FrameOpResult QRhiVulkan::beginOffscreenFrame(QRhiCommandBuffer **cb, QRhi
+ 
+ QRhi::FrameOpResult QRhiVulkan::endOffscreenFrame(QRhi::EndFrameFlags flags)
+ {
+-    Q_UNUSED(flags);
+     Q_ASSERT(ofr.active);
+     ofr.active = false;
+ 
+@@ -3212,7 +3226,8 @@ QRhi::FrameOpResult QRhiVulkan::endOffscreenFrame(QRhi::EndFrameFlags flags)
+         finishActiveReadbacks(true);
+     }
+ 
+-    currentFrameSlot = (currentFrameSlot + 1) % QVK_FRAMES_IN_FLIGHT;
++    if (!flags.testFlag(QRhi::KeepFrameSlot))
++        currentFrameSlot = (currentFrameSlot + 1) % QVK_FRAMES_IN_FLIGHT;
+ 
+     return QRhi::FrameOpSuccess;
+ }
+-- 
+2.56.1
+

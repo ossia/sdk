@@ -184,6 +184,18 @@ multisample texture (Qt Quick 3D's MSAA render texture, so every glTF scene in
 score on OpenGL) raises `GL_INVALID_ENUM` and fails strict KHR_debug checks.
 It is skipped when `samples > 1`. Not submitted upstream yet.
 
+### qtbase/0017-rhi-vk-frame-slot-groups.patch
+
+QRhiVulkan advances its frame slot after every swapchain and offscreen
+frame, and each beginFrame waits for every command buffer of its slot. score's
+multi-window output renders one offscreen frame and then one frame per window
+each tick, so the second window waited for the scene render submitted moments
+earlier and nothing overlapped across ticks. The patch adds
+`QRhi::ContinueFrameSlot` / `QRhi::KeepFrameSlot` (feature macro
+`QRHI_HAS_FRAME_SLOT_GROUPS`) so the scene and all windows share one slot and the
+only wait is for the work two ticks back. Vulkan only; other backends ignore
+the flags. Not submitted upstream.
+
 ### qtshadertools/0002-spirv-cross-glsl-viewindex-int-cast.patch
 
 SPIR-V's `ViewIndex` is a signed int, but `GL_OVR_multiview` declares
