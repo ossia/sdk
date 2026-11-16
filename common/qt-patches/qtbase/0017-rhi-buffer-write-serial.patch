@@ -1,0 +1,541 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Jean-Michael Celerier <jmcelerier@sat.qc.ca>
+Date: Sun, 15 Nov 2026 12:11:53 -0500
+Subject: [PATCH 1/2] rhi: add a write serial to QRhiBuffer
+
+A consumer that mirrors or derives data from a buffer it does not own
+(a copy into another buffer, an acceleration structure, an accumulated
+image) has no way to find out if the content of that buffer changed:
+the QRhiBuffer is the same before and after a write. It has to redo
+its work in every frame, or rely on every producer reporting its
+writes through a side channel.
+
+QRhi sees every write that goes through it. Add
+QRhiBuffer::writeSerial(), a value that changes whenever an operation
+that defines or may change the content of the buffer is recorded:
+
+- create(),
+- a dynamic update or static upload of a resource update batch, when
+  the batch is committed,
+- beginFullDynamicBufferUpdateForCurrentFrame() and
+  fullDynamicBufferUpdateForCurrentFrame(),
+- setShaderResources() with the buffer in a BufferStore or
+  BufferLoadStore binding, in render and compute passes.
+
+Readbacks and BufferLoad bindings, and the vertex, index, indirect and
+uniform usages do not change it. The values come from the process-wide
+counter that already provides the resource ids, so a serial is never
+repeated by another buffer, nor by the same QRhiBuffer after create():
+comparing the value is enough even when a buffer is destroyed and
+another one is allocated at the same address.
+
+Writes QRhi cannot see (native commands on nativeBuffer() between
+beginExternal() and endExternal()) are reported with the new
+QRhiBuffer::noteExternalWrite().
+
+The serial is 0 on a backend that does not maintain it; noteExternalWrite()
+does nothing then. This change implements it for Vulkan, OpenGL and the
+Null backend, with an autotest (tst_QRhi::bufferWriteSerial).
+---
+ src/gui/rhi/qrhi.cpp                 | 129 ++++++++++++++++++++++++++
+ src/gui/rhi/qrhi.h                   |   6 ++
+ src/gui/rhi/qrhi_p.h                 |   3 +
+ src/gui/rhi/qrhigles2.cpp            |   7 ++
+ src/gui/rhi/qrhinull.cpp             |   6 +-
+ src/gui/rhi/qrhivulkan.cpp           |   5 +
+ tests/auto/gui/rhi/qrhi/tst_qrhi.cpp | 132 +++++++++++++++++++++++++++
+ 7 files changed, 287 insertions(+), 1 deletion(-)
+
+diff --git a/src/gui/rhi/qrhi.cpp b/src/gui/rhi/qrhi.cpp
+index ac07c210..265e806a 100644
+--- a/src/gui/rhi/qrhi.cpp
++++ b/src/gui/rhi/qrhi.cpp
+@@ -4286,6 +4286,91 @@ void QRhiBuffer::fullDynamicBufferUpdateForCurrentFrame(const void *data, quint3
+     }
+ }
+ 
++/*!
++    \fn quint64 QRhiBuffer::writeSerial() const
++
++    \return a value that changes every time an operation that defines or may
++    change the content of the buffer is recorded, or 0 when the backend does
++    not track buffer writes or create() has not been called yet.
++
++    This allows a consumer that mirrors or derives data from a buffer it does
++    not own (a copy, an acceleration structure, an accumulated image) to find
++    out if that work has to be redone: as long as the value is the same
++    non-zero value as before, nothing was recorded since then that could have
++    changed the content.
++
++    The serial changes when:
++
++    \list
++
++    \li create() succeeds. The content of a newly created buffer is undefined.
++
++    \li a QRhiResourceUpdateBatch containing
++    \l{QRhiResourceUpdateBatch::updateDynamicBuffer()}{updateDynamicBuffer()}
++    or \l{QRhiResourceUpdateBatch::uploadStaticBuffer()}{uploadStaticBuffer()}
++    operations for the buffer is committed, meaning it is passed to
++    \l{QRhiCommandBuffer::resourceUpdate()}{resourceUpdate()}, or to one of
++    the functions beginning or ending a pass. Queuing the operation on the
++    batch does not change the serial yet.
++
++    \li beginFullDynamicBufferUpdateForCurrentFrame() or
++    fullDynamicBufferUpdateForCurrentFrame() is called.
++
++    \li \l{QRhiCommandBuffer::setShaderResources()}{setShaderResources()} is
++    called in a render or compute pass with a QRhiShaderResourceBindings that
++    has the buffer in a
++    \l{QRhiShaderResourceBinding::BufferStore}{BufferStore} or
++    \l{QRhiShaderResourceBinding::BufferLoadStore}{BufferLoadStore} binding,
++    regardless of the shader stages of the binding and of what the shaders
++    then do with it. A \l{QRhiShaderResourceBinding::BufferLoad}{BufferLoad}
++    binding does not count as a write.
++
++    \li noteExternalWrite() is called.
++
++    \endlist
++
++    Using the buffer as vertex, index, indirect, or uniform buffer, and
++    \l{QRhiResourceUpdateBatch::readBackBuffer()}{reading it back}, do not
++    change the serial.
++
++    The values are unique within the process: two different buffers never
++    report the same non-zero value, and neither does the same QRhiBuffer
++    before and after a create(). Therefore comparing the serial alone is
++    sufficient, even when a buffer is destroyed and another one is later
++    allocated at the same address. For a given buffer the values only grow.
++
++    \note The serial follows the order in which operations are recorded on
++    the command buffer. This is the order in which the graphics API executes
++    them.
++
++    \note Writes that QRhi does not see are not tracked: native graphics API
++    calls made on the object returned from nativeBuffer(), typically between
++    \l{QRhiCommandBuffer::beginExternal()}{beginExternal()} and
++    \l{QRhiCommandBuffer::endExternal()}{endExternal()}, and writes made by a
++    shader to a buffer bound with BufferLoad access. Call noteExternalWrite()
++    to report the former.
++
++    \sa noteExternalWrite()
++ */
++
++/*!
++    Reports that the content of the buffer was, or is about to be, changed by
++    means QRhi has no knowledge of, such as a native copy command recorded
++    between \l{QRhiCommandBuffer::beginExternal()}{beginExternal()} and
++    \l{QRhiCommandBuffer::endExternal()}{endExternal()}. Gives the buffer a
++    new writeSerial().
++
++    Does nothing when the backend does not track buffer writes, or when
++    create() has not been called yet: writeSerial() stays 0 then.
++
++    \sa writeSerial()
++ */
++void QRhiBuffer::noteExternalWrite()
++{
++    if (m_writeSerial)
++        QRhiImplementation::bufferWritten(this);
++}
++
+ /*!
+     \class QRhiRenderBuffer
+     \inmodule QtGuiPrivate
+@@ -5885,12 +5970,56 @@ void QRhiImplementation::updateLayoutDesc(QRhiShaderResourceBindings *srb)
+ {
+     srb->m_layoutDescHash = 0;
+     srb->m_layoutDesc.clear();
++    srb->m_hasStorageBufferWrites = false;
+     auto layoutDescAppender = std::back_inserter(srb->m_layoutDesc);
+     for (const QRhiShaderResourceBinding &b : std::as_const(srb->m_bindings)) {
+         const QRhiShaderResourceBinding::Data *d = &b.d;
+         srb->m_layoutDescHash ^= uint(d->binding) ^ uint(d->stage) ^ uint(d->type)
+             ^ uint(d->arraySize());
+         layoutDescAppender = d->serialize(layoutDescAppender);
++        if (d->type == QRhiShaderResourceBinding::BufferStore
++                || d->type == QRhiShaderResourceBinding::BufferLoadStore) {
++            srb->m_hasStorageBufferWrites = true;
++        }
++    }
++}
++
++/*!
++    \internal
++
++    Gives \a buf a new write serial. Called by the backends whenever they
++    record an operation that defines or may change the content of the buffer:
++    create(), a resource update, a full dynamic buffer update, and binding it
++    with store access.
++
++    The values come from one process-wide counter, so they are never repeated,
++    neither by another buffer nor by the same QRhiBuffer after create().
++ */
++void QRhiImplementation::bufferWritten(QRhiBuffer *buf)
++{
++    buf->m_writeSerial = QRhiGlobalObjectIdGenerator::newId();
++}
++
++/*!
++    \internal
++
++    Called by the backends from setShaderResources(): the storage buffers \a
++    srb binds with BufferStore or BufferLoadStore access are taken to be
++    written by the draw calls or dispatches that follow.
++
++    The binding types are part of the layout, so the flag computed in
++    updateLayoutDesc() stays valid across updateResources().
++ */
++void QRhiImplementation::storageBuffersWritten(QRhiShaderResourceBindings *srb)
++{
++    if (!srb->m_hasStorageBufferWrites)
++        return;
++    for (const QRhiShaderResourceBinding &b : std::as_const(srb->m_bindings)) {
++        const QRhiShaderResourceBinding::Data *d = &b.d;
++        if (d->type == QRhiShaderResourceBinding::BufferStore
++                || d->type == QRhiShaderResourceBinding::BufferLoadStore) {
++            bufferWritten(d->u.sbuf.buf);
++        }
+     }
+ }
+ 
+diff --git a/src/gui/rhi/qrhi.h b/src/gui/rhi/qrhi.h
+index 9a75bfec..893f22ac 100644
+--- a/src/gui/rhi/qrhi.h
++++ b/src/gui/rhi/qrhi.h
+@@ -899,11 +899,16 @@ public:
+     virtual void endFullDynamicBufferUpdateForCurrentFrame();
+     virtual void fullDynamicBufferUpdateForCurrentFrame(const void *data, quint32 size = 0);
+ 
++    quint64 writeSerial() const { return m_writeSerial; }
++    void noteExternalWrite();
++
+ protected:
+     QRhiBuffer(QRhiImplementation *rhi, Type type_, UsageFlags usage_, quint32 size_);
+     Type m_type;
+     UsageFlags m_usage;
+     quint32 m_size;
++    quint64 m_writeSerial = 0;
++    friend class QRhiImplementation;
+ };
+ 
+ Q_DECLARE_OPERATORS_FOR_FLAGS(QRhiBuffer::UsageFlags)
+@@ -1295,6 +1300,7 @@ protected:
+     // better served with an implicitly shared container here, because they will likely
+     // throw this directly into structs serving as cache keys.
+     QVector<quint32> m_layoutDesc;
++    bool m_hasStorageBufferWrites = false;
+     friend class QRhiImplementation;
+ #ifndef QT_NO_DEBUG_STREAM
+     friend Q_GUI_EXPORT QDebug operator<<(QDebug, const QRhiShaderResourceBindings &);
+diff --git a/src/gui/rhi/qrhi_p.h b/src/gui/rhi/qrhi_p.h
+index 6cc5218b..31a0c3e1 100644
+--- a/src/gui/rhi/qrhi_p.h
++++ b/src/gui/rhi/qrhi_p.h
+@@ -218,6 +218,9 @@ public:
+     bool sanityCheckResourceOwnership(QRhiResource *maybeResource);
+     void updateLayoutDesc(QRhiShaderResourceBindings *srb);
+ 
++    static void bufferWritten(QRhiBuffer *buf);
++    static void storageBuffersWritten(QRhiShaderResourceBindings *srb);
++
+     quint32 pipelineCacheRhiId() const
+     {
+         const quint32 ver = (QT_VERSION_MAJOR << 16) | (QT_VERSION_MINOR << 8) | (QT_VERSION_PATCH);
+diff --git a/src/gui/rhi/qrhigles2.cpp b/src/gui/rhi/qrhigles2.cpp
+index 861cb3fe..4f985657 100644
+--- a/src/gui/rhi/qrhigles2.cpp
++++ b/src/gui/rhi/qrhigles2.cpp
+@@ -2158,6 +2158,7 @@ void QRhiGles2::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBind
+     }
+ 
+     QGles2ShaderResourceBindings *srbD = QRHI_RES(QGles2ShaderResourceBindings, srb);
++    storageBuffersWritten(srb);
+     if (cbD->passNeedsResourceTracking) {
+         QRhiPassResourceTracker &passResTracker(cbD->passResTrackers[cbD->currentPassResTrackerIndex]);
+         for (int i = 0, ie = srbD->m_bindings.size(); i != ie; ++i) {
+@@ -3029,6 +3030,7 @@ void QRhiGles2::enqueueResourceUpdates(QRhiCommandBuffer *cb, QRhiResourceUpdate
+         const QRhiResourceUpdateBatchPrivate::BufferOp &u(ud->bufferOps[opIdx]);
+         if (u.type == QRhiResourceUpdateBatchPrivate::BufferOp::DynamicUpdate) {
+             QGles2Buffer *bufD = QRHI_RES(QGles2Buffer, u.buf);
++            bufferWritten(bufD);
+             Q_ASSERT(bufD->m_type == QRhiBuffer::Dynamic);
+             if (bufD->m_usage.testFlag(QRhiBuffer::UniformBuffer)) {
+                 memcpy(bufD->data.data() + u.offset, u.data.constData(), size_t(u.data.size()));
+@@ -3044,6 +3046,7 @@ void QRhiGles2::enqueueResourceUpdates(QRhiCommandBuffer *cb, QRhiResourceUpdate
+             }
+         } else if (u.type == QRhiResourceUpdateBatchPrivate::BufferOp::StaticUpload) {
+             QGles2Buffer *bufD = QRHI_RES(QGles2Buffer, u.buf);
++            bufferWritten(bufD);
+             Q_ASSERT(bufD->m_type != QRhiBuffer::Dynamic);
+             Q_ASSERT(u.offset + u.data.size() <= bufD->m_size);
+             if (bufD->m_usage.testFlag(QRhiBuffer::UniformBuffer)) {
+@@ -6284,6 +6287,7 @@ bool QGles2Buffer::create()
+             return false;
+         }
+         data.resize(nonZeroSize);
++        QRhiImplementation::bufferWritten(this);
+         return true;
+     }
+ 
+@@ -6307,6 +6311,7 @@ bool QGles2Buffer::create()
+ 
+     usageState.access = AccessNone;
+ 
++    QRhiImplementation::bufferWritten(this);
+     rhiD->registerResource(this);
+     return true;
+ }
+@@ -6322,6 +6327,7 @@ QRhiBuffer::NativeBuffer QGles2Buffer::nativeBuffer()
+ char *QGles2Buffer::beginFullDynamicBufferUpdateForCurrentFrame()
+ {
+     Q_ASSERT(m_type == Dynamic);
++    QRhiImplementation::bufferWritten(this);
+     if (!m_usage.testFlag(UniformBuffer)) {
+         QRHI_RES_RHI(QRhiGles2);
+         rhiD->f->glBindBuffer(targetForDataOps, buffer);
+@@ -6351,6 +6357,7 @@ void QGles2Buffer::endFullDynamicBufferUpdateForCurrentFrame()
+ 
+ void QGles2Buffer::fullDynamicBufferUpdateForCurrentFrame(const void *bufferData, quint32 size)
+ {
++    QRhiImplementation::bufferWritten(this);
+     const quint32 copySize = size > 0 ? size : m_size;
+     if (!m_usage.testFlag(UniformBuffer)) {
+         QRHI_RES_RHI(QRhiGles2);
+diff --git a/src/gui/rhi/qrhinull.cpp b/src/gui/rhi/qrhinull.cpp
+index 094bd1cd..7dbc6723 100644
+--- a/src/gui/rhi/qrhinull.cpp
++++ b/src/gui/rhi/qrhinull.cpp
+@@ -264,9 +264,10 @@ void QRhiNull::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBindi
+                                   const QRhiCommandBuffer::DynamicOffset *dynamicOffsets)
+ {
+     Q_UNUSED(cb);
+-    Q_UNUSED(srb);
+     Q_UNUSED(dynamicOffsetCount);
+     Q_UNUSED(dynamicOffsets);
++    if (srb)
++        storageBuffersWritten(srb);
+ }
+ 
+ void QRhiNull::setVertexInput(QRhiCommandBuffer *cb,
+@@ -561,6 +562,7 @@ void QRhiNull::resourceUpdate(QRhiCommandBuffer *cb, QRhiResourceUpdateBatch *re
+                 || u.type == QRhiResourceUpdateBatchPrivate::BufferOp::StaticUpload)
+         {
+             QNullBuffer *bufD = QRHI_RES(QNullBuffer, u.buf);
++            bufferWritten(bufD);
+             memcpy(bufD->data + u.offset, u.data.constData(), size_t(u.data.size()));
+         } else if (u.type == QRhiResourceUpdateBatchPrivate::BufferOp::Read) {
+             QRhiReadbackResult *result = u.result;
+@@ -691,6 +693,7 @@ bool QNullBuffer::create()
+     memset(data, 0, m_size);
+ 
+     QRHI_RES_RHI(QRhiNull);
++    QRhiImplementation::bufferWritten(this);
+     rhiD->registerResource(this);
+ 
+     return true;
+@@ -699,6 +702,7 @@ bool QNullBuffer::create()
+ char *QNullBuffer::beginFullDynamicBufferUpdateForCurrentFrame()
+ {
+     Q_ASSERT(m_type == Dynamic);
++    QRhiImplementation::bufferWritten(this);
+     return data;
+ }
+ 
+diff --git a/src/gui/rhi/qrhivulkan.cpp b/src/gui/rhi/qrhivulkan.cpp
+index 3328dfaf..06fcd8ed 100644
+--- a/src/gui/rhi/qrhivulkan.cpp
++++ b/src/gui/rhi/qrhivulkan.cpp
+@@ -4557,6 +4557,7 @@ void QRhiVulkan::enqueueResourceUpdates(QVkCommandBuffer *cbD, QRhiResourceUpdat
+         const QRhiResourceUpdateBatchPrivate::BufferOp &u(ud->bufferOps[opIdx]);
+         if (u.type == QRhiResourceUpdateBatchPrivate::BufferOp::DynamicUpdate) {
+             QVkBuffer *bufD = QRHI_RES(QVkBuffer, u.buf);
++            bufferWritten(bufD);
+             Q_ASSERT(bufD->m_type == QRhiBuffer::Dynamic);
+             for (int i = 0; i < QVK_FRAMES_IN_FLIGHT; ++i) {
+                 if (u.offset == 0 && u.data.size() == bufD->m_size)
+@@ -4565,6 +4566,7 @@ void QRhiVulkan::enqueueResourceUpdates(QVkCommandBuffer *cbD, QRhiResourceUpdat
+             }
+         } else if (u.type == QRhiResourceUpdateBatchPrivate::BufferOp::StaticUpload) {
+             QVkBuffer *bufD = QRHI_RES(QVkBuffer, u.buf);
++            bufferWritten(bufD);
+             Q_ASSERT(bufD->m_type != QRhiBuffer::Dynamic);
+             Q_ASSERT(u.offset + u.data.size() <= bufD->m_size);
+ 
+@@ -6298,6 +6300,7 @@ void QRhiVulkan::setShaderResources(QRhiCommandBuffer *cb, QRhiShaderResourceBin
+     }
+ 
+     QVkShaderResourceBindings *srbD = QRHI_RES(QVkShaderResourceBindings, srb);
++    storageBuffersWritten(srb);
+     auto &descSetBd(srbD->boundResourceData[currentFrameSlot]);
+     bool rewriteDescSet = false;
+     bool addWriteBarrier = false;
+@@ -7653,6 +7656,7 @@ bool QVkBuffer::create()
+ 
+     lastActiveFrameSlot = -1;
+     generation += 1;
++    QRhiImplementation::bufferWritten(this);
+     rhiD->registerResource(this);
+     return true;
+ }
+@@ -7683,6 +7687,7 @@ char *QVkBuffer::beginFullDynamicBufferUpdateForCurrentFrame()
+     Q_ASSERT(m_type == Dynamic);
+     QRHI_RES_RHI(QRhiVulkan);
+     Q_ASSERT(rhiD->inFrame);
++    QRhiImplementation::bufferWritten(this);
+     const int slot = rhiD->currentFrameSlot;
+     void *p = nullptr;
+     VmaAllocation a = toVmaAllocation(allocations[slot]);
+diff --git a/tests/auto/gui/rhi/qrhi/tst_qrhi.cpp b/tests/auto/gui/rhi/qrhi/tst_qrhi.cpp
+index 99d343ea..acb62556 100644
+--- a/tests/auto/gui/rhi/qrhi/tst_qrhi.cpp
++++ b/tests/auto/gui/rhi/qrhi/tst_qrhi.cpp
+@@ -70,6 +70,8 @@ private slots:
+     void nativeBuffer();
+     void resourceUpdateBatchBuffer_data();
+     void resourceUpdateBatchBuffer();
++    void bufferWriteSerial_data();
++    void bufferWriteSerial();
+     void resourceUpdateBatchRGBATextureUpload_data();
+     void resourceUpdateBatchRGBATextureUpload();
+     void resourceUpdateBatchRGBATextureCopy_data();
+@@ -10958,6 +10960,136 @@ void tst_QRhi::storageBuffer()
+     }
+ }
+ 
++void tst_QRhi::bufferWriteSerial_data()
++{
++    rhiTestData();
++}
++
++void tst_QRhi::bufferWriteSerial()
++{
++    QFETCH(QRhi::Implementation, impl);
++    QFETCH(QRhiInitParams *, initParams);
++
++    QScopedPointer<QRhi> rhi(QRhi::create(impl, initParams, QRhi::Flags(), nullptr));
++    if (!rhi)
++        QSKIP("QRhi could not be created, skipping testing buffer write serials");
++
++    const int bufferSize = 64;
++    const QByteArray data(bufferSize, 'A');
++
++    QScopedPointer<QRhiBuffer> staticBuffer(rhi->newBuffer(QRhiBuffer::Static, QRhiBuffer::VertexBuffer, bufferSize));
++    // nothing is tracked before create()
++    QCOMPARE(staticBuffer->writeSerial(), quint64(0));
++    staticBuffer->noteExternalWrite();
++    QCOMPARE(staticBuffer->writeSerial(), quint64(0));
++
++    QVERIFY(staticBuffer->create());
++    const quint64 created = staticBuffer->writeSerial();
++    if (!created)
++        QSKIP("This backend does not track buffer writes");
++
++    QScopedPointer<QRhiBuffer> dynamicBuffer(rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, bufferSize));
++    QVERIFY(dynamicBuffer->create());
++    const quint64 dynamicCreated = dynamicBuffer->writeSerial();
++    QVERIFY(dynamicCreated != 0);
++    // never the same value for two buffers
++    QVERIFY(dynamicCreated != created);
++
++    // queuing an update on a batch does not count, committing the batch does
++    QRhiResourceUpdateBatch *batch = rhi->nextResourceUpdateBatch();
++    QVERIFY(batch);
++    batch->uploadStaticBuffer(staticBuffer.data(), 0, bufferSize, data.constData());
++    batch->updateDynamicBuffer(dynamicBuffer.data(), 0, bufferSize, data.constData());
++    QCOMPARE(staticBuffer->writeSerial(), created);
++    QCOMPARE(dynamicBuffer->writeSerial(), dynamicCreated);
++    QVERIFY(submitResourceUpdates(rhi.data(), batch));
++    const quint64 uploaded = staticBuffer->writeSerial();
++    const quint64 dynamicUpdated = dynamicBuffer->writeSerial();
++    QVERIFY(uploaded > created);
++    QVERIFY(dynamicUpdated > dynamicCreated);
++    QVERIFY(uploaded != dynamicUpdated);
++
++    // a readback is not a write
++    {
++        batch = rhi->nextResourceUpdateBatch();
++        QVERIFY(batch);
++        QRhiReadbackResult readResult;
++        batch->readBackBuffer(dynamicBuffer.data(), 0, bufferSize, &readResult);
++        QRhiReadbackResult staticReadResult;
++        if (rhi->isFeatureSupported(QRhi::ReadBackNonUniformBuffer))
++            batch->readBackBuffer(staticBuffer.data(), 0, bufferSize, &staticReadResult);
++        QVERIFY(submitResourceUpdates(rhi.data(), batch));
++        QCOMPARE(dynamicBuffer->writeSerial(), dynamicUpdated);
++        QCOMPARE(staticBuffer->writeSerial(), uploaded);
++    }
++
++    // a full dynamic update is a write
++    {
++        QRhiCommandBuffer *cb = nullptr;
++        QCOMPARE(rhi->beginOffscreenFrame(&cb), QRhi::FrameOpSuccess);
++        dynamicBuffer->fullDynamicBufferUpdateForCurrentFrame(data.constData());
++        rhi->endOffscreenFrame();
++        QVERIFY(dynamicBuffer->writeSerial() > dynamicUpdated);
++    }
++
++    // writes done behind QRhi's back are reported by the application
++    staticBuffer->noteExternalWrite();
++    const quint64 noted = staticBuffer->writeSerial();
++    QVERIFY(noted > uploaded);
++
++    // a new native object: the content is undefined again
++    QVERIFY(staticBuffer->create());
++    QVERIFY(staticBuffer->writeSerial() > noted);
++
++    // storage buffers: a load binding reads, a load-store binding writes
++    if (impl == QRhi::Null || !rhi->isFeatureSupported(QRhi::Feature::Compute))
++        return;
++
++    QShader s = loadShader(":/data/storagebuffer.comp.qsb");
++    QVERIFY(s.isValid());
++    QMap<QByteArray, QShaderDescription::StorageBlock> blocks;
++    for (const QShaderDescription::StorageBlock &block : s.description().storageBlocks())
++        blocks[block.blockName] = block;
++
++    QRhiCommandBuffer *cb = nullptr;
++    rhi->beginOffscreenFrame(&cb);
++    QVERIFY(cb);
++    OffscreenFrameGuard frameGuard(rhi.data());
++
++    QScopedPointer<QRhiBuffer> toGpuBuffer(rhi->newBuffer(QRhiBuffer::Static, QRhiBuffer::StorageBuffer, blocks["toGpu"].knownSize));
++    QVERIFY(toGpuBuffer->create());
++    QScopedPointer<QRhiBuffer> fromGpuBuffer(rhi->newBuffer(QRhiBuffer::Static, QRhiBuffer::StorageBuffer, blocks["fromGpu"].knownSize));
++    QVERIFY(fromGpuBuffer->create());
++
++    QRhiResourceUpdateBatch *u = rhi->nextResourceUpdateBatch();
++    QVERIFY(u);
++    u->uploadStaticBuffer(toGpuBuffer.data(), QByteArray(blocks["toGpu"].knownSize, 0));
++    u->uploadStaticBuffer(fromGpuBuffer.data(), QByteArray(blocks["fromGpu"].knownSize, 0));
++
++    QScopedPointer<QRhiShaderResourceBindings> srb(rhi->newShaderResourceBindings());
++    srb->setBindings({QRhiShaderResourceBinding::bufferLoad(blocks["toGpu"].binding, QRhiShaderResourceBinding::ComputeStage, toGpuBuffer.data()),
++                      QRhiShaderResourceBinding::bufferLoadStore(blocks["fromGpu"].binding, QRhiShaderResourceBinding::ComputeStage, fromGpuBuffer.data())});
++    QVERIFY(srb->create());
++
++    QScopedPointer<QRhiComputePipeline> pipeline(rhi->newComputePipeline());
++    pipeline->setShaderStage({QRhiShaderStage::Compute, s});
++    pipeline->setShaderResourceBindings(srb.data());
++    QVERIFY(pipeline->create());
++
++    cb->beginComputePass(u);
++    const quint64 toGpuUploaded = toGpuBuffer->writeSerial();
++    const quint64 fromGpuUploaded = fromGpuBuffer->writeSerial();
++    cb->setComputePipeline(pipeline.data());
++    QCOMPARE(fromGpuBuffer->writeSerial(), fromGpuUploaded);
++    cb->setShaderResources();
++    cb->dispatch(1, 1, 1);
++    cb->endComputePass();
++    frameGuard.endFrame();
++
++    QCOMPARE(toGpuBuffer->writeSerial(), toGpuUploaded);
++    QVERIFY(fromGpuBuffer->writeSerial() > fromGpuUploaded);
++}
++
+  void tst_QRhi::storageBufferRuntimeSizeCompute_data()
+ {
+      rhiTestData();
+-- 
+2.43.0
+
