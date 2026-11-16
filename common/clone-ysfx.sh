@@ -5,7 +5,7 @@ YSFX_PATCHES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/ysfx-patches" && pwd)"
 
 if [[ ! -d ysfx ]]; then
 (
-  git clone --recursive $SDK_CLONE_DEPTH $SDK_SHALLOW_SUBMODULES https://github.com/jcelerier/ysfx -b ossia/2026-01
+  git clone --recursive $SDK_CLONE_DEPTH $SDK_SHALLOW_SUBMODULES https://github.com/jcelerier/ysfx -b ossia/2026-11
   (
     cd ysfx
     for p in "$YSFX_PATCHES_DIR"/*.patch; do
