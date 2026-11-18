@@ -22,7 +22,7 @@ source ../common/versions.sh
 
 _ort_src() {   # ensure the pinned onnxruntime source tree exists
   [[ -d onnxruntime ]] || git clone --quiet --depth 1 --recursive \
-    --branch "v$ONNXRUNTIME_VERSION" https://github.com/microsoft/onnxruntime
+    --branch "v$ONNXRUNTIME_VERSION" https://github.com/ossia/onnxruntime
 }
 
 # A static archive may legitimately leave libc/libc++ symbols undefined, so grepping
@@ -127,16 +127,31 @@ build_onnxruntime() {
 }
 
 _ort_repackage() {   # plat arch stage -- repackage the upstream prebuilt (x86_64/win)
-  local plat="$1" arch="$2" stage="$3" asset
+  local plat="$1" arch="$2" stage="$3" rid v="$ONNXRUNTIME_VERSION"
   case "$plat" in
-    macos)   asset="onnxruntime-osx-universal2-$ONNXRUNTIME_VERSION.tgz" ;;
-    linux)   asset="onnxruntime-linux-x64-$ONNXRUNTIME_VERSION.tgz" ;;
-    windows) asset="onnxruntime-win-x64-$ONNXRUNTIME_VERSION.zip" ;;
+    macos)   rid="osx-x64" ;;
+    linux)   rid="linux-x64" ;;
+    windows) rid="win-x64" ;;
   esac
-  curl -ksSLOJ "https://github.com/microsoft/onnxruntime/releases/download/v$ONNXRUNTIME_VERSION/$asset"
   local d; d="$(mktemp -d)"
-  case "$asset" in *.zip) unzip -q "$asset" -d "$d" ;; *) tar xaf "$asset" -C "$d" ;; esac
-  local root; root="$(find "$d" -maxdepth 1 -type d -name 'onnxruntime-*' | head -1)"
-  cp -a "$root/lib/." "$stage/lib/"; cp -a "$root/include/." "$stage/include/"
+  curl -fsSL -o "$d/ort.nupkg" \
+    "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime/$v/microsoft.ml.onnxruntime.$v.nupkg"
+  unzip -q "$d/ort.nupkg" -d "$d/pkg"
+  local native="$d/pkg/runtimes/$rid/native"
+  [[ -d "$native" ]] || { echo "build-onnxruntime: no $rid runtime in onnxruntime $v" >&2; exit 1; }
+  cp -a "$d/pkg/build/native/include/." "$stage/include/"
+  case "$plat" in
+    macos)
+      cp "$native/libonnxruntime.dylib" "$stage/lib/libonnxruntime.$v.dylib"
+      ln -sf "libonnxruntime.$v.dylib" "$stage/lib/libonnxruntime.1.dylib"
+      ln -sf "libonnxruntime.$v.dylib" "$stage/lib/libonnxruntime.dylib" ;;
+    linux)
+      cp "$native/libonnxruntime.so" "$stage/lib/libonnxruntime.so.$v"
+      ln -sf "libonnxruntime.so.$v" "$stage/lib/libonnxruntime.so.1"
+      ln -sf libonnxruntime.so.1 "$stage/lib/libonnxruntime.so"
+      cp "$native/libonnxruntime_providers_shared.so" "$stage/lib/" ;;
+    windows)
+      cp "$native/"* "$stage/lib/" ;;
+  esac
   rm -rf "$d"
 }
