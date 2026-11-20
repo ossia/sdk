@@ -14,6 +14,7 @@ cd /image
 ./openssl.sh
 ./qt.sh
 ./sdl.sh
+./sdl3.sh
 ./portaudio.sh
 ./jack.sh
 ../Linux/ysfx.sh

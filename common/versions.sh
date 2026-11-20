@@ -1,4 +1,13 @@
+# SDL2 is transitional: libossia's joystick/game-controller/audio backends and
+# its find_package(SDL2) still speak the SDL2 API, so an SDL3-only SDK would flip
+# OSSIA_ENABLE_SDL off and drop the joystick protocol and the SDL audio engine
+# from the releases -- silently, since score_assert_feature is a no-op today.
+# Both SDLs are therefore installed side by side ($INSTALL_PREFIX/SDL2 and
+# $INSTALL_PREFIX/SDL3) so an SDK tag stays consumable by today's score while the
+# port happens in libossia. Drop SDL_VERSION and every sdl.sh once libossia is on
+# SDL3.
 export SDL_VERSION=2.32.10
+export SDL3_VERSION=3.4.14
 # ffmpeg master, pinned to a commit: 9.0.x still ships the Vulkan ProRes decoder
 # that gets part of every frame wrong, fixed on master on 2026-09-20. Back to a
 # release tag once one carries those fixes. FFMPEG_VERSION names the source
