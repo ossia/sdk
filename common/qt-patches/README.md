@@ -206,3 +206,38 @@ its own uniform blocks, reported in the native resource binding map at the
 given binding, so a uniform buffer bound there feeds it. Filling it is the
 application's job: score copies an INDIRECT dispatch's arguments into it on
 the GPU. Composes with 0001. Not submitted upstream yet.
+
+### qtbase/0017-rhi-buffer-write-serial.patch
+
+A consumer that mirrors a buffer it does not own cannot tell when its content
+changed: the `QRhiBuffer` is the same before and after a write. score's Scene
+Preprocessor copies GPU-resident meshes into its arena and the ray tracing
+layer builds acceleration structures from them; without a change signal that
+is a copy, a refit and a restarted accumulation in every frame, or a report
+that every producer has to remember to make.
+
+The patch adds `quint64 QRhiBuffer::writeSerial() const` and
+`void QRhiBuffer::noteExternalWrite()`. QRhi gives the buffer a new serial
+whenever it records something that defines or may change its content:
+`create()`, a dynamic update or static upload when its batch is committed, a
+full dynamic buffer update, and `setShaderResources()` with the buffer in a
+`BufferStore` / `BufferLoadStore` binding (render and compute passes).
+Readbacks, `BufferLoad` bindings and vertex / index / indirect / uniform use
+leave it alone. The values come from the process-wide counter of the resource
+ids, so a serial is never repeated by another buffer nor after `create()`.
+`noteExternalWrite()` is for the writes QRhi cannot see (native commands
+between `beginExternal()` and `endExternal()`). 0 means "not tracked" (before
+`create()`, or a backend that does not maintain it).
+
+This file covers the common code and the Vulkan, OpenGL and Null backends, with
+an autotest (`tst_QRhi::bufferWriteSerial`). score detects the API from the
+class itself (`requires` on `QRhiBuffer`, `Gfx/Graph/BufferWriteSerial.hpp`)
+and falls back on explicit producer reports without it, so the patch is
+optional. Not submitted upstream yet.
+
+### qtbase/0018-rhi-buffer-write-serial-d3d-metal.patch
+
+The same call sites for D3D11, D3D12 and Metal. Needs 0017. **Written on
+Linux and never compiled**: build it on Windows and macOS before relying on
+it. Without it those backends report serial 0 and score keeps its previous
+behaviour there.
