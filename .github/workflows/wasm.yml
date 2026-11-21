@@ -44,6 +44,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prefetch Qt Gerrit picks
+        if: >-
+          github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' ||
+          (github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.user.login != 'dependabot[bot]'))
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
+
       - name: Install host dependencies
         run: |
           sudo apt-get update

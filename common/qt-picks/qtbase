@@ -1,0 +1,43 @@
+# The 658xxx changes were abandoned in favour of dev-targeted rewrites; the
+# old refs still resolve, so a stale one builds silently instead of failing.
+# Same trap for a pick that has landed on 6.12: --keep-redundant-commits
+# turns it into an empty commit rather than an error. Dropped on that basis:
+# 686804 (win32: clang: fix unity builds) and, in qtquick3d-assimp, 687132
+# (poly2tri: add missing include for clang-21) -- both are in the tree the
+# current pins check out. 761497 and 761490 went the same way, see below.
+# qhash: prevent a -fsanitize=integer warning in the hash functions
+refs/changes/05/757205/2
+# Enable exports on static builds
+refs/changes/66/658066/2
+# qfsm disable sorting
+refs/changes/07/757207/1
+
+# RHI changes merged to dev but not present in the pinned 6.12 branch. Keep
+# their dev dependency order: the Metal indirect-count implementation builds
+# on the indirect APIs and render-pass preservation fixes.
+# rhi: Add support for dispatch indirect (tests/ rewritten upstream)
+refs/changes/11/738611/16 tests-ok
+# rhi: Add support for multi draw count indirect
+refs/changes/12/738612/19
+# rhi: gl: Implement base instance support
+refs/changes/67/761467/9
+# 761497 (metal: preserve per-pass state) and 761490 (metal: keep attachment
+# contents) have landed on 6.12; picking them again only conflicts.
+# rhi: Implement DrawIndirectCount for Metal, add NoTransientBacking
+refs/changes/69/761469/12 tests-ok
+# rhi: metal: Disable ICB usage when the shader uses textures
+refs/changes/41/763541/4
+# rhi: Add a shader variant for Metal argument buffers
+refs/changes/31/763731/5
+# macos: use same convention than other platforms for GL multisampling
+refs/changes/38/767938/1
+
+# More RHI fixes merged to dev and missing from 6.12.
+# rhi: Report the per-stage storage buffer limits
+refs/changes/24/760024/5
+# rhi: d3d11: Pad too small indirect buffers
+refs/changes/45/765245/5
+# rhi: metal: Fix buffer readbacks. This one is the cherry-pick bot's own
+# 6.12 change (dev is 766239), so drop it once it integrates rather than
+# rebasing it. tests/ conflicts because 6.12 rewrote tst_qrhi.cpp.
+refs/changes/20/767720/1 tests-ok

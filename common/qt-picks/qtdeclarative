@@ -1,0 +1,4 @@
+# cmake: do not try to use qmlcachegen if it is not being built
+refs/changes/68/464668/2
+# masm: PATH_MAX used with no limits.h in scope
+refs/changes/04/757204/1

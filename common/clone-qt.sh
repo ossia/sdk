@@ -23,8 +23,7 @@ git config --global maintenance.auto false
 # once. Nothing left to apply is success; keep going. A real conflict still
 # fails hard, because that one does need a human.
 qt_pick() {
-  local repo=$1 ref=$2 i ok=0
-  local url="https://codereview.qt-project.org/qt/$repo"
+  local repo=$1 url=$2 ref=$3 mode=$4 i ok=0
   # Retry the fetch: the shallow-file race above is transient (a second read
   # sees a settled file), so a retry clears it; a genuine network/ref error
   # still gives up after five tries rather than cherry-picking a stale FETCH_HEAD.
@@ -43,9 +42,9 @@ qt_pick() {
   # A pick whose only conflicts are under tests/ is still usable: we configure
   # with -nomake tests -no-feature-testlib, so nothing there is ever compiled,
   # and the 6.12 head regularly rewrites tst_qrhi.cpp under a dev-targeted RHI
-  # change. Callers opt in per pick with a third argument; the source hunks
-  # still have to apply cleanly or the pick fails as before.
-  if [[ -n "${3:-}" ]]; then
+  # change. Manifests opt in per pick; the source hunks still have to apply
+  # cleanly or the pick fails as before.
+  if [[ "$mode" == tests-ok ]]; then
     local unmerged src
     unmerged=$(git diff --name-only --diff-filter=U)
     src=$(printf '%s\n' "$unmerged" | grep -v '^tests/' || true)
@@ -62,6 +61,30 @@ qt_pick() {
   git cherry-pick --abort || true
   echo "clone-qt: cherry-pick of $repo $ref conflicts with $QT_VERSION" >&2
   return 1
+}
+
+qt_apply_picks() {
+  local repo=$1 line ref mode extra
+  local url="https://codereview.qt-project.org/qt/$repo"
+  local cache="$SDK_COMMON_ROOT/common/qt-gerrit-cache/$repo"
+  if [[ -d "$cache" ]]; then
+    url="$cache"
+    # Native Windows git needs a drive-letter path, even if MSYS argument
+    # conversion is disabled. Fetch by path, not by an SSH or file:// URL.
+    case "$OSTYPE" in
+      msys*|cygwin*) url=$(cygpath -am "$cache") || return 1 ;;
+    esac
+  fi
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    read -r ref mode extra <<< "${line%$'\r'}"
+    [[ -z "$ref" || "$ref" == \#* ]] && continue
+    if [[ "$ref" != refs/changes/* || ( -n "$mode" && "$mode" != tests-ok ) || -n "$extra" ]]; then
+      echo "clone-qt: invalid pick for $repo: $line" >&2
+      return 1
+    fi
+    qt_pick "$repo" "$url" "$ref" "$mode" </dev/null || return 1
+  done < "$SDK_COMMON_ROOT/common/qt-picks/$repo"
 }
 
 # Apply the local patches we carry for a module, from common/qt-patches/<repo>/.
@@ -120,49 +143,7 @@ git init -q qt
     git fetch $SDK_FETCH_DEPTH origin "$QTBASE_VERSION"
     git checkout -q FETCH_HEAD
 
-    # The 658xxx changes were abandoned in favour of dev-targeted rewrites; the
-    # old refs still resolve, so a stale one builds silently instead of failing.
-    # Same trap for a pick that has landed on 6.12: --keep-redundant-commits
-    # turns it into an empty commit rather than an error. Dropped on that basis:
-    # 686804 (win32: clang: fix unity builds) and, in qtquick3d-assimp, 687132
-    # (poly2tri: add missing include for clang-21) -- both are in the tree the
-    # current pins check out. 761497 and 761490 went the same way, see below.
-    # qhash: prevent a -fsanitize=integer warning in the hash functions
-    qt_pick qtbase refs/changes/05/757205/2
-    # Enable exports on static builds
-    qt_pick qtbase refs/changes/66/658066/2
-    # qfsm disable sorting
-    qt_pick qtbase refs/changes/07/757207/1
-
-    # RHI changes merged to dev but not present in the pinned 6.12 branch. Keep
-    # their dev dependency order: the Metal indirect-count implementation builds
-    # on the indirect APIs and render-pass preservation fixes.
-    # rhi: Add support for dispatch indirect (tests/ rewritten upstream)
-    qt_pick qtbase refs/changes/11/738611/16 tests-ok
-    # rhi: Add support for multi draw count indirect
-    qt_pick qtbase refs/changes/12/738612/19
-    # rhi: gl: Implement base instance support
-    qt_pick qtbase refs/changes/67/761467/9
-    # 761497 (metal: preserve per-pass state) and 761490 (metal: keep attachment
-    # contents) have landed on 6.12; picking them again only conflicts.
-    # rhi: Implement DrawIndirectCount for Metal, add NoTransientBacking
-    qt_pick qtbase refs/changes/69/761469/12 tests-ok
-    # rhi: metal: Disable ICB usage when the shader uses textures
-    qt_pick qtbase refs/changes/41/763541/4
-    # rhi: Add a shader variant for Metal argument buffers
-    qt_pick qtbase refs/changes/31/763731/5
-    # macos: use same convention than other platforms for GL multisampling
-    qt_pick qtbase refs/changes/38/767938/1
-
-    # More RHI fixes merged to dev and missing from 6.12.
-    # rhi: Report the per-stage storage buffer limits
-    qt_pick qtbase refs/changes/24/760024/5
-    # rhi: d3d11: Pad too small indirect buffers
-    qt_pick qtbase refs/changes/45/765245/5
-    # rhi: metal: Fix buffer readbacks. This one is the cherry-pick bot's own
-    # 6.12 change (dev is 766239), so drop it once it integrates rather than
-    # rebasing it. tests/ conflicts because 6.12 rewrote tst_qrhi.cpp.
-    qt_pick qtbase refs/changes/20/767720/1 tests-ok
+    qt_apply_picks qtbase
 
     qt_apply_local qtbase
   )
@@ -176,8 +157,7 @@ git init -q qt
     git fetch $SDK_FETCH_DEPTH origin "$QTSHADERTOOLS_VERSION"
     git checkout -q FETCH_HEAD
 
-    # Generate the MSL argument-buffer variant declared by the qtbase pick.
-    qt_pick qtshadertools refs/changes/32/763732/2
+    qt_apply_picks qtshadertools
 
     qt_apply_local qtshadertools
   )
@@ -186,10 +166,7 @@ git init -q qt
     cd qtdeclarative
     git config user.email "you@example.com"
     git config user.name "Your Name"
-    # cmake: do not try to use qmlcachegen if it is not being built
-    qt_pick qtdeclarative refs/changes/68/464668/2
-    # masm: PATH_MAX used with no limits.h in scope
-    qt_pick qtdeclarative refs/changes/04/757204/1
+    qt_apply_picks qtdeclarative
 
     qt_apply_local qtdeclarative
   )
