@@ -22,7 +22,7 @@ if [[ ! -d "$FFMPEG_SRC" ]]; then
       && tar xjf "ffmpeg-$FFMPEG_VERSION.tar.bz2" && return 0
     echo "clone-ffmpeg: not on the ossia mirror, falling back upstream" >&2
     curl -fksSL -o "ffmpeg-$FFMPEG_VERSION.tar.gz" \
-      "https://github.com/FFmpeg/FFmpeg/archive/${FFMPEG_COMMIT:-refs/tags/n$FFMPEG_VERSION}.tar.gz" \
+      "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n$FFMPEG_VERSION.tar.gz" \
       && mkdir -p "$FFMPEG_SRC" \
       && tar xzf "ffmpeg-$FFMPEG_VERSION.tar.gz" -C "$FFMPEG_SRC" --strip-components=1 \
       && return 0
@@ -30,8 +30,8 @@ if [[ ! -d "$FFMPEG_SRC" ]]; then
       && tar xjf "ffmpeg-$FFMPEG_VERSION.tar.bz2"
   }
   fetch_ffmpeg || { echo "clone-ffmpeg: every source failed for $FFMPEG_SRC" >&2; exit 1; }
-  # A git snapshot has no FF_VERSION file, so it would report itself as "N-unknown"
-  if [[ -n "${FFMPEG_COMMIT:-}" && ! -f "$FFMPEG_SRC/FF_VERSION" ]]; then
+  # GitHub tag archives lack the FF_VERSION file included in release tarballs.
+  if [[ ! -f "$FFMPEG_SRC/FF_VERSION" ]]; then
     echo "$FFMPEG_VERSION" > "$FFMPEG_SRC/FF_VERSION"
   fi
 fi
@@ -40,20 +40,14 @@ if [[ ! -f "$FFMPEG_READY" ]]; then
   case "$OSTYPE" in
     darwin*)
       echo "Mac OS"
-     (
-      set -e
-      cd "$FFMPEG_SRC"
       # Without camera access, opening an avfoundation device otherwise never returns
-      patch -p1 < ../../common/patches/ffmpeg/0002-avfoundation-interruptible-first-frame.patch
-     )
+      patch -F 0 -p1 -d "$FFMPEG_SRC" < ../common/patches/ffmpeg/0002-avfoundation-interruptible-first-frame.patch || exit 1
     ;;
     win*)     echo "Windows" ;;
     msys*)    echo "MSYS / MinGW / Git Bash" ;;
     cygwin*)  echo "Cygwin" ;;
     *)
       echo "Linux or BSD"
-     (
-      set -e
       # `patch` is preinstalled nearly everywhere; yum only exists on the
       # almalinux build image. Do not make the whole Linux branch depend on a
       # RedHat package manager -- that makes these scripts unrunnable on any
@@ -61,11 +55,7 @@ if [[ ! -f "$FFMPEG_READY" ]]; then
       if ! command -v patch >/dev/null 2>&1; then
         command -v yum >/dev/null 2>&1 && yum -y install patch
       fi
-      cd "$FFMPEG_SRC"
-      patch -p1 < ../../common/patches/ffmpeg/0001-rpi.patch
-
-      sed -i "1i \ #define V4L2_PIX_FMT_P010    v4l2_fourcc('P', '0', '1', '0') /* 24  Y/CbCr 4:2:0 10-bit per component */"  libavcodec/v4l2_req_hevc_vx.c
-     )
+      patch -F 0 -p1 -d "$FFMPEG_SRC" < ../common/patches/ffmpeg/0001-rpi.patch || exit 1
     ;;
   esac
   # Only now is the tree usable. Written after the patch so an interrupted run
