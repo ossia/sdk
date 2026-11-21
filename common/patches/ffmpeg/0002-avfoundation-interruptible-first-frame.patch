@@ -8,11 +8,13 @@ arrives. avf_read_header() then spins forever in get_video_config() /
 get_audio_config(), ignoring the interrupt callback, so callers have no way to
 time out or cancel the open.
 
-Check the interrupt callback in both loops.
+Check the interrupt callback in both loops and return AVERROR_EXIT through
+the ordinary header failure path, which wakes blocked capture delegates and
+stops the session. Keep mapping other capture setup failures to EIO.
 ---
 --- a/libavdevice/avfoundation.m
 +++ b/libavdevice/avfoundation.m
-@@ -628,6 +628,18 @@
+@@ -678,6 +678,18 @@
      return 0;
  }
  
@@ -31,25 +33,49 @@ Check the interrupt callback in both loops.
  static int get_video_config(AVFormatContext *s)
  {
      AVFContext *ctx = (AVFContext*)s->priv_data;
-@@ -641,6 +653,10 @@
+@@ -691,6 +703,10 @@
  
      // Take stream info from the first frame.
      while (ctx->frames_captured < 1) {
 +        if (avf_interrupted(s)) {
 +            av_log(s, AV_LOG_ERROR, "Interrupted while waiting for the first video frame\n");
-+            return 1;
++            return AVERROR_EXIT;
 +        }
          CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, YES);
      }
  
-@@ -686,6 +702,10 @@
+@@ -736,6 +752,10 @@
  
      // Take stream info from the first frame.
      while (ctx->audio_frames_captured < 1) {
 +        if (avf_interrupted(s)) {
 +            av_log(s, AV_LOG_ERROR, "Interrupted while waiting for the first audio frame\n");
-+            return 1;
++            return AVERROR_EXIT;
 +        }
          CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.1, YES);
      }
  
+@@ -1317,12 +1337,12 @@
+         [video_device unlockForConfiguration];
+     }
+ 
+-    if (video_device && get_video_config(s)) {
++    if (video_device && (ret = get_video_config(s))) {
+         goto fail;
+     }
+ 
+     // set audio stream
+-    if (audio_device && get_audio_config(s)) {
++    if (audio_device && (ret = get_audio_config(s))) {
+         goto fail;
+     }
+ 
+@@ -1332,7 +1352,7 @@
+ fail:
+     [pool release];
+     destroy_context(ctx);
+-    if (ret)
++    if (ret < 0)
+         return ret;
+     return AVERROR(EIO);
+ }
