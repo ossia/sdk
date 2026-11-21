@@ -56,6 +56,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prefetch Qt Gerrit picks
+        if: github.actor != 'dependabot[bot]'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
+
       - name: Restore ccache
         uses: actions/cache/restore@v4
         with:
@@ -109,6 +116,13 @@ jobs:
             runner: macos-15
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prefetch Qt Gerrit picks
+        if: github.actor != 'dependabot[bot]'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
@@ -171,6 +185,13 @@ jobs:
         shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prefetch Qt Gerrit picks
+        if: github.actor != 'dependabot[bot]'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
 
       - name: Restore ccache
         uses: actions/cache/restore@v4

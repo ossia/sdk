@@ -64,6 +64,11 @@ env:
   # The deliverable goes out on everything except PRs.
   PUBLISH_SDK: ${{ github.event_name != 'pull_request' }}
   FORCE_CORE: ${{ inputs.force_core_rebuild || false }}
+  # Never authenticate Gerrit for fork PRs or Dependabot-authored changes.
+  TRUST_QT_PREFETCH: >-
+    ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' ||
+    (github.event.pull_request.head.repo.full_name == github.repository &&
+    github.event.pull_request.user.login != 'dependabot[bot]')) }}
 
 jobs:
   plan:
@@ -117,6 +122,13 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Prefetch Qt Gerrit picks
+        if: steps.check.outputs.exists != 'true' && env.TRUST_QT_PREFETCH == 'true'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
 
       - name: Restore ccache
         if: steps.check.outputs.exists != 'true'
@@ -215,6 +227,13 @@ jobs:
             "core-dl" "false" \
             "${{ steps.corehash.outputs.core_hash }}"
 
+      - name: Prefetch Qt Gerrit picks
+        if: steps.resolve.outputs.mode == 'inline' && env.TRUST_QT_PREFETCH == 'true'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
+
       - name: Prepare install prefix
         run: |
           sudo mkdir -p /opt/ossia-sdk-${{ matrix.arch }}
@@ -296,6 +315,13 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Prefetch Qt Gerrit picks
+        if: steps.check.outputs.exists != 'true' && env.TRUST_QT_PREFETCH == 'true'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
 
       - name: Restore ccache
         if: steps.check.outputs.exists != 'true'
@@ -395,6 +421,13 @@ jobs:
             "core-dl" "false" \
             "${{ steps.corehash.outputs.core_hash }}"
 
+      - name: Prefetch Qt Gerrit picks
+        if: steps.resolve.outputs.mode == 'inline' && env.TRUST_QT_PREFETCH == 'true'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
+
       - name: Prepare install prefix
         run: |
           sudo mkdir -p /opt/ossia-sdk-${{ matrix.prefix_arch }}
@@ -490,6 +523,13 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Prefetch Qt Gerrit picks
+        if: steps.check.outputs.exists != 'true' && env.TRUST_QT_PREFETCH == 'true'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
 
       - uses: msys2/setup-msys2@v2
         if: steps.check.outputs.exists != 'true'
@@ -588,6 +628,13 @@ jobs:
             "sdk-core-mingw-${{ matrix.sdk_arch }}.7z" \
             "core-dl" "false" \
             "${{ steps.corehash.outputs.core_hash }}"
+
+      - name: Prefetch Qt Gerrit picks
+        if: steps.resolve.outputs.mode == 'inline' && env.TRUST_QT_PREFETCH == 'true'
+        shell: bash
+        env:
+          QT_GERRIT_SSH_KEY: ${{ secrets.QT_GERRIT_SSH_KEY }}
+        run: bash .github/fetch-qt-picks.sh
 
       - uses: msys2/setup-msys2@v2
         with:

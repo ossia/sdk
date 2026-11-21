@@ -141,6 +141,8 @@ fi
 # Local dev keeps full history. GitHub Actions exports CI=true on every runner;
 # Linux/create-sdk.sh forwards CI into the build container.
 if [[ -n "${CI:-}" ]]; then
+  # No runner can answer a Git credential prompt (including inside Docker).
+  export GIT_TERMINAL_PROMPT=0
   export SDK_CLONE_DEPTH="--depth 1"
   export SDK_SHALLOW_SUBMODULES="--shallow-submodules"
   # cherry-pick needs the change commit AND its parent, hence depth 2

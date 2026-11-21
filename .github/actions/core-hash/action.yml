@@ -47,6 +47,7 @@ runs:
           common/qtmodules
           common/qtfeatures
           common/patches/*.patch
+          common/qt-picks/*
           common/qt-patches/*/*.patch
           # The core stage runs `media-deps.sh libjpeg webp` before qt.sh
           # (qtfeatures says -system-libjpeg and -system-webp), so those two
