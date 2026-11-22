@@ -63,8 +63,23 @@ _md_build_dir() { echo "$1-build${MD_BUILD_TAG:-}"; }
 
 # Marker files, not "is the .a there" probes: several of these install multiple
 # artifacts and a half-finished build would otherwise look complete.
-_md_done()      { [[ -f "$MEDIA_DEPS_PREFIX/.media-deps/$1" ]]; }
-_md_mark_done() { mkdir -p "$MEDIA_DEPS_PREFIX/.media-deps"; touch "$MEDIA_DEPS_PREFIX/.media-deps/$1"; }
+# A retained prefix must rebuild these archives when their core inputs change;
+# in particular an SRT built with the OpenSSL 3 headers cannot be reused.
+_md_marker_value() {
+  case "$1" in
+    libjpeg) echo "$LIBJPEGTURBO_VERSION" ;;
+    snappy)  echo "$SNAPPY_VERSION" ;;
+    srt)     echo "$SRT_VERSION/$OPENSSL_VERSION" ;;
+  esac
+}
+_md_done() {
+  local marker="$MEDIA_DEPS_PREFIX/.media-deps/$1"
+  [[ -f "$marker" && "$(<"$marker")" == "$(_md_marker_value "$1")" ]]
+}
+_md_mark_done() {
+  mkdir -p "$MEDIA_DEPS_PREFIX/.media-deps"
+  _md_marker_value "$1" > "$MEDIA_DEPS_PREFIX/.media-deps/$1"
+}
 
 _md_clone() {  # name ref url [url...]
   # ref comes BEFORE the urls so the last argument never has to be addressed:
@@ -363,15 +378,17 @@ _md_build_libjpeg() {
 _md_build_snappy() {
   # Hap encoding (ffmpeg's --enable-libsnappy). Linux and MSYS already build
   # snappy in their CORE stage via zlib.sh; macOS has no equivalent, so it is a
-  # media-stage recipe there. Same fork/pin as common/clone-zlib.sh so all three
-  # platforms ship the same snappy.
-  _md_clone snappy "$SNAPPY_VERSION" https://github.com/jcelerier/snappy
+  # media-stage recipe there. Use the same upstream release on all three.
+  local src="snappy-$SNAPPY_VERSION" build
+  build=$(_md_build_dir snappy)
+  _md_fetch_tar "$src" 1 "https://github.com/google/snappy/archive/refs/tags/$SNAPPY_VERSION.tar.gz" || return 1
   _md_cmake_flags
-  rm -rf "$(_md_build_dir snappy)"
-  cmake -S "$MEDIA_DEPS_SRC/snappy" -B "$(_md_build_dir snappy)" "${MD_CMAKE_FLAGS[@]}" \
-    -DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF -DSNAPPY_INSTALL=ON
-  cmake --build "$(_md_build_dir snappy)"
-  cmake --install "$(_md_build_dir snappy)"
+  rm -rf "$build" || return 1
+  cmake -S "$MEDIA_DEPS_SRC/$src" -B "$build" "${MD_CMAKE_FLAGS[@]}" \
+    -DCMAKE_CXX_FLAGS_RELEASE_INIT=-Wno-error \
+    -DSNAPPY_BUILD_TESTS=OFF -DSNAPPY_BUILD_BENCHMARKS=OFF -DSNAPPY_INSTALL=ON || return 1
+  cmake --build "$build" || return 1
+  cmake --install "$build" || return 1
   # snappy ships no .pc; ffmpeg's libsnappy probe is a plain link check, but
   # gstreamer and other consumers expect one.
   mkdir -p "$MEDIA_DEPS_PREFIX/lib/pkgconfig"

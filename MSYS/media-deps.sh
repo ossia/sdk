@@ -59,9 +59,8 @@ if [[ "$TARGET_ARCH" != "x86_64" ]]; then
 fi
 
 # libsrt must find the openssl built by openssl.sh, not a pacman one.
-# On Windows-on-ARM there is no openssl (OpenSSL has no mingw arm64 target), so
-# build SRT without encryption there rather than fail the leg. ffmpeg's own TLS
-# is schannel on Windows and is unaffected either way.
+# Keep the existing Windows ARM SDK configuration: SRT without encryption,
+# and schannel for ffmpeg's own TLS on both architectures.
 if [[ "$TARGET_ARCH" == "x86_64" ]]; then
   export MD_SRT_EXTRA_FLAGS=(
     -DUSE_ENCLIB=openssl

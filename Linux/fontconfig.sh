@@ -6,7 +6,7 @@ source ../common/clone-fontconfig.sh
 # expat: fontconfig's XML parser for the configuration files.
 cmake \
   -S "expat-$EXPAT_VERSION" \
-  -B expat-build \
+  -B "expat-$EXPAT_VERSION-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DEXPAT_SHARED_LIBS=OFF \
   -DEXPAT_BUILD_TOOLS=OFF \
@@ -15,8 +15,8 @@ cmake \
   -DEXPAT_BUILD_DOCS=OFF \
   -DEXPAT_BUILD_FUZZERS=OFF \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
-cmake --build expat-build --parallel
-cmake --build expat-build --target install/strip
+cmake --build "expat-$EXPAT_VERSION-build" --parallel
+cmake --build "expat-$EXPAT_VERSION-build" --target install/strip
 
 # The library is embedded in an application that runs on arbitrary distros, so
 # every path compiled into it is the conventional host one: it reads the host's

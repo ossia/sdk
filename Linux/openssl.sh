@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/bash -e
 
 source ./common.sh clang
 source ../common/clone-openssl.sh
 
-if [[ -f $INSTALL_PREFIX/openssl/bin/openssl ]]; then
+if openssl_is_current "$INSTALL_PREFIX/openssl/bin/openssl"; then
   exit 0
 fi
 

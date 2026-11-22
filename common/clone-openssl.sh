@@ -2,13 +2,21 @@
 
 source ../common/versions.sh
 
+# The installed binary can be for another architecture; inspect the version
+# header so a reused prefix won't silently keep OpenSSL 3 after the upgrade.
+openssl_is_current() {
+  local header="$INSTALL_PREFIX/openssl/include/openssl/opensslv.h"
+  [[ -f "$1" && -f "$header" ]] &&
+    grep -Fxq "# define OPENSSL_VERSION_STR \"$OPENSSL_VERSION\"" "$header"
+}
+
 # Guard on the extracted TREE, not the tarball. The self-hosted runners keep
 # their work dir between runs, so a source tree removed by hand (or by a failed
 # build) while the tarball survived would never be re-extracted, and the caller
 # would then die on `cd openssl-$OPENSSL_VERSION: No such file or directory`.
 if [[ ! -d openssl-$OPENSSL_VERSION ]]; then
   if [[ ! -f openssl-$OPENSSL_VERSION.tar.gz ]]; then
-    curl -ksSLOJ https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz
+    curl -fLsSO "https://github.com/openssl/openssl/releases/download/openssl-$OPENSSL_VERSION/openssl-$OPENSSL_VERSION.tar.gz"
   fi
   # -z, not -a: bsdtar rejects -a in extract mode outright on macOS 15
   # ("Option -a is not permitted in mode -x"). macOS 26's bsdtar only warns,

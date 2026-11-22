@@ -26,5 +26,7 @@
 !common/qt-patches/**
 !common/faust-patches/**
 !common/ysfx-patches/**
+!common/patches/freetype/*.patch
+!common/bzip2/CMakeLists.txt
 
 

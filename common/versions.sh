@@ -36,9 +36,14 @@ export X264_VERSION=b35605ace3ddf7c1a5d67a2eb553f034aef41d55
 export X265_VERSION=4.2
 export OPUS_VERSION=v1.6.1
 export SRT_VERSION=v1.5.6
-# Hap encoding. Same fork/pin common/clone-zlib.sh uses for the Linux/MSYS core
-# stage; macOS has no core zlib.sh, so it builds snappy as a media dep instead.
-export SNAPPY_VERSION=ossia-2025-03-31
+# Compression libraries installed by the Linux and Windows core stages.
+# macOS builds the same Snappy release in its media stage.
+export ZLIB_NG_VERSION=2.3.3
+export BZIP2_VERSION=bzip2-1.0.8
+export ZSTD_VERSION=v1.5.7
+export BROTLI_VERSION=v1.2.1
+export XZ_VERSION=v5.8.4
+export SNAPPY_VERSION=1.3.1
 # VP8/VP9 software encoding -- the webm muxer has no usable software video
 # encoder without it (see common/build-media-deps.sh).
 export VPX_VERSION=v1.16.0
@@ -54,7 +59,7 @@ export WEBP_VERSION=v1.6.0
 #    -ljpeg has to resolve against something. Against the build image's libjpeg
 #    it would be a host leak; against ours it is just another SDK library.
 # Building it ourselves is what lets both point at the same archive.
-export LIBJPEGTURBO_VERSION=3.2.0
+export LIBJPEGTURBO_VERSION=3.2.1
 # MP3 encoding: ffmpeg ships no native MP3 encoder at all. SourceForge is lame's
 # only home, so the tarball is mirrored on the ossia sdk36 release
 # (sha256 ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e).
@@ -94,7 +99,7 @@ export FAUST_VERSION=2e20dde10938821e68395f5e25e8414c6767f13e
 export FAUST_PRS="1281"
 export LLVM_MINGW_VERSION=20260826
 export LLVM_VERSION=llvmorg-23.1.0
-export OPENSSL_VERSION=3.5.7
+export OPENSSL_VERSION=4.1.0
 # qt5.git super-repo commit, not a tag: use the current 6.12 branch tip.
 # A full SHA rather than a branch name keeps the build reproducible; github.com
 # and code.qt.io both allow fetching one directly into a shallow clone, which
@@ -111,12 +116,14 @@ export CMAKE_VERSION=4.3.4
 export PYTHON_VERSION=3.13.14
 export MESON_VERSION=0.61.1
 export PIPEWIRE_VERSION=1.6.7
+export FREETYPE_VERSION=2.15.0
+export HARFBUZZ_VERSION=15.2.0
 # Linux core stage: a static fontconfig (+ expat, its XML parser) for Qt, which
 # reads the host's /etc/fonts at runtime. fontconfig 2.18 needs meson >= 1.11,
 # the last release that runs on the build image's Python 3.9.
-export FONTCONFIG_VERSION=2.18.3
+export FONTCONFIG_VERSION=2.18.4
 export FONTCONFIG_MESON_VERSION=1.11.0
-export EXPAT_VERSION=2.9.0
+export EXPAT_VERSION=2.10.0
 # `extra` stage: prebuilt extension dependencies (see common/build-*.sh)
 export ONNXRUNTIME_VERSION=1.27.0
 

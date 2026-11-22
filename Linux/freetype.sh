@@ -9,8 +9,8 @@ source ./common/clone-freetype.sh
 # 1. Build freetype without harfbuzz
 (
 cmake \
-  -S freetype \
-  -B freetype-build \
+  -S "$FREETYPE_SRC" \
+  -B "$FREETYPE_SRC-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DFT_DISABLE_PNG=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
@@ -19,18 +19,14 @@ cmake \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX/sysroot" \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
 
-cmake --build freetype-build --parallel
-cmake --build freetype-build --target install/strip
+cmake --build "$FREETYPE_SRC-build" --parallel
+cmake --build "$FREETYPE_SRC-build" --target install/strip
 )
 
 # 2. Build harfbuzz
 
 (
-  # HarfBuzz promotes -Wunused to an error in hb.hh. Clang 23 expanded that
-  # group to include -Wunused-template, exposing intentionally dormant generic
-  # overloads. Use HarfBuzz's supported escape hatch for its internal pragmas.
-  export CXXFLAGS="$CXXFLAGS -DHB_NO_PRAGMA_GCC_DIAGNOSTIC_ERROR"
-  cd harfbuzz
+  cd "$HARFBUZZ_SRC"
   export LIBRARY_PATH=$INSTALL_PREFIX/sysroot
   export PKG_CONFIG_PATH=$INSTALL_PREFIX/sysroot/lib64/pkgconfig
   meson build \
@@ -45,14 +41,16 @@ cmake --build freetype-build --target install/strip
   cd build
   ninja
   ninja install
-  ln -s $INSTALL_PREFIX/sysroot/lib64 $INSTALL_PREFIX/sysroot/lib
+  if [[ -d "$INSTALL_PREFIX/sysroot/lib64" && ! -e "$INSTALL_PREFIX/sysroot/lib" ]]; then
+    ln -s lib64 "$INSTALL_PREFIX/sysroot/lib"
+  fi
 )
 
 # 3. Build freetype with harfbuzz
 (
 cmake \
-  -S freetype \
-  -B freetype-build-final \
+  -S "$FREETYPE_SRC" \
+  -B "$FREETYPE_SRC-build-final" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DFT_DISABLE_PNG=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
@@ -61,6 +59,6 @@ cmake \
   -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX/sysroot" \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX/sysroot"
 
-cmake --build freetype-build-final --parallel
-cmake --build freetype-build-final --target install/strip
+cmake --build "$FREETYPE_SRC-build-final" --parallel
+cmake --build "$FREETYPE_SRC-build-final" --target install/strip
 )

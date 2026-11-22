@@ -4,43 +4,32 @@ source ./common.sh clang
 source ../common/clone-zlib.sh
 
 (
-  cmake -S zlib-ng -B zlib-build \
+  cmake -S "$ZLIB_NG_SRC" -B "$ZLIB_NG_SRC-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DZLIB_COMPAT=1 \
   -DBUILD_SHARED_LIBS=0 \
-  -DZLIB_ENABLE_TESTS=0 \
-  -DZLIBNG_ENABLE_TESTS=0 \
-  -DWITH_GTEST=0 \
+  -DBUILD_TESTING=OFF \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build zlib-build --config Release
-  cmake --build zlib-build --config Release --target install/strip
+  cmake --build "$ZLIB_NG_SRC-build" --config Release --target install/strip
 )
 
 (
-  cmake -S bzip2 -B bzip2-build \
+  cmake -S ../common/bzip2 -B "$BZIP2_VERSION-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
-  -DENABLE_EXAMPLES=0 \
-  -DENABLE_TESTS=0 \
-  -DENABLE_DOCS=0 \
-  -DENABLE_APP=0 \
-  -DBUILD_SHARED_LIBS=0 \
-  -DENABLE_STATIC_LIB=1 \
-  -DENABLE_SHARED_LIB=0 \
+  -DBZIP2_SOURCE_DIR="$PWD/$BZIP2_VERSION" \
+  -DBZIP2_RELEASE="${BZIP2_VERSION#bzip2-}" \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build bzip2-build --config Release
-  cmake --build bzip2-build --config Release --target install/strip
-  
-  cd $INSTALL_PREFIX/sysroot
-  ln -s lib64 lib || true
-  
-  cp "$INSTALL_PREFIX/sysroot/lib/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib/libbz2.a" || true
-  cp "$INSTALL_PREFIX/sysroot/lib64/libbz2_static.a"  "$INSTALL_PREFIX/sysroot/lib64/libbz2.a" || true
+  cmake --build "$BZIP2_VERSION-build" --config Release --target install/strip
+
+  if [[ -d "$INSTALL_PREFIX/sysroot/lib64" && ! -e "$INSTALL_PREFIX/sysroot/lib" ]]; then
+    ln -s lib64 "$INSTALL_PREFIX/sysroot/lib"
+  fi
 )
 
 (
-  cmake -S zstd/build/cmake -B zstd-build \
+  cmake -S "$ZSTD_SRC/build/cmake" -B "$ZSTD_SRC-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DZSTD_BUILD_PROGRAMS=0 \
   -DBUILD_SHARED_LIBS=0 \
@@ -49,49 +38,51 @@ source ../common/clone-zlib.sh
   -DZSTD_BUILD_STATIC=1 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build zstd-build --config Release
-  cmake --build zstd-build --config Release --target install/strip
+  cmake --build "$ZSTD_SRC-build" --config Release --target install/strip
   
 )
 
 (
-  cmake -S brotli -B brotli-build \
+  cmake -S "$BROTLI_SRC" -B "$BROTLI_SRC-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
-  -DBROTLI_DISABLE_TESTS=1 \
+  -DBROTLI_BUILD_TOOLS=OFF \
   -DBUILD_SHARED_LIBS=0 \
-  -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot" \
-  -DSHARE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
+  -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build brotli-build --config Release
-  cmake --build brotli-build --config Release --target install/strip
+  cmake --build "$BROTLI_SRC-build" --config Release --target install/strip
   
 )
 
 (
-  cmake -S xz -B xz-build \
+  cmake -S "$XZ_SRC" -B "$XZ_SRC-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DBUILD_SHARED_LIBS=0 \
   -DBUILD_TESTING=0 \
-  -DCREATE_XZ_SYMLINKS=0 \
-  -DCREATE_LZMA_SYMLINKS=0 \
+  -DXZ_TOOL_SYMLINKS=OFF \
+  -DXZ_TOOL_SYMLINKS_LZMA=OFF \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build xz-build --config Release
-  cmake --build xz-build --config Release --target install/strip
+  cmake --build "$XZ_SRC-build" --config Release --target install/strip
   
 )
 
 (
-  cmake -S snappy -B snappy-build \
+  # Upstream adds -Werror for Clang. As in the old SDK fork, keep dependency
+  # warnings visible without making them fatal as the SDK compiler advances.
+  # Hidden inline helpers can be inlined under GCC -fPIC too, without making
+  # its public, non-inline C/C++ API hidden when linked into a shared object.
+  cmake -S "$SNAPPY_SRC" -B "$SNAPPY_SRC-build" \
   "${CMAKE_COMMON_FLAGS[@]}" \
   -DBUILD_SHARED_LIBS=0 \
+  -DCMAKE_VISIBILITY_INLINES_HIDDEN=ON \
+  -DCMAKE_CXX_FLAGS_RELEASE_INIT=-Wno-error \
+  -DCMAKE_CXX_FLAGS_DEBUG_INIT=-Wno-error \
   -DSNAPPY_BUILD_TESTS=0 \
   -DSNAPPY_BUILD_BENCHMARKS=0 \
   -DSNAPPY_INSTALL=1 \
   -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX_CMAKE/sysroot"
   
-  cmake --build snappy-build --config Release
-  cmake --build snappy-build --config Release --target install/strip
+  cmake --build "$SNAPPY_SRC-build" --config Release --target install/strip
   
 )
 
