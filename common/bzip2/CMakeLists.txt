@@ -10,6 +10,10 @@ foreach(file blocksort huffman crctable randtable compress decompress bzlib)
 endforeach()
 target_compile_definitions(bz2 PRIVATE _FILE_OFFSET_BITS=64)
 install(TARGETS bz2 ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # Existing SDK consumers can link with either -lbz2 or -lbz2_static.
+  install(FILES "$<TARGET_FILE:bz2>" DESTINATION "${CMAKE_INSTALL_LIBDIR}" RENAME libbz2_static.a)
+endif()
 install(FILES "${BZIP2_SOURCE_DIR}/bzlib.h" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 # The previous SDK shipped bzip2.pc alongside libbz2.a on both platforms.
