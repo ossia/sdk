@@ -28,15 +28,13 @@ _font_clone() ( # destination tag upstream [patch]
 _font_clone "$FREETYPE_SRC" "VER-${FREETYPE_VERSION//./-}" https://github.com/freetype/freetype "$ft_patch"
 _font_clone "$HARFBUZZ_SRC" "$HARFBUZZ_VERSION" https://github.com/harfbuzz/harfbuzz
 
-# Qt needs shaping, not the rendering libraries. Keep their optional host
-# dependencies (e.g. Homebrew's arm64 libpng on x86_64 builds) out of the SDK.
+# Keep optional raster/GPU backends out of the static SDK (notably host libpng
+# on macOS cross builds). Keep the shipped vector library and its zlib support.
 HB_SHAPING_ONLY=(
   -Dcairo=disabled
   -Dchafa=disabled
   -Dpng=disabled
-  -Dzlib=disabled
   -Draster=disabled
-  -Dvector=disabled
   -Dgpu=disabled
   -Dgpu_demo=disabled
   -Dutilities=disabled
