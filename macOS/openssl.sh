@@ -13,7 +13,7 @@
 source ./common.sh
 source ../common/clone-openssl.sh
 
-if [[ -f "$INSTALL_PREFIX/openssl/lib/libssl.a" ]]; then
+if openssl_is_current "$INSTALL_PREFIX/openssl/lib/libssl.a"; then
   exit 0
 fi
 

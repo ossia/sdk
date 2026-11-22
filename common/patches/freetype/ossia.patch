@@ -1,0 +1,164 @@
+--- a/builds/cmake/FindBrotliDec.cmake
++++ b/builds/cmake/FindBrotliDec.cmake
+@@ -19,25 +19,12 @@
+ #   BROTLIDEC_INCLUDE_DIRS
+ #   BROTLIDEC_LIBRARIES
+ 
+-find_package(PkgConfig QUIET)
+-
+-pkg_check_modules(PC_BROTLIDEC QUIET libbrotlidec)
+-
+-if (PC_BROTLIDEC_VERSION)
+-  set(BROTLIDEC_VERSION "${PC_BROTLIDEC_VERSION}")
+-endif ()
+-
+-
+ find_path(BROTLIDEC_INCLUDE_DIRS
+   NAMES brotli/decode.h
+-  HINTS ${PC_BROTLIDEC_INCLUDEDIR}
+-        ${PC_BROTLIDEC_INCLUDE_DIRS}
+   PATH_SUFFIXES brotli)
+ 
+ find_library(BROTLIDEC_LIBRARIES
+-  NAMES brotlidec
+-  HINTS ${PC_BROTLIDEC_LIBDIR}
+-        ${PC_BROTLIDEC_LIBRARY_DIRS})
++  NAMES brotlidec)
+ 
+ 
+ include(FindPackageHandleStandardArgs)
+--- a/builds/cmake/FindHarfBuzz.cmake
++++ b/builds/cmake/FindHarfBuzz.cmake
+@@ -65,10 +65,6 @@
+ 
+ #]=======================================================================]
+ 
+-find_package(PkgConfig QUIET)
+-pkg_check_modules(PC_HARFBUZZ QUIET harfbuzz)
+-set(HarfBuzz_COMPILE_OPTIONS ${PC_HARFBUZZ_CFLAGS_OTHER})
+-set(HarfBuzz_VERSION ${PC_HARFBUZZ_CFLAGS_VERSION})
+ 
+ find_path(HarfBuzz_INCLUDE_DIR
+     NAMES hb.h
+--- a/include/freetype/config/ftoption.h
++++ b/include/freetype/config/ftoption.h
+@@ -123,7 +123,7 @@
+    * When this macro is not defined, FreeType offers alternative LCD
+    * rendering technology that produces excellent output.
+    */
+-/* #define FT_CONFIG_OPTION_SUBPIXEL_RENDERING */
++#define FT_CONFIG_OPTION_SUBPIXEL_RENDERING
+ 
+ 
+   /**************************************************************************
+@@ -968,7 +968,7 @@
+    * If this option is activated, it can be controlled with the
+    * `no-long-family-names` property of the 'pcf' driver module.
+    */
+-/* #define PCF_CONFIG_OPTION_LONG_FAMILY_NAMES */
++#define PCF_CONFIG_OPTION_LONG_FAMILY_NAMES
+ 
+ 
+   /*************************************************************************/
+--- a/modules.cfg
++++ b/modules.cfg
+@@ -123,7 +123,7 @@
+ 
+ # TrueType GX/AAT table validation.  Needs `ftgxval.c' below.
+ #
+-# AUX_MODULES += gxvalid
++AUX_MODULES += gxvalid
+ 
+ # Support for streams compressed with gzip (files with suffix .gz).
+ #
+@@ -142,7 +142,7 @@
+ 
+ # OpenType table validation.  Needs `ftotval.c' below.
+ #
+-# AUX_MODULES += otvalid
++AUX_MODULES += otvalid
+ 
+ # Auxiliary PostScript driver component to share common code.
+ #
+--- a/src/gzip/crc32.c
++++ b/src/gzip/crc32.c
+@@ -699,7 +699,7 @@
+ #endif
+ 
+ /* ========================================================================= */
+-unsigned long ZEXPORT crc32_z(unsigned long crc, const unsigned char FAR *buf,
++ZEXTERN unsigned long ZEXPORT crc32_z(unsigned long crc, const unsigned char FAR *buf,
+                               z_size_t len) {
+     /* Return initial CRC, if requested. */
+     if (buf == Z_NULL) return 0;
+@@ -1020,7 +1020,7 @@
+ #endif
+ 
+ /* ========================================================================= */
+-unsigned long ZEXPORT crc32(unsigned long crc, const unsigned char FAR *buf,
++ZEXTERN unsigned long ZEXPORT crc32(unsigned long crc, const unsigned char FAR *buf,
+                             uInt len) {
+     return crc32_z(crc, buf, len);
+ }
+@@ -1028,7 +1028,7 @@
+ #ifndef Z_FREETYPE
+ 
+ /* ========================================================================= */
+-uLong ZEXPORT crc32_combine64(uLong crc1, uLong crc2, z_off64_t len2) {
++ZEXTERN uLong ZEXPORT crc32_combine64(uLong crc1, uLong crc2, z_off64_t len2) {
+     if (len2 < 0)
+         return 0;
+ #ifdef DYNAMIC_CRC_TABLE
+@@ -1038,12 +1038,12 @@
+ }
+ 
+ /* ========================================================================= */
+-uLong ZEXPORT crc32_combine(uLong crc1, uLong crc2, z_off_t len2) {
++ZEXTERN uLong ZEXPORT crc32_combine(uLong crc1, uLong crc2, z_off_t len2) {
+     return crc32_combine64(crc1, crc2, (z_off64_t)len2);
+ }
+ 
+ /* ========================================================================= */
+-uLong ZEXPORT crc32_combine_gen64(z_off64_t len2) {
++ZEXTERN uLong ZEXPORT crc32_combine_gen64(z_off64_t len2) {
+     if (len2 < 0)
+         return 0;
+ #ifdef DYNAMIC_CRC_TABLE
+@@ -1053,12 +1053,12 @@
+ }
+ 
+ /* ========================================================================= */
+-uLong ZEXPORT crc32_combine_gen(z_off_t len2) {
++ZEXTERN uLong ZEXPORT crc32_combine_gen(z_off_t len2) {
+     return crc32_combine_gen64((z_off64_t)len2);
+ }
+ 
+ /* ========================================================================= */
+-uLong ZEXPORT crc32_combine_op(uLong crc1, uLong crc2, uLong op) {
++ZEXTERN uLong ZEXPORT crc32_combine_op(uLong crc1, uLong crc2, uLong op) {
+     return multmodp(op, crc1) ^ (crc2 & 0xffffffff);
+ }
+ 
+--- a/src/gzip/ftgzip.c
++++ b/src/gzip/ftgzip.c
+@@ -70,9 +70,17 @@
+   /* so that configuration with `FT_CONFIG_OPTION_SYSTEM_ZLIB' might   */
+   /* include the wrong `zconf.h' file, leading to errors.              */
+ 
+-#define ZEXPORT
+-  /* prevent zlib functions from being visible outside their object files */
+-#define ZEXTERN  static
++  /* `HAVE_HIDDEN` should be defined if                                 */
++  /*                                                                    */
++  /*   __attribute__((visibility("hidden")))                            */
++  /*                                                                    */
++  /* is supported by the compiler, which prevents internal symbols from */
++  /* being exported by the library.                                     */
++#if defined( __GNUC__ ) ||  defined( __clang__ )
++#define HAVE_HIDDEN  1
++#define ZEXPORT __attribute__((visibility("hidden")))
++#define ZEXTERN static
++#endif
+ 
+ #define HAVE_MEMCPY  1
+ #define Z_SOLO       1

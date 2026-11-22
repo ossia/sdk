@@ -2,40 +2,41 @@
 
 source ../common/versions.sh
 
-if [[ ! -d freetype ]]; then
-(
-  (
-    # NB: keep the -b branch and the checkout below in sync. In CI SDK_CLONE_DEPTH
-    # is set, which makes this a shallow single-branch clone -- so a checkout of
-    # any *other* branch cannot work, it was never fetched.
-    git clone $SDK_CLONE_DEPTH ${SDK_CLONE_DEPTH:+-b ossia-2026-05} https://github.com/jcelerier/freetype
-    cd freetype
-    git checkout ossia-2026-05
-    git remote add upstream https://github.com/freetype/freetype
-  )
+# Use separate, versioned source trees: never switch or patch an existing
+# developer checkout in freetype/ or harfbuzz/. Include the SDK patch in the
+# FreeType cache key so editing it also gets a freshly prepared tree.
+ft_patch=../common/patches/freetype/ossia.patch
+ft_patch_id=$(git hash-object "$ft_patch")
+FREETYPE_SRC="freetype-$FREETYPE_VERSION-${ft_patch_id:0:12}"
+HARFBUZZ_SRC="harfbuzz-$HARFBUZZ_VERSION"
 
-  (
-    git clone $SDK_CLONE_DEPTH ${SDK_CLONE_DEPTH:+-b ossia-2026-05} https://github.com/jcelerier/harfbuzz
-    cd harfbuzz
-    git checkout ossia-2026-05
-    git remote add upstream https://github.com/harfbuzz/harfbuzz
-  )
-
+_font_clone() ( # destination tag upstream [patch]
+  [[ -d "$1" ]] && return 0
+  local tmp
+  tmp=$(mktemp -d "$1.XXXXXX")
+  trap 'rm -rf "$tmp"' EXIT
+  git clone $SDK_CLONE_DEPTH --branch "$2" "$3" "$tmp"
+  if [[ -n "${4:-}" ]]; then
+    git -C "$tmp" apply < "$4"
+  fi
+  mv "$tmp" "$1"
 )
-fi
 
-# HarfBuzz features the SDK does not use -- Qt links libharfbuzz only for text
-# shaping. The ossia-2026-05 bump (HarfBuzz 12.x) turns the new raster + gpu
-# glyph-rasterization libraries on by default, and they auto-detect libpng,
-# cairo and chafa from whatever the runner happens to ship. On the macOS x86_64
-# cross build that pulled in an arm64 homebrew libpng and broke the link with a
-# wall of undefined _png_* symbols. None of it is needed; disabling keeps the
-# static lib self-contained and byte-for-byte reproducible across runners.
+# The former FreeType fork enabled subpixel rendering, long PCF family names
+# and extra validators, hid bundled zlib symbols, and avoided pkg-config host
+# hints for Brotli/HarfBuzz. Carry those changes on the upstream release.
+_font_clone "$FREETYPE_SRC" "VER-${FREETYPE_VERSION//./-}" https://github.com/freetype/freetype "$ft_patch"
+_font_clone "$HARFBUZZ_SRC" "$HARFBUZZ_VERSION" https://github.com/harfbuzz/harfbuzz
+
+# Qt needs shaping, not the rendering libraries. Keep their optional host
+# dependencies (e.g. Homebrew's arm64 libpng on x86_64 builds) out of the SDK.
 HB_SHAPING_ONLY=(
   -Dcairo=disabled
   -Dchafa=disabled
   -Dpng=disabled
+  -Dzlib=disabled
   -Draster=disabled
+  -Dvector=disabled
   -Dgpu=disabled
   -Dgpu_demo=disabled
   -Dutilities=disabled
