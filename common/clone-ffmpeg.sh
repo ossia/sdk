@@ -42,6 +42,8 @@ if [[ ! -f "$FFMPEG_READY" ]]; then
       echo "Mac OS"
       # Without camera access, opening an avfoundation device otherwise never returns
       patch -F 0 -p1 -d "$FFMPEG_SRC" < ../common/patches/ffmpeg/0002-avfoundation-interruptible-first-frame.patch || exit 1
+      # Unplugging a camera otherwise leaves a reader blocked in av_read_frame
+      patch -F 0 -p1 -d "$FFMPEG_SRC" < ../common/patches/ffmpeg/0003-avfoundation-interruptible-read.patch || exit 1
     ;;
     win*)     echo "Windows" ;;
     msys*)    echo "MSYS / MinGW / Git Bash" ;;

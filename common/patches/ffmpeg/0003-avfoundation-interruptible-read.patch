@@ -1,0 +1,100 @@
+From: Jean-Michaël Celerier <jeanmichael.celerier@gmail.com>
+Subject: [PATCH] avdevice/avfoundation: let a reader waiting for a frame be
+ interrupted, and end the stream when the device is unplugged
+
+Since ddf8f40301 avf_read_packet() waits on frame_wait_cond whenever no
+frame is queued, and only a new frame, a transport-control stop or
+avf_close() ends that wait. That ignores AVFMT_FLAG_NONBLOCK, which used
+to make the read return EAGAIN, and the interrupt callback; and once the
+device is unplugged no frame comes, so the read never returns. A caller
+that reads on its own thread and joins it before closing (ffplay, or any
+application) then hangs, since avformat_close_input() cannot run while
+the read does.
+
+Return EAGAIN with AVFMT_FLAG_NONBLOCK, wait in 100 ms slices checking
+the interrupt callback, and set observed_quit when the capture device
+posts AVCaptureDeviceWasDisconnectedNotification, so the read returns
+EOF. The capture callback still waits for its frame to be consumed.
+---
+--- a/libavdevice/avfoundation.m
++++ b/libavdevice/avfoundation.m
+@@ -152,6 +152,7 @@
+     CMSampleBufferRef         current_audio_frame;
+ 
+     AVCaptureDevice          *observed_device;
++    AVCaptureDevice          *video_device;
+ #if !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+     AVCaptureDeviceTransportControlsPlaybackMode observed_mode;
+ #endif
+@@ -203,6 +204,13 @@
+                                            context: _context];
+         }
+ #endif
++
++        if (_context->video_device) {
++            [[NSNotificationCenter defaultCenter] addObserver: self
++                                                     selector: @selector(deviceWasDisconnected:)
++                                                         name: AVCaptureDeviceWasDisconnectedNotification
++                                                       object: _context->video_device];
++        }
+     }
+     return self;
+ }
+@@ -215,9 +223,21 @@
+         [_context->observed_device removeObserver: self forKeyPath: keyPath];
+     }
+ #endif
++    [[NSNotificationCenter defaultCenter] removeObserver: self];
+     [super dealloc];
+ }
+ 
++/**
++ * A device that is unplugged delivers no more frames: end the stream, so a
++ * reader blocked in avf_read_packet() returns EOF.
++ */
++- (void)deviceWasDisconnected:(NSNotification *)notification
++{
++    lock_frames(_context);
++    _context->observed_quit = 1;
++    unlock_frames(_context);
++}
++
+ - (void)observeValueForKeyPath:(NSString *)keyPath
+                       ofObject:(id)object
+                         change:(NSDictionary *)change
+@@ -618,6 +638,9 @@
+     }
+ #endif
+ 
++    if (!ctx->video_is_screen)
++        ctx->video_device = video_device;
++
+     ctx->avf_delegate = [[AVFFrameReceiver alloc] initWithContext:ctx];
+ 
+     queue = dispatch_queue_create("avf_queue", NULL);
+@@ -1541,9 +1564,23 @@
+                 unlock_frames(ctx);
+                 return AVERROR_EOF;
+             }
++            if (s->flags & AVFMT_FLAG_NONBLOCK) {
++                unlock_frames(ctx);
++                return AVERROR(EAGAIN);
++            }
++            if (avf_interrupted(s)) {
++                unlock_frames(ctx);
++                return AVERROR_EXIT;
++            }
+             // No frame available yet: wait until a capture callback delivers
+-            // one (or until the device is being torn down).
+-            pthread_cond_wait(&ctx->frame_wait_cond, &ctx->frame_lock);
++            // one (or until the device is being torn down), and check the
++            // interrupt callback at least every 100 ms meanwhile.
++            {
++                int64_t deadline = av_gettime() + 100000;
++                struct timespec ts = { .tv_sec  = deadline / 1000000,
++                                       .tv_nsec = (deadline % 1000000) * 1000 };
++                pthread_cond_timedwait(&ctx->frame_wait_cond, &ctx->frame_lock, &ts);
++            }
+         }
+     } while (!pkt->data && !ctx->is_stopping);
+ 
